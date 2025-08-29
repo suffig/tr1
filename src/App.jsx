@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy } from 'react';
+import { useState, Suspense, lazy, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './hooks/useAuth';
 import Login from './components/Login';
@@ -17,6 +17,23 @@ function App() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('matches');
   const [tabLoading, setTabLoading] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
+  // Check if we're in demo mode
+  useEffect(() => {
+    const checkDemoMode = () => {
+      // Check if user has demo metadata or if there are demo-related console logs
+      const demoMode = user?.user_metadata?.demo_mode || 
+                       localStorage.getItem('supabase.auth.token')?.includes('demo-token');
+      setIsDemoMode(demoMode);
+    };
+    
+    checkDemoMode();
+    
+    // Listen for demo mode changes
+    const interval = setInterval(checkDemoMode, 1000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleTabChange = async (newTab) => {
     if (newTab === activeTab) return;
@@ -94,6 +111,15 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-bg-primary">
+      {/* Connection Status Indicator */}
+      {isDemoMode && (
+        <div className="bg-yellow-500 text-yellow-900 px-4 py-2 text-center text-sm font-medium">
+          <span className="inline-flex items-center">
+            ⚠️ Demo-Modus aktiv - Supabase CDN blockiert
+          </span>
+        </div>
+      )}
+      
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         <Suspense fallback={<LoadingSpinner message="Lade Tab..." />}>

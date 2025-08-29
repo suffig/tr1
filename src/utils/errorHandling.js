@@ -5,8 +5,17 @@ export class ErrorHandler {
   static showUserError(message, type = 'error', duration = 5000) {
     if (type === 'success') {
       toast.success(message, { duration });
-    } else if (type === 'warning') {
-      toast.warning(message, { duration });
+    } else if (type === 'warning' || type === 'info') {
+      // Use info style for warnings since react-hot-toast doesn't have warning
+      toast(message, { 
+        duration,
+        icon: '⚠️',
+        style: {
+          background: '#FEF3C7',
+          color: '#92400E',
+          border: '1px solid #FBBF24'
+        }
+      });
     } else {
       toast.error(message, { duration });
     }
