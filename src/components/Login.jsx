@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../utils/supabase';
+import { supabase, switchToFallbackMode } from '../utils/supabase';
 import { ErrorHandler, FormValidator } from '../utils/errorHandling';
 
 export default function Login() {
@@ -21,17 +21,77 @@ export default function Login() {
         throw new Error('Passwort muss mindestens 6 Zeichen haben');
       }
 
-      const { error } = isLogin
-        ? await supabase.auth.signInWithPassword({
-            email: FormValidator.sanitizeInput(email),
-            password
-          })
-        : await supabase.auth.signUp({
-            email: FormValidator.sanitizeInput(email),
-            password
-          });
+      // Use current supabase client for auth
+      let result;
+      try {
+        result = isLogin
+          ? await supabase.auth.signInWithPassword({
+              email: FormValidator.sanitizeInput(email),
+              password
+            })
+          : await supabase.auth.signUp({
+              email: FormValidator.sanitizeInput(email),
+              password
+            });
+            
+        console.log('🔍 Auth result:', result);
+        
+        // Check if the error indicates CDN blocking
+        if (result.error && (
+            result.error.name === 'AuthRetryableFetchError' ||
+            result.error.message.includes('Failed to fetch') ||
+            result.error.message.includes('NetworkError') ||
+            result.error.message.includes('fetch')
+          )) {
+          
+          console.warn('🔄 Supabase CDN blocked (via result.error), switching to demo mode');
+          ErrorHandler.showUserError('Supabase CDN blockiert - Demo-Modus wird verwendet', 'warning');
+          
+          // Switch to fallback globally
+          const fallbackClient = switchToFallbackMode();
+          
+          // Retry with fallback
+          result = isLogin
+            ? await fallbackClient.auth.signInWithPassword({
+                email: FormValidator.sanitizeInput(email),
+                password
+              })
+            : await fallbackClient.auth.signUp({
+                email: FormValidator.sanitizeInput(email),
+                password
+              });
+        }
+      } catch (error) {
+        console.log('🔍 Caught auth error:', error.name, error.message);
+        
+        // Check if this is a CDN blocked error
+        if (error.name === 'AuthRetryableFetchError' || 
+            error.message.includes('Failed to fetch') ||
+            error.message.includes('NetworkError') ||
+            error.message.includes('fetch')) {
+          
+          console.warn('🔄 Supabase CDN blocked (via exception), switching to demo mode');
+          ErrorHandler.showUserError('Supabase CDN blockiert - Demo-Modus wird verwendet', 'warning');
+          
+          // Switch to fallback globally
+          const fallbackClient = switchToFallbackMode();
+          
+          // Retry with fallback
+          result = isLogin
+            ? await fallbackClient.auth.signInWithPassword({
+                email: FormValidator.sanitizeInput(email),
+                password
+              })
+            : await fallbackClient.auth.signUp({
+                email: FormValidator.sanitizeInput(email),
+                password
+              });
+        } else {
+          throw error;
+        }
+      }
 
-      if (error) throw error;
+      if (result.error) throw result.error;
 
       if (!isLogin) {
         ErrorHandler.showUserError(
