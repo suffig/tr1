@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
+import toast from 'react-hot-toast';
 
 const BAN_TYPES = [
   { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1 },
@@ -10,11 +11,94 @@ const BAN_TYPES = [
 
 export default function BansTab() {
   const [selectedType, setSelectedType] = useState('all');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingBan, setEditingBan] = useState(null);
+  const [formData, setFormData] = useState({
+    spieler_id: '',
+    art: 'Gelb-Rote Karte',
+    anzahl_spiele: 1,
+    beschreibung: ''
+  });
   
   const { data: bans, loading: bansLoading, refetch: refetchBans } = useSupabaseQuery('bans', '*');
   const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
+  const { insert, update, remove, loading: mutationLoading } = useSupabaseMutation('bans');
   
   const loading = bansLoading || playersLoading;
+
+  const resetForm = () => {
+    setFormData({
+      spieler_id: '',
+      art: 'Gelb-Rote Karte',
+      anzahl_spiele: 1,
+      beschreibung: ''
+    });
+    setEditingBan(null);
+    setShowAddForm(false);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      if (editingBan) {
+        await update(formData, editingBan.id);
+        toast.success('Sperre erfolgreich aktualisiert!');
+      } else {
+        await insert({ 
+          ...formData, 
+          datum: new Date().toISOString(),
+          spieler_id: parseInt(formData.spieler_id)
+        });
+        toast.success('Sperre erfolgreich hinzugefügt!');
+      }
+      
+      resetForm();
+      refetchBans();
+    } catch (error) {
+      console.error('Error saving ban:', error);
+      toast.error(`Fehler beim ${editingBan ? 'Aktualisieren' : 'Hinzufügen'} der Sperre`);
+    }
+  };
+
+  const handleEdit = (ban) => {
+    setFormData({
+      spieler_id: ban.spieler_id.toString(),
+      art: ban.art,
+      anzahl_spiele: ban.anzahl_spiele,
+      beschreibung: ban.beschreibung || ''
+    });
+    setEditingBan(ban);
+    setShowAddForm(true);
+  };
+
+  const handleDelete = async (banId) => {
+    if (!confirm('Sind Sie sicher, dass Sie diese Sperre löschen möchten?')) {
+      return;
+    }
+
+    try {
+      await remove(banId);
+      toast.success('Sperre erfolgreich gelöscht!');
+      refetchBans();
+    } catch (error) {
+      console.error('Error deleting ban:', error);
+      toast.error('Fehler beim Löschen der Sperre');
+    }
+  };
+
+  const handleReduceBan = async (ban) => {
+    if (ban.anzahl_spiele <= 0) return;
+    
+    try {
+      await update({ anzahl_spiele: ban.anzahl_spiele - 1 }, ban.id);
+      toast.success('Sperre um ein Spiel reduziert!');
+      refetchBans();
+    } catch (error) {
+      console.error('Error reducing ban:', error);
+      toast.error('Fehler beim Reduzieren der Sperre');
+    }
+  };
 
   const getPlayerName = (playerId) => {
     if (!players) return 'Unbekannt';
@@ -70,10 +154,121 @@ export default function BansTab() {
 
   return (
     <div className="p-4 pb-20">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-text-primary mb-4">
-          Sperren-Übersicht
-        </h2>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-semibold text-text-primary mb-4">
+            Sperren-Übersicht
+          </h2>
+        </div>
+        <button 
+          onClick={() => setShowAddForm(true)}
+          className="btn-primary flex items-center"
+          disabled={mutationLoading}
+        >
+          <i className="fas fa-plus mr-2"></i>
+          Neue Sperre
+        </button>
+      </div>
+
+      {/* Add/Edit Form */}
+      {showAddForm && (
+        <div className="modern-card mb-6">
+          <h3 className="text-lg font-semibold text-text-primary mb-4">
+            {editingBan ? 'Sperre bearbeiten' : 'Neue Sperre hinzufügen'}
+          </h3>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">
+                Spieler
+              </label>
+              <select
+                value={formData.spieler_id}
+                onChange={(e) => setFormData({...formData, spieler_id: e.target.value})}
+                className="form-input"
+                required
+              >
+                <option value="">Spieler auswählen</option>
+                {players?.map(player => (
+                  <option key={player.id} value={player.id}>
+                    {player.name} ({player.team})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Art der Sperre
+                </label>
+                <select
+                  value={formData.art}
+                  onChange={(e) => {
+                    const banType = BAN_TYPES.find(type => type.value === e.target.value);
+                    setFormData({
+                      ...formData, 
+                      art: e.target.value,
+                      anzahl_spiele: banType?.duration || 1
+                    });
+                  }}
+                  className="form-input"
+                >
+                  {BAN_TYPES.map(type => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Anzahl Spiele
+                </label>
+                <input
+                  type="number"
+                  value={formData.anzahl_spiele}
+                  onChange={(e) => setFormData({...formData, anzahl_spiele: parseInt(e.target.value) || 1})}
+                  className="form-input"
+                  min="1"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">
+                Beschreibung (optional)
+              </label>
+              <textarea
+                value={formData.beschreibung}
+                onChange={(e) => setFormData({...formData, beschreibung: e.target.value})}
+                className="form-input"
+                rows="3"
+                placeholder="Zusätzliche Details zur Sperre..."
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={mutationLoading}
+                className="btn-primary disabled:opacity-50"
+              >
+                {mutationLoading ? 'Speichert...' : (editingBan ? 'Aktualisieren' : 'Hinzufügen')}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="btn-secondary"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
         
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-4">
@@ -182,15 +377,27 @@ export default function BansTab() {
                 <div className="flex items-center space-x-2">
                   {ban.anzahl_spiele > 0 && (
                     <button
+                      onClick={() => handleReduceBan(ban)}
                       className="text-text-muted hover:text-primary-green transition-colors p-1"
                       title="Sperre reduzieren"
+                      disabled={mutationLoading}
                     >
                       <i className="fas fa-minus text-sm"></i>
                     </button>
                   )}
                   <button
+                    onClick={() => handleEdit(ban)}
+                    className="text-text-muted hover:text-primary-blue transition-colors p-1"
+                    title="Sperre bearbeiten"
+                    disabled={mutationLoading}
+                  >
+                    <i className="fas fa-edit text-sm"></i>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(ban.id)}
                     className="text-text-muted hover:text-accent-red transition-colors p-1"
                     title="Sperre löschen"
+                    disabled={mutationLoading}
                   >
                     <i className="fas fa-trash text-sm"></i>
                   </button>
@@ -215,12 +422,18 @@ export default function BansTab() {
       )}
 
       {/* Add Ban Button */}
-      <div className="mt-6">
-        <button className="w-full btn-primary">
-          <i className="fas fa-plus mr-2"></i>
-          Neue Sperre hinzufügen
-        </button>
-      </div>
+      {!showAddForm && (
+        <div className="mt-6">
+          <button 
+            onClick={() => setShowAddForm(true)} 
+            className="w-full btn-primary"
+            disabled={mutationLoading}
+          >
+            <i className="fas fa-plus mr-2"></i>
+            Neue Sperre hinzufügen
+          </button>
+        </div>
+      )}
     </div>
   );
 }
