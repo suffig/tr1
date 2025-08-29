@@ -8,22 +8,10 @@ import LoadingSpinner, { FullScreenLoader } from './components/LoadingSpinner';
 // Lazy load tab components for better performance
 const MatchesTab = lazy(() => import('./components/tabs/MatchesTab'));
 const KaderTab = lazy(() => import('./components/tabs/KaderTab'));
+const BansTab = lazy(() => import('./components/tabs/BansTab'));
+const FinanzenTab = lazy(() => import('./components/tabs/FinanzenTab'));
+const StatsTab = lazy(() => import('./components/tabs/StatsTab'));
 const SpielerTab = lazy(() => import('./components/tabs/SpielerTab'));
-
-// For now, we'll create placeholder components for remaining tabs
-const PlaceholderTab = ({ tabName }) => (
-  <div className="p-4 pb-20">
-    <div className="text-center py-12">
-      <div className="text-4xl mb-4">⚽</div>
-      <h3 className="text-lg font-medium text-text-primary mb-2">
-        {tabName} Tab
-      </h3>
-      <p className="text-text-muted">
-        Diese Funktionalität wird gerade zu React migriert...
-      </p>
-    </div>
-  </div>
-);
 
 function App() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -55,11 +43,11 @@ function App() {
       case 'squad':
         return <KaderTab />;
       case 'bans':
-        return <PlaceholderTab tabName="Sperren" />;
+        return <BansTab />;
       case 'finanzen':
-        return <PlaceholderTab tabName="Finanzen" />;
+        return <FinanzenTab />;
       case 'stats':
-        return <PlaceholderTab tabName="Stats" />;
+        return <StatsTab />;
       case 'spieler':
         return <SpielerTab />;
       default:
