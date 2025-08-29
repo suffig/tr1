@@ -101,9 +101,16 @@ const createFallbackClient = () => {
               console.warn('Could not persist demo session:', e);
             }
             
-            // Notify all auth listeners
-            authCallbacks.forEach(callback => {
-              setTimeout(() => callback('SIGNED_IN', fallbackSession), 50);
+            console.log('🔥 Demo session created:', fallbackSession);
+            console.log('🔥 Number of auth callbacks:', authCallbacks.length);
+            
+            // Notify all auth listeners immediately
+            authCallbacks.forEach((callback, index) => {
+              console.log(`🔥 Calling auth callback ${index + 1}/${authCallbacks.length}`);
+              setTimeout(() => {
+                console.log(`🔥 Executing auth callback ${index + 1} with SIGNED_IN event`);
+                callback('SIGNED_IN', fallbackSession);
+              }, 50);
             });
             
             resolve({ 
@@ -172,6 +179,7 @@ const createFallbackClient = () => {
 
 // Try to create real Supabase client first, fallback if not available
 let supabase;
+let originalOnAuthStateChange = null;
 
 try {
   // Create Supabase client
@@ -187,6 +195,33 @@ try {
       }
     }
   });
+  
+  // Store the original onAuthStateChange method
+  originalOnAuthStateChange = supabase.auth.onAuthStateChange.bind(supabase.auth);
+  
+  // Wrap the onAuthStateChange to also register callbacks with our fallback system
+  supabase.auth.onAuthStateChange = (callback) => {
+    console.log('🔄 Registering auth callback (will work with fallback too)');
+    authCallbacks.push(callback);
+    
+    // Initial callback with current state
+    setTimeout(() => callback(fallbackSession ? 'SIGNED_IN' : 'SIGNED_OUT', fallbackSession), 100);
+    
+    // If we still have the original client, register there too
+    if (originalOnAuthStateChange && !usingFallback) {
+      return originalOnAuthStateChange(callback);
+    }
+    
+    return { 
+      data: { 
+        subscription: { 
+          unsubscribe: () => {
+            authCallbacks = authCallbacks.filter(cb => cb !== callback);
+          } 
+        } 
+      } 
+    };
+  };
   
   console.log('✅ Supabase client created successfully');
 } catch (error) {
