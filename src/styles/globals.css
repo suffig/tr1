@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom FIFA Tracker styles */
+@layer base {
+  html, body {
+    @apply h-full min-h-full bg-bg-primary text-text-primary font-sans font-normal leading-relaxed;
+  }
+  
+  body {
+    @apply flex flex-col min-h-screen;
+  }
+}
+
+@layer components {
+  .modern-card {
+    @apply bg-bg-secondary border border-border-light rounded-lg p-6 shadow-sm transition-all duration-fast hover:shadow-md hover:-translate-y-0.5;
+  }
+  
+  .nav-item {
+    @apply flex flex-col items-center justify-center p-3 text-text-muted transition-all duration-fast hover:text-primary-green;
+  }
+  
+  .nav-item.active {
+    @apply text-primary-green relative;
+  }
+  
+  .nav-item.active::before {
+    @apply absolute -top-3 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary-green rounded-full;
+    content: '';
+  }
+  
+  .form-input {
+    @apply w-full px-4 py-3 border border-border-medium rounded-lg text-sm bg-bg-secondary text-text-primary transition-all duration-fast focus:outline-none focus:border-primary-green focus:ring-1 focus:ring-primary-green/20;
+  }
+  
+  .form-input::placeholder {
+    @apply text-text-muted;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-green hover:bg-primary-green-dark text-white font-medium py-3 px-6 rounded-lg transition-all duration-fast focus:outline-none focus:ring-2 focus:ring-primary-green/50;
+  }
+  
+  .btn-secondary {
+    @apply bg-bg-secondary hover:bg-bg-tertiary text-text-primary border border-border-medium font-medium py-3 px-6 rounded-lg transition-all duration-fast focus:outline-none focus:ring-2 focus:ring-border-medium;
+  }
+  
+  .spinner {
+    @apply animate-spin rounded-full h-8 w-8 border-b-2 border-primary-green;
+  }
+}
