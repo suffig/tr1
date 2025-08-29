@@ -7,7 +7,10 @@ import LoadingSpinner, { FullScreenLoader } from './components/LoadingSpinner';
 
 // Lazy load tab components for better performance
 const MatchesTab = lazy(() => import('./components/tabs/MatchesTab'));
-// For now, we'll create placeholder components for other tabs
+const KaderTab = lazy(() => import('./components/tabs/KaderTab'));
+const SpielerTab = lazy(() => import('./components/tabs/SpielerTab'));
+
+// For now, we'll create placeholder components for remaining tabs
 const PlaceholderTab = ({ tabName }) => (
   <div className="p-4 pb-20">
     <div className="text-center py-12">
@@ -50,7 +53,7 @@ function App() {
       case 'matches':
         return <MatchesTab />;
       case 'squad':
-        return <PlaceholderTab tabName="Kader" />;
+        return <KaderTab />;
       case 'bans':
         return <PlaceholderTab tabName="Sperren" />;
       case 'finanzen':
@@ -58,7 +61,7 @@ function App() {
       case 'stats':
         return <PlaceholderTab tabName="Stats" />;
       case 'spieler':
-        return <PlaceholderTab tabName="Spieler" />;
+        return <SpielerTab />;
       default:
         return <MatchesTab />;
     }
