@@ -94,6 +94,22 @@ export function renderKaderTab(containerId = "app") {
                 <p class="page-subtitle">Verwalten Sie Ihre FIFA-Teams und Spieler</p>
             </div>
             
+            <!-- Quick Player Analytics -->
+            <div class="bg-gray-800 rounded-xl p-4 mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-xl">⚡</span>
+                        Schnell-Analyse
+                    </h3>
+                    <button id="refresh-analytics" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                        <i class="fas fa-sync-alt"></i> Aktualisieren
+                    </button>
+                </div>
+                <div id="player-analytics-content">
+                    <div class="animate-pulse text-gray-400">Lade Spielerstatistiken...</div>
+                </div>
+            </div>
+            
             <div class="space-y-6">
                 ${accordionPanelHtml('AEK Athen', 'aek', 'from-blue-500 to-blue-600', 'AEK')}
                 ${accordionPanelHtml('Real Madrid', 'real', 'from-red-500 to-red-600', 'Real')}
@@ -107,6 +123,182 @@ export function renderKaderTab(containerId = "app") {
             renderKaderTab(containerId); // Neu rendern, damit Panel-Inhalt sichtbar wird
         });
     });
+
+    // Add analytics refresh button functionality
+    const refreshBtn = document.getElementById('refresh-analytics');
+    if (refreshBtn) {
+        refreshBtn.onclick = () => renderPlayerAnalytics();
+    }
+    
+    // Load analytics
+    setTimeout(() => renderPlayerAnalytics(), 500);
+}
+
+// New function to render player analytics
+async function renderPlayerAnalytics() {
+    try {
+        const analyticsContent = document.getElementById('player-analytics-content');
+        if (!analyticsContent) return;
+
+        // Load fresh data
+        const [
+            { data: matches = [] },
+            { data: players = [] },
+            { data: bans = [] }
+        ] = await Promise.all([
+            supabaseDb.select('matches', '*'),
+            supabaseDb.select('players', '*'),
+            supabaseDb.select('bans', '*')
+        ]);
+
+        const aekPlayers = players.filter(p => p.team === "AEK");
+        const realPlayers = players.filter(p => p.team === "Real");
+        
+        // Calculate team statistics
+        const aekStats = calculateTeamStats(aekPlayers, matches, bans, 'AEK');
+        const realStats = calculateTeamStats(realPlayers, matches, bans, 'Real');
+        
+        // Find top performers
+        const topScorer = players.reduce((top, player) => 
+            (player.goals || 0) > (top?.goals || 0) ? player : top, null);
+        
+        const mostDisciplined = players.reduce((best, player) => {
+            const playerBans = bans.filter(b => b.player_id === player.id).length;
+            const bestBans = bans.filter(b => b.player_id === best?.id).length || Infinity;
+            return playerBans < bestBans ? player : best;
+        }, null);
+
+        analyticsContent.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Team Comparison -->
+                <div class="bg-gray-700 rounded-lg p-3">
+                    <h4 class="font-bold text-white mb-2 text-sm">Team-Vergleich</h4>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-blue-300">AEK Spieler:</span>
+                            <span class="text-white font-bold">${aekStats.playerCount}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-red-300">Real Spieler:</span>
+                            <span class="text-white font-bold">${realStats.playerCount}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-blue-300">AEK Ø Tore:</span>
+                            <span class="text-white font-bold">${aekStats.avgGoals}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-red-300">Real Ø Tore:</span>
+                            <span class="text-white font-bold">${realStats.avgGoals}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Performer -->
+                <div class="bg-gray-700 rounded-lg p-3">
+                    <h4 class="font-bold text-white mb-2 text-sm">Top-Performer</h4>
+                    <div class="space-y-2 text-xs">
+                        <div>
+                            <span class="text-yellow-300">👑 Torschützenkönig:</span>
+                            <div class="text-white font-bold">${topScorer ? `${topScorer.name} (${topScorer.goals || 0})` : 'Keine Daten'}</div>
+                        </div>
+                        <div>
+                            <span class="text-green-300">😇 Diszipliniert:</span>
+                            <div class="text-white font-bold">${mostDisciplined ? mostDisciplined.name : 'Keine Daten'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-gray-700 rounded-lg p-3">
+                    <h4 class="font-bold text-white mb-2 text-sm">Schnell-Aktionen</h4>
+                    <div class="space-y-2">
+                        <button onclick="generatePlayerReport()" class="w-full bg-blue-600 text-white py-1 px-2 rounded text-xs hover:bg-blue-700">
+                            📊 Spieler-Report
+                        </button>
+                        <button onclick="balanceTeams()" class="w-full bg-green-600 text-white py-1 px-2 rounded text-xs hover:bg-green-700">
+                            ⚖️ Teams ausgleichen
+                        </button>
+                        <button onclick="suggestTransfers()" class="w-full bg-purple-600 text-white py-1 px-2 rounded text-xs hover:bg-purple-700">
+                            🔄 Transfer-Tipps
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add functionality to quick action buttons
+        window.generatePlayerReport = () => {
+            const report = players.map(p => `${p.name} (${p.team}): ${p.goals || 0} Tore, ${p.position || 'Unbekannt'}`).join('\n');
+            alert(`Spieler-Report:\n\n${report}`);
+        };
+
+        window.balanceTeams = () => {
+            const aekCount = aekPlayers.length;
+            const realCount = realPlayers.length;
+            const difference = Math.abs(aekCount - realCount);
+            
+            if (difference <= 1) {
+                alert('✅ Teams sind bereits ausgeglichen!');
+            } else {
+                const needMore = aekCount > realCount ? 'Real Madrid' : 'AEK Athen';
+                alert(`⚖️ Team-Balance:\n${needMore} benötigt ${difference} weitere Spieler für ausgeglichene Teams.`);
+            }
+        };
+
+        window.suggestTransfers = () => {
+            if (players.length < 4) {
+                alert('🔄 Nicht genügend Spieler für Transfer-Analyse');
+                return;
+            }
+            
+            const suggestions = [];
+            const aekGoals = aekPlayers.reduce((sum, p) => sum + (p.goals || 0), 0);
+            const realGoals = realPlayers.reduce((sum, p) => sum + (p.goals || 0), 0);
+            
+            if (aekGoals > realGoals * 1.5) {
+                suggestions.push('Real Madrid könnte einen stärkeren Stürmer gebrauchen');
+            } else if (realGoals > aekGoals * 1.5) {
+                suggestions.push('AEK Athen könnte einen stärkeren Stürmer gebrauchen');
+            }
+            
+            const aekBans = bans.filter(b => b.team === 'AEK').length;
+            const realBans = bans.filter(b => b.team === 'Real').length;
+            
+            if (aekBans > realBans * 2) {
+                suggestions.push('AEK Athen sollte diszipliniertere Spieler verpflichten');
+            } else if (realBans > aekBans * 2) {
+                suggestions.push('Real Madrid sollte diszipliniertere Spieler verpflichten');
+            }
+            
+            if (suggestions.length === 0) {
+                suggestions.push('Teams sind gut ausgeglichen! 👍');
+            }
+            
+            alert(`🔄 Transfer-Empfehlungen:\n\n${suggestions.join('\n')}`);
+        };
+
+    } catch (error) {
+        console.error('Error rendering player analytics:', error);
+        const analyticsContent = document.getElementById('player-analytics-content');
+        if (analyticsContent) {
+            analyticsContent.innerHTML = '<div class="text-red-400 text-sm">Fehler beim Laden der Analyse</div>';
+        }
+    }
+}
+
+// Helper function to calculate team statistics
+function calculateTeamStats(teamPlayers, matches, bans, teamName) {
+    const playerCount = teamPlayers.length;
+    const totalGoals = teamPlayers.reduce((sum, p) => sum + (p.goals || 0), 0);
+    const avgGoals = playerCount > 0 ? (totalGoals / playerCount).toFixed(1) : '0.0';
+    const teamBans = bans.filter(b => b.team === teamName).length;
+    
+    return {
+        playerCount,
+        totalGoals,
+        avgGoals,
+        teamBans
+    };
 }
 
 function accordionPanelHtml(team, key, gradientClass, teamKey) {

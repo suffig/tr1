@@ -4,6 +4,137 @@ import { dataManager } from './dataManager.js';
 import { loadingManager, ErrorHandler, Performance, DOM } from './utils.js';
 import { supabase } from './supabaseClient.js';
 
+// Match Analytics and Prediction System
+class MatchAnalytics {
+    constructor(matches, players, bans) {
+        this.matches = matches || [];
+        this.players = players || [];
+        this.bans = bans || [];
+    }
+
+    // Predict next match outcome based on historical data
+    predictNextMatch() {
+        if (this.matches.length < 3) {
+            return {
+                prediction: "Ungenügend Daten",
+                confidence: 0,
+                reasoning: "Mindestens 3 Spiele benötigt für Vorhersage"
+            };
+        }
+
+        const recentMatches = this.matches.slice(-5); // Last 5 matches
+        let aekFormScore = 0;
+        let realFormScore = 0;
+
+        recentMatches.forEach((match, index) => {
+            const weight = (index + 1) / recentMatches.length; // More recent = higher weight
+            const aekGoals = match.goalsa || 0;
+            const realGoals = match.goalsb || 0;
+
+            if (aekGoals > realGoals) {
+                aekFormScore += 3 * weight;
+            } else if (realGoals > aekGoals) {
+                realFormScore += 3 * weight;
+            } else {
+                aekFormScore += 1 * weight;
+                realFormScore += 1 * weight;
+            }
+
+            // Factor in goal difference
+            aekFormScore += (aekGoals - realGoals) * 0.1 * weight;
+            realFormScore += (realGoals - aekGoals) * 0.1 * weight;
+        });
+
+        // Calculate average goals
+        const aekAvgGoals = this.matches.reduce((sum, m) => sum + (m.goalsa || 0), 0) / this.matches.length;
+        const realAvgGoals = this.matches.reduce((sum, m) => sum + (m.goalsb || 0), 0) / this.matches.length;
+
+        // Factor in current bans (negative impact)
+        const activeBans = this.bans.filter(ban => ban.status === 'active' || !ban.status);
+        const aekBans = activeBans.filter(ban => ban.team === 'AEK').length;
+        const realBans = activeBans.filter(ban => ban.team === 'Real').length;
+
+        aekFormScore -= aekBans * 0.5;
+        realFormScore -= realBans * 0.5;
+
+        const totalScore = aekFormScore + realFormScore;
+        const aekWinProbability = Math.max(0.1, Math.min(0.9, aekFormScore / totalScore));
+        const realWinProbability = Math.max(0.1, Math.min(0.9, realFormScore / totalScore));
+        const drawProbability = 1 - aekWinProbability - realWinProbability;
+
+        let prediction, confidence;
+        if (aekWinProbability > realWinProbability && aekWinProbability > drawProbability) {
+            prediction = "AEK Sieg";
+            confidence = Math.round(aekWinProbability * 100);
+        } else if (realWinProbability > drawProbability) {
+            prediction = "Real Sieg";
+            confidence = Math.round(realWinProbability * 100);
+        } else {
+            prediction = "Unentschieden";
+            confidence = Math.round(drawProbability * 100);
+        }
+
+        const predictedScore = `${Math.round(aekAvgGoals)}:${Math.round(realAvgGoals)}`;
+
+        return {
+            prediction,
+            confidence,
+            predictedScore,
+            aekWinProbability: Math.round(aekWinProbability * 100),
+            realWinProbability: Math.round(realWinProbability * 100),
+            drawProbability: Math.round(drawProbability * 100),
+            reasoning: this.generateReasoning(aekFormScore, realFormScore, aekBans, realBans)
+        };
+    }
+
+    generateReasoning(aekForm, realForm, aekBans, realBans) {
+        const reasons = [];
+        
+        if (aekForm > realForm) {
+            reasons.push("AEK zeigt bessere Form in den letzten Spielen");
+        } else if (realForm > aekForm) {
+            reasons.push("Real zeigt bessere Form in den letzten Spielen");
+        }
+
+        if (aekBans > realBans) {
+            reasons.push(`AEK hat mehr gesperrte Spieler (${aekBans} vs ${realBans})`);
+        } else if (realBans > aekBans) {
+            reasons.push(`Real hat mehr gesperrte Spieler (${realBans} vs ${aekBans})`);
+        }
+
+        return reasons.join('. ') || "Ausgeglichene Teams";
+    }
+
+    // Generate match statistics summary
+    getMatchStats() {
+        const totalMatches = this.matches.length;
+        if (totalMatches === 0) return null;
+
+        const aekWins = this.matches.filter(m => (m.goalsa || 0) > (m.goalsb || 0)).length;
+        const realWins = this.matches.filter(m => (m.goalsb || 0) > (m.goalsa || 0)).length;
+        const draws = totalMatches - aekWins - realWins;
+
+        const totalGoals = this.matches.reduce((sum, m) => sum + (m.goalsa || 0) + (m.goalsb || 0), 0);
+        const avgGoalsPerMatch = (totalGoals / totalMatches).toFixed(2);
+
+        const lastMatch = this.matches[this.matches.length - 1];
+        const lastMatchResult = lastMatch ? 
+            `${lastMatch.goalsa || 0}:${lastMatch.goalsb || 0} (${lastMatch.date})` : 
+            'Keine Spiele';
+
+        return {
+            totalMatches,
+            aekWins,
+            realWins,
+            draws,
+            avgGoalsPerMatch,
+            lastMatchResult,
+            aekWinPercentage: Math.round((aekWins / totalMatches) * 100),
+            realWinPercentage: Math.round((realWins / totalMatches) * 100)
+        };
+    }
+}
+
 // Optimized data management with caching
 class MatchesDataManager {
     constructor() {
@@ -142,10 +273,39 @@ export async function renderMatchesTab(containerId = "app") {
     app.innerHTML = `
         <div class="flex flex-col sm:flex-row sm:justify-between mb-4 gap-2">
             <h2 class="text-lg font-semibold">Matches</h2>
-            <button id="add-match-btn" class="bg-green-600 text-white w-full sm:w-auto px-4 py-2 rounded-lg text-base flex items-center justify-center gap-2 active:scale-95 transition">
-                <i class="fas fa-plus"></i> <span>Match hinzufügen</span>
-            </button>
+            <div class="flex gap-2">
+                <button id="show-analytics-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 active:scale-95 transition">
+                    <i class="fas fa-chart-line"></i> Analytics
+                </button>
+                <button id="add-match-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 active:scale-95 transition">
+                    <i class="fas fa-plus"></i> Match hinzufügen
+                </button>
+            </div>
         </div>
+        
+        <!-- Analytics Section (initially hidden) -->
+        <div id="analytics-section" class="mb-6 space-y-4" style="display: none;">
+            <div class="bg-gray-800 rounded-xl p-4">
+                <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+                    <span class="text-xl">🔮</span>
+                    Nächstes Match - Vorhersage
+                </h3>
+                <div id="prediction-content">
+                    <div class="animate-pulse">Analysiere Daten...</div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-xl p-4">
+                <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+                    <span class="text-xl">📈</span>
+                    Match-Statistiken
+                </h3>
+                <div id="match-stats-content">
+                    <div class="animate-pulse">Lade Statistiken...</div>
+                </div>
+            </div>
+        </div>
+        
         <div id="matches-list" class="space-y-3">
             <div class="flex items-center justify-center py-8">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -154,10 +314,26 @@ export async function renderMatchesTab(containerId = "app") {
         </div>
     `;
 
-    // Attach event listener safely
+    // Attach event listeners safely
     const addMatchBtn = DOM.getElementById("add-match-btn");
     if (addMatchBtn) {
         addMatchBtn.onclick = () => openMatchForm();
+    }
+
+    const analyticsBtn = DOM.getElementById("show-analytics-btn");
+    const analyticsSection = DOM.getElementById("analytics-section");
+    if (analyticsBtn && analyticsSection) {
+        analyticsBtn.onclick = () => {
+            const isVisible = analyticsSection.style.display !== 'none';
+            analyticsSection.style.display = isVisible ? 'none' : 'block';
+            analyticsBtn.innerHTML = isVisible ? 
+                '<i class="fas fa-chart-line"></i> Analytics' : 
+                '<i class="fas fa-chart-line"></i> Analytics schließen';
+            
+            if (!isVisible) {
+                renderAnalytics();
+            }
+        };
     }
 
     // Subscribe to real-time changes
@@ -165,6 +341,102 @@ export async function renderMatchesTab(containerId = "app") {
     
     // Load data
     await matchesData.loadAllData(renderMatchesList);
+}
+
+// New function to render analytics
+async function renderAnalytics() {
+    try {
+        // Load fresh data for analytics
+        const data = await dataManager.loadAllAppData();
+        const analytics = new MatchAnalytics(data.matches, data.players, data.bans);
+        
+        const prediction = analytics.predictNextMatch();
+        const matchStats = analytics.getMatchStats();
+        
+        // Render prediction
+        const predictionContent = DOM.getElementById('prediction-content');
+        if (predictionContent) {
+            predictionContent.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-400 mb-2">${prediction.prediction}</div>
+                            <div class="text-sm text-gray-300">Wahrscheinlichkeit: ${prediction.confidence}%</div>
+                            <div class="text-sm text-gray-300 mt-1">Vorhersage: ${prediction.predictedScore || 'N/A'}</div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <div class="text-sm space-y-2">
+                            <div class="flex justify-between">
+                                <span>AEK Sieg:</span>
+                                <span class="font-bold text-blue-400">${prediction.aekWinProbability}%</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Unentschieden:</span>
+                                <span class="font-bold text-yellow-400">${prediction.drawProbability}%</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Real Sieg:</span>
+                                <span class="font-bold text-red-400">${prediction.realWinProbability}%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 text-sm text-gray-300 bg-gray-700 rounded p-3">
+                    <strong>Analyse:</strong> ${prediction.reasoning}
+                </div>
+            `;
+        }
+        
+        // Render match statistics
+        const statsContent = DOM.getElementById('match-stats-content');
+        if (statsContent && matchStats) {
+            statsContent.innerHTML = `
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-gray-700 rounded-lg p-3 text-center">
+                        <div class="text-2xl font-bold text-blue-400">${matchStats.totalMatches}</div>
+                        <div class="text-xs text-gray-300">Gesamt Spiele</div>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-3 text-center">
+                        <div class="text-2xl font-bold text-green-400">${matchStats.avgGoalsPerMatch}</div>
+                        <div class="text-xs text-gray-300">Ø Tore/Spiel</div>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-3 text-center">
+                        <div class="text-lg font-bold text-blue-400">${matchStats.aekWinPercentage}%</div>
+                        <div class="text-xs text-gray-300">AEK Siege</div>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-3 text-center">
+                        <div class="text-lg font-bold text-red-400">${matchStats.realWinPercentage}%</div>
+                        <div class="text-xs text-gray-300">Real Siege</div>
+                    </div>
+                </div>
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                    <div class="bg-blue-100 text-blue-900 rounded p-3 text-center">
+                        <div class="font-bold">${matchStats.aekWins}</div>
+                        <div>AEK Siege</div>
+                    </div>
+                    <div class="bg-gray-100 text-gray-900 rounded p-3 text-center">
+                        <div class="font-bold">${matchStats.draws}</div>
+                        <div>Unentschieden</div>
+                    </div>
+                    <div class="bg-red-100 text-red-900 rounded p-3 text-center">
+                        <div class="font-bold">${matchStats.realWins}</div>
+                        <div>Real Siege</div>
+                    </div>
+                </div>
+                <div class="mt-3 text-sm text-gray-300 bg-gray-700 rounded p-3">
+                    <strong>Letztes Spiel:</strong> ${matchStats.lastMatchResult}
+                </div>
+            `;
+        }
+        
+    } catch (error) {
+        console.error('Error rendering analytics:', error);
+        const predictionContent = DOM.getElementById('prediction-content');
+        if (predictionContent) {
+            predictionContent.innerHTML = '<div class="text-red-400">Fehler beim Laden der Analytics</div>';
+        }
+    }
 }
 
 let matchViewDate = new Date().toISOString().slice(0, 10); // Standard: heute
@@ -1298,6 +1570,23 @@ async function submitMatchForm(event, id) {
 
     // Nach Insert: ALLE Daten laden (damit matches aktuell ist)
     await matchesData.loadAllData(() => {});
+
+    // Check for new achievements after match is saved
+    try {
+        const { achievementSystem } = await import('./achievements.js');
+        const [
+            { data: allMatches = [] },
+            { data: allPlayers = [] },
+            { data: allBans = [] }
+        ] = await Promise.all([
+            supabase.from('matches').select('*'),
+            supabase.from('players').select('*'),
+            supabase.from('bans').select('*')
+        ]);
+        await achievementSystem.checkAchievements(allMatches, allPlayers, allBans);
+    } catch (error) {
+        console.log('Achievement check skipped:', error.message);
+    }
 
     // Hole App-Matchnummer (laufende Nummer)
     const appMatchNr = getAppMatchNumber(matchId);

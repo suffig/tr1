@@ -13,8 +13,69 @@ export default function BansTab() {
   
   const { data: bans, loading: bansLoading, refetch: refetchBans } = useSupabaseQuery('bans', '*');
   const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
+  const { insert, update, remove } = useSupabaseMutation('bans');
   
   const loading = bansLoading || playersLoading;
+
+  // Minimal CRUD functions without changing the design
+  const handleAddBan = async () => {
+    if (!players || players.length === 0) {
+      alert('Keine Spieler gefunden. Bitte fügen Sie erst Spieler hinzu.');
+      return;
+    }
+
+    const playerName = prompt('Spielername:');
+    if (!playerName) return;
+    
+    const player = players.find(p => p.name.toLowerCase().includes(playerName.toLowerCase()));
+    if (!player) {
+      alert('Spieler nicht gefunden. Verfügbare Spieler: ' + players.map(p => p.name).join(', '));
+      return;
+    }
+    
+    const banType = prompt('Grund (Gelb-Rote Karte, Rote Karte, Verletzung):', 'Gelb-Rote Karte');
+    if (!banType) return;
+    
+    const selectedBanType = BAN_TYPES.find(type => type.value === banType) || BAN_TYPES[0];
+    
+    try {
+      await insert({
+        spieler_id: player.id,
+        art: selectedBanType.value,
+        anzahl_spiele: selectedBanType.duration,
+        beschreibung: '',
+        datum: new Date().toISOString().split('T')[0]
+      });
+      refetchBans();
+    } catch (error) {
+      alert('Fehler beim Hinzufügen der Sperre: ' + error.message);
+    }
+  };
+
+  const handleReduceBan = async (ban) => {
+    if (ban.anzahl_spiele <= 0) return;
+    
+    try {
+      await update({
+        anzahl_spiele: ban.anzahl_spiele - 1
+      }, ban.id);
+      refetchBans();
+    } catch (error) {
+      alert('Fehler beim Reduzieren der Sperre: ' + error.message);
+    }
+  };
+
+  const handleDeleteBan = async (ban) => {
+    const playerName = getPlayerName(ban.spieler_id);
+    if (!confirm(`Sind Sie sicher, dass Sie die Sperre von ${playerName} löschen möchten?`)) return;
+    
+    try {
+      await remove(ban.id);
+      refetchBans();
+    } catch (error) {
+      alert('Fehler beim Löschen der Sperre: ' + error.message);
+    }
+  };
 
   const getPlayerName = (playerId) => {
     if (!players) return 'Unbekannt';
@@ -182,6 +243,7 @@ export default function BansTab() {
                 <div className="flex items-center space-x-2">
                   {ban.anzahl_spiele > 0 && (
                     <button
+                      onClick={() => handleReduceBan(ban)}
                       className="text-text-muted hover:text-primary-green transition-colors p-1"
                       title="Sperre reduzieren"
                     >
@@ -189,6 +251,7 @@ export default function BansTab() {
                     </button>
                   )}
                   <button
+                    onClick={() => handleDeleteBan(ban)}
                     className="text-text-muted hover:text-accent-red transition-colors p-1"
                     title="Sperre löschen"
                   >
@@ -216,7 +279,10 @@ export default function BansTab() {
 
       {/* Add Ban Button */}
       <div className="mt-6">
-        <button className="w-full btn-primary">
+        <button 
+          onClick={handleAddBan}
+          className="w-full btn-primary"
+        >
           <i className="fas fa-plus mr-2"></i>
           Neue Sperre hinzufügen
         </button>

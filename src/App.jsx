@@ -12,6 +12,7 @@ const BansTab = lazy(() => import('./components/tabs/BansTab'));
 const FinanzenTab = lazy(() => import('./components/tabs/FinanzenTab'));
 const StatsTab = lazy(() => import('./components/tabs/StatsTab'));
 const SpielerTab = lazy(() => import('./components/tabs/SpielerTab'));
+const AchievementsTab = lazy(() => import('./components/tabs/AchievementsTab'));
 
 function App() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -67,6 +68,8 @@ function App() {
         return <StatsTab />;
       case 'spieler':
         return <SpielerTab />;
+      case 'achievements':
+        return <AchievementsTab />;
       default:
         return <MatchesTab />;
     }
