@@ -1,90 +1,18 @@
 import { useState } from 'react';
 import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
-import toast from 'react-hot-toast';
+import { POSITIONS, TEAMS } from '../../utils/errorHandling';
 
 export default function KaderTab() {
   const [openPanel, setOpenPanel] = useState('aek');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingPlayer, setEditingPlayer] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    team: 'AEK',
-    position: 'ST',
-    goals: 0
-  });
   
   const { data: players, loading, error, refetch } = useSupabaseQuery('players', '*');
   const { data: finances } = useSupabaseQuery('finances', '*');
-  const { insert, update, remove, loading: mutationLoading } = useSupabaseMutation('players');
+  const { insert, update, remove } = useSupabaseMutation('players');
   
   const POSITION_ORDER = {
     "TH": 0, "IV": 1, "LV": 2, "RV": 3, "ZDM": 4, "ZM": 5,
     "ZOM": 6, "LM": 7, "RM": 8, "LF": 9, "RF": 10, "ST": 11
-  };
-
-  const POSITIONS = ["TH", "IV", "LV", "RV", "ZDM", "ZM", "ZOM", "LM", "RM", "LF", "RF", "ST"];
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      team: 'AEK',
-      position: 'ST',
-      goals: 0
-    });
-    setEditingPlayer(null);
-    setShowAddForm(false);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      if (editingPlayer) {
-        await update(formData, editingPlayer.id);
-        toast.success('Spieler erfolgreich aktualisiert!');
-      } else {
-        await insert(formData);
-        toast.success('Spieler erfolgreich hinzugefügt!');
-      }
-      
-      resetForm();
-      refetch();
-    } catch (error) {
-      console.error('Error saving player:', error);
-      toast.error(`Fehler beim ${editingPlayer ? 'Aktualisieren' : 'Hinzufügen'} des Spielers`);
-    }
-  };
-
-  const handleEdit = (player) => {
-    setFormData({
-      name: player.name,
-      team: player.team,
-      position: player.position,
-      goals: player.goals || 0
-    });
-    setEditingPlayer(player);
-    setShowAddForm(true);
-  };
-
-  const handleDelete = async (playerId) => {
-    if (!confirm('Sind Sie sicher, dass Sie diesen Spieler löschen möchten?')) {
-      return;
-    }
-
-    try {
-      await remove(playerId);
-      toast.success('Spieler erfolgreich gelöscht!');
-      refetch();
-    } catch (error) {
-      console.error('Error deleting player:', error);
-      toast.error('Fehler beim Löschen des Spielers');
-    }
-  };
-
-  const handleAddPlayerToTeam = (teamName) => {
-    setFormData({ ...formData, team: teamName });
-    setShowAddForm(true);
   };
 
   const getPositionBadgeClass = (pos) => {
@@ -128,6 +56,50 @@ export default function KaderTab() {
     if (teamName === "Real") return "🟣";
     if (teamName === "Ehemalige") return "⚪";
     return "⚽";
+  };
+
+  // Minimal CRUD functions without changing the design
+  const handleEditPlayer = async (player) => {
+    const newName = prompt('Spielername:', player.name);
+    if (!newName || newName === player.name) return;
+    
+    try {
+      await update({ name: newName }, player.id);
+      refetch();
+    } catch (error) {
+      alert('Fehler beim Aktualisieren des Spielers: ' + error.message);
+    }
+  };
+
+  const handleDeletePlayer = async (player) => {
+    if (!confirm(`Sind Sie sicher, dass Sie ${player.name} löschen möchten?`)) return;
+    
+    try {
+      await remove(player.id);
+      refetch();
+    } catch (error) {
+      alert('Fehler beim Löschen des Spielers: ' + error.message);
+    }
+  };
+
+  const handleAddPlayer = async (teamName) => {
+    const name = prompt('Spielername:');
+    if (!name) return;
+    
+    const position = prompt('Position (ST, TH, IV, etc.):', 'ST');
+    if (!position) return;
+    
+    try {
+      await insert({
+        name: name.trim(),
+        team: teamName,
+        position: position.toUpperCase(),
+        goals: 0
+      });
+      refetch();
+    } catch (error) {
+      alert('Fehler beim Hinzufügen des Spielers: ' + error.message);
+    }
   };
 
   if (loading) {
@@ -181,111 +153,14 @@ export default function KaderTab() {
 
   return (
     <div className="p-4 pb-20">
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-semibold text-text-primary mb-2">
-            Kader-Übersicht
-          </h2>
-          <p className="text-text-muted">
-            {players?.length || 0} Spieler insgesamt
-          </p>
-        </div>
-        <button 
-          onClick={() => setShowAddForm(true)}
-          className="btn-primary flex items-center"
-          disabled={mutationLoading}
-        >
-          <i className="fas fa-plus mr-2"></i>
-          Neuer Spieler
-        </button>
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-text-primary mb-2">
+          Kader-Übersicht
+        </h2>
+        <p className="text-text-muted">
+          {players?.length || 0} Spieler insgesamt
+        </p>
       </div>
-
-      {/* Add/Edit Form */}
-      {showAddForm && (
-        <div className="modern-card mb-6">
-          <h3 className="text-lg font-semibold text-text-primary mb-4">
-            {editingPlayer ? 'Spieler bearbeiten' : 'Neuen Spieler hinzufügen'}
-          </h3>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Name
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="form-input"
-                placeholder="Spielername"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Team
-                </label>
-                <select
-                  value={formData.team}
-                  onChange={(e) => setFormData({...formData, team: e.target.value})}
-                  className="form-input"
-                >
-                  <option value="AEK">AEK</option>
-                  <option value="Real">Real</option>
-                  <option value="Ehemalige">Ehemalige</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Position
-                </label>
-                <select
-                  value={formData.position}
-                  onChange={(e) => setFormData({...formData, position: e.target.value})}
-                  className="form-input"
-                >
-                  {POSITIONS.map(pos => (
-                    <option key={pos} value={pos}>{pos}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Tore
-                </label>
-                <input
-                  type="number"
-                  value={formData.goals}
-                  onChange={(e) => setFormData({...formData, goals: parseInt(e.target.value) || 0})}
-                  className="form-input"
-                  min="0"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={mutationLoading}
-                className="btn-primary disabled:opacity-50"
-              >
-                {mutationLoading ? 'Speichert...' : (editingPlayer ? 'Aktualisieren' : 'Hinzufügen')}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="btn-secondary"
-              >
-                Abbrechen
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* Team Accordions */}
       <div className="space-y-4">
@@ -351,18 +226,16 @@ export default function KaderTab() {
                           </div>
                           <div className="flex items-center space-x-2">
                             <button
-                              onClick={() => handleEdit(player)}
+                              onClick={() => handleEditPlayer(player)}
                               className="text-text-muted hover:text-primary-green transition-colors p-1"
                               title="Bearbeiten"
-                              disabled={mutationLoading}
                             >
                               <i className="fas fa-edit text-sm"></i>
                             </button>
                             <button
-                              onClick={() => handleDelete(player.id)}
+                              onClick={() => handleDeletePlayer(player)}
                               className="text-text-muted hover:text-accent-red transition-colors p-1"
                               title="Löschen"
-                              disabled={mutationLoading}
                             >
                               <i className="fas fa-trash text-sm"></i>
                             </button>
@@ -383,9 +256,8 @@ export default function KaderTab() {
                 {/* Add Player Button */}
                 <div className="mt-4 pt-4 border-t border-border-light">
                   <button 
-                    onClick={() => handleAddPlayerToTeam(team.name)}
+                    onClick={() => handleAddPlayer(team.name)}
                     className="w-full btn-secondary text-sm py-2"
-                    disabled={mutationLoading}
                   >
                     <i className="fas fa-plus mr-2"></i>
                     Spieler zu {team.displayName} hinzufügen

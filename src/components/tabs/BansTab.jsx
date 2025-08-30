@@ -1,274 +1,292 @@
 import { useState } from 'react';
 import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
-import toast from 'react-hot-toast';
+
+const BAN_TYPES = [
+  { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1 },
+  { value: "Rote Karte", label: "Rote Karte", duration: 2 },
+  { value: "Verletzung", label: "Verletzung", duration: 3 }
+];
 
 export default function BansTab() {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingBan, setEditingBan] = useState(null);
-  const [formData, setFormData] = useState({
-    player_name: '',
-    team: 'AEK',
-    matches_remaining: 1,
-    reason: ''
-  });
+  const [selectedType, setSelectedType] = useState('all');
+  
+  const { data: bans, loading: bansLoading, refetch: refetchBans } = useSupabaseQuery('bans', '*');
+  const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
+  const { insert, update, remove } = useSupabaseMutation('bans');
+  
+  const loading = bansLoading || playersLoading;
 
-  const { data: bans, loading, error, refetch } = useSupabaseQuery(
-    'bans',
-    '*',
-    { order: { column: 'created_at', ascending: false } }
-  );
-
-  const { insert, update, remove, loading: mutationLoading } = useSupabaseMutation('bans');
-
-  const resetForm = () => {
-    setFormData({
-      player_name: '',
-      team: 'AEK',
-      matches_remaining: 1,
-      reason: ''
-    });
-    setEditingBan(null);
-    setShowAddForm(false);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      if (editingBan) {
-        await update(formData, editingBan.id);
-        toast.success('Sperre erfolgreich aktualisiert!');
-      } else {
-        await insert(formData);
-        toast.success('Sperre erfolgreich hinzugefügt!');
-      }
-      
-      resetForm();
-      refetch();
-    } catch (error) {
-      console.error('Error saving ban:', error);
-      toast.error(`Fehler beim ${editingBan ? 'Aktualisieren' : 'Hinzufügen'} der Sperre`);
-    }
-  };
-
-  const handleEdit = (ban) => {
-    setFormData({
-      player_name: ban.player_name,
-      team: ban.team,
-      matches_remaining: ban.matches_remaining,
-      reason: ban.reason || ''
-    });
-    setEditingBan(ban);
-    setShowAddForm(true);
-  };
-
-  const handleDelete = async (banId) => {
-    if (!confirm('Sind Sie sicher, dass Sie diese Sperre löschen möchten?')) {
+  // Minimal CRUD functions without changing the design
+  const handleAddBan = async () => {
+    if (!players || players.length === 0) {
+      alert('Keine Spieler gefunden. Bitte fügen Sie erst Spieler hinzu.');
       return;
     }
 
+    const playerName = prompt('Spielername:');
+    if (!playerName) return;
+    
+    const player = players.find(p => p.name.toLowerCase().includes(playerName.toLowerCase()));
+    if (!player) {
+      alert('Spieler nicht gefunden. Verfügbare Spieler: ' + players.map(p => p.name).join(', '));
+      return;
+    }
+    
+    const banType = prompt('Grund (Gelb-Rote Karte, Rote Karte, Verletzung):', 'Gelb-Rote Karte');
+    if (!banType) return;
+    
+    const selectedBanType = BAN_TYPES.find(type => type.value === banType) || BAN_TYPES[0];
+    
     try {
-      await remove(banId);
-      toast.success('Sperre erfolgreich gelöscht!');
-      refetch();
+      await insert({
+        spieler_id: player.id,
+        art: selectedBanType.value,
+        anzahl_spiele: selectedBanType.duration,
+        beschreibung: '',
+        datum: new Date().toISOString().split('T')[0]
+      });
+      refetchBans();
     } catch (error) {
-      console.error('Error deleting ban:', error);
-      toast.error('Fehler beim Löschen der Sperre');
+      alert('Fehler beim Hinzufügen der Sperre: ' + error.message);
     }
   };
+
+  const handleReduceBan = async (ban) => {
+    if (ban.anzahl_spiele <= 0) return;
+    
+    try {
+      await update({
+        anzahl_spiele: ban.anzahl_spiele - 1
+      }, ban.id);
+      refetchBans();
+    } catch (error) {
+      alert('Fehler beim Reduzieren der Sperre: ' + error.message);
+    }
+  };
+
+  const handleDeleteBan = async (ban) => {
+    const playerName = getPlayerName(ban.spieler_id);
+    if (!confirm(`Sind Sie sicher, dass Sie die Sperre von ${playerName} löschen möchten?`)) return;
+    
+    try {
+      await remove(ban.id);
+      refetchBans();
+    } catch (error) {
+      alert('Fehler beim Löschen der Sperre: ' + error.message);
+    }
+  };
+
+  const getPlayerName = (playerId) => {
+    if (!players) return 'Unbekannt';
+    const player = players.find(p => p.id === playerId);
+    return player?.name || 'Unbekannt';
+  };
+
+  const getPlayerTeam = (playerId) => {
+    if (!players) return 'Unbekannt';
+    const player = players.find(p => p.id === playerId);
+    return player?.team || 'Unbekannt';
+  };
+
+  const getBanTypeColor = (type) => {
+    switch (type) {
+      case 'Gelb-Rote Karte':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Rote Karte':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'Verletzung':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getBanIcon = (type) => {
+    switch (type) {
+      case 'Gelb-Rote Karte':
+        return '🟨🟥';
+      case 'Rote Karte':
+        return '🟥';
+      case 'Verletzung':
+        return '🏥';
+      default:
+        return '⚠️';
+    }
+  };
+
+  const filteredBans = bans?.filter(ban => {
+    if (selectedType === 'all') return true;
+    if (selectedType === 'active') return ban.anzahl_spiele > 0;
+    if (selectedType === 'completed') return ban.anzahl_spiele === 0;
+    return ban.art === selectedType;
+  }) || [];
+
+  const activeBans = bans?.filter(ban => ban.anzahl_spiele > 0) || [];
+  const completedBans = bans?.filter(ban => ban.anzahl_spiele === 0) || [];
 
   if (loading) {
     return <LoadingSpinner message="Lade Sperren..." />;
   }
 
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <div className="text-accent-red mb-4">
-          <i className="fas fa-exclamation-triangle text-2xl"></i>
-        </div>
-        <p className="text-text-muted mb-4">Fehler beim Laden der Sperren</p>
-        <button onClick={refetch} className="btn-primary">
-          Erneut versuchen
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="p-4 pb-20">
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-semibold text-text-primary mb-2">
-            Sperren
-          </h2>
-          <p className="text-text-muted">
-            {bans?.length || 0} aktive Sperren
-          </p>
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-text-primary mb-4">
+          Sperren-Übersicht
+        </h2>
+        
+        {/* Filter Buttons */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {[
+            { key: 'all', label: 'Alle', count: bans?.length || 0 },
+            { key: 'active', label: 'Aktiv', count: activeBans.length },
+            { key: 'completed', label: 'Beendet', count: completedBans.length },
+            ...BAN_TYPES.map(type => ({
+              key: type.value,
+              label: type.label,
+              count: bans?.filter(ban => ban.art === type.value).length || 0
+            }))
+          ].map((filter) => (
+            <button
+              key={filter.key}
+              onClick={() => setSelectedType(filter.key)}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                selectedType === filter.key
+                  ? 'bg-primary-green text-white'
+                  : 'bg-bg-secondary text-text-muted hover:bg-bg-tertiary border border-border-light'
+              }`}
+            >
+              {filter.label} ({filter.count})
+            </button>
+          ))}
         </div>
-        <button 
-          onClick={() => setShowAddForm(true)}
-          className="btn-primary flex items-center"
-          disabled={mutationLoading}
-        >
-          <i className="fas fa-plus mr-2"></i>
-          Neue Sperre
-        </button>
       </div>
 
-      {/* Add/Edit Form */}
-      {showAddForm && (
-        <div className="modern-card mb-6">
-          <h3 className="text-lg font-semibold text-text-primary mb-4">
-            {editingBan ? 'Sperre bearbeiten' : 'Neue Sperre hinzufügen'}
-          </h3>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Spielername
-              </label>
-              <input
-                type="text"
-                value={formData.player_name}
-                onChange={(e) => setFormData({...formData, player_name: e.target.value})}
-                className="form-input"
-                placeholder="Name des gesperrten Spielers"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Team
-                </label>
-                <select
-                  value={formData.team}
-                  onChange={(e) => setFormData({...formData, team: e.target.value})}
-                  className="form-input"
-                >
-                  <option value="AEK">AEK</option>
-                  <option value="Real">Real</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Verbleibende Spiele
-                </label>
-                <input
-                  type="number"
-                  value={formData.matches_remaining}
-                  onChange={(e) => setFormData({...formData, matches_remaining: parseInt(e.target.value) || 1})}
-                  className="form-input"
-                  min="1"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Grund der Sperre
-              </label>
-              <input
-                type="text"
-                value={formData.reason}
-                onChange={(e) => setFormData({...formData, reason: e.target.value})}
-                className="form-input"
-                placeholder="z.B. Gelb-Rot, Unsportlichkeit, etc."
-                required
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={mutationLoading}
-                className="btn-primary disabled:opacity-50"
-              >
-                {mutationLoading ? 'Speichert...' : (editingBan ? 'Aktualisieren' : 'Hinzufügen')}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="btn-secondary"
-              >
-                Abbrechen
-              </button>
-            </div>
-          </form>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="modern-card text-center">
+          <div className="text-2xl font-bold text-accent-red">
+            {activeBans.length}
+          </div>
+          <div className="text-sm text-text-muted">Aktive Sperren</div>
         </div>
-      )}
+        <div className="modern-card text-center">
+          <div className="text-2xl font-bold text-primary-green">
+            {completedBans.length}
+          </div>
+          <div className="text-sm text-text-muted">Beendete Sperren</div>
+        </div>
+        <div className="modern-card text-center">
+          <div className="text-2xl font-bold text-accent-orange">
+            {bans?.length || 0}
+          </div>
+          <div className="text-sm text-text-muted">Gesamt Sperren</div>
+        </div>
+        <div className="modern-card text-center">
+          <div className="text-2xl font-bold text-accent-blue">
+            {BAN_TYPES.length}
+          </div>
+          <div className="text-sm text-text-muted">Sperr-Arten</div>
+        </div>
+      </div>
 
-      {bans && bans.length > 0 ? (
+      {/* Bans List */}
+      {filteredBans.length > 0 ? (
         <div className="space-y-4">
-          {bans.map((ban) => (
+          {filteredBans.map((ban) => (
             <div key={ban.id} className="modern-card">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-text-primary">
-                    {ban.player_name}
-                  </h3>
-                  <p className="text-sm text-text-muted">
-                    {ban.team} • {ban.reason}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className={`text-lg font-bold ${
-                    ban.matches_remaining > 2 ? 'text-accent-red' : 
-                    ban.matches_remaining > 1 ? 'text-accent-orange' : 'text-primary-green'
-                  }`}>
-                    {ban.matches_remaining} Spiel{ban.matches_remaining !== 1 ? 'e' : ''}
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-4">
+                  <div className="text-2xl">
+                    {getBanIcon(ban.art)}
                   </div>
-                  <p className="text-xs text-text-muted">
-                    verbleibend
-                  </p>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <h3 className="font-semibold text-text-primary">
+                        {getPlayerName(ban.spieler_id)}
+                      </h3>
+                      <span className="text-sm text-text-muted">
+                        ({getPlayerTeam(ban.spieler_id)})
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium border ${getBanTypeColor(ban.art)}`}>
+                        {ban.art}
+                      </span>
+                      {ban.anzahl_spiele > 0 ? (
+                        <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                          {ban.anzahl_spiele} Spiel{ban.anzahl_spiele !== 1 ? 'e' : ''} verbleibend
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                          Beendet
+                        </span>
+                      )}
+                    </div>
+
+                    {ban.beschreibung && (
+                      <p className="text-sm text-text-muted">
+                        {ban.beschreibung}
+                      </p>
+                    )}
+                    
+                    {ban.datum && (
+                      <p className="text-xs text-text-muted mt-2">
+                        Erstellt: {new Date(ban.datum).toLocaleDateString('de-DE')}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              
-              <div className="flex gap-2 mt-3 pt-3 border-t">
-                <button
-                  onClick={() => handleEdit(ban)}
-                  className="text-primary-blue hover:text-primary-blue-dark text-sm font-medium"
-                  disabled={mutationLoading}
-                >
-                  <i className="fas fa-edit mr-1"></i>
-                  Bearbeiten
-                </button>
-                <button
-                  onClick={() => handleDelete(ban.id)}
-                  className="text-accent-red hover:text-red-700 text-sm font-medium"
-                  disabled={mutationLoading}
-                >
-                  <i className="fas fa-trash mr-1"></i>
-                  Löschen
-                </button>
+                
+                <div className="flex items-center space-x-2">
+                  {ban.anzahl_spiele > 0 && (
+                    <button
+                      onClick={() => handleReduceBan(ban)}
+                      className="text-text-muted hover:text-primary-green transition-colors p-1"
+                      title="Sperre reduzieren"
+                    >
+                      <i className="fas fa-minus text-sm"></i>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDeleteBan(ban)}
+                    className="text-text-muted hover:text-accent-red transition-colors p-1"
+                    title="Sperre löschen"
+                  >
+                    <i className="fas fa-trash text-sm"></i>
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       ) : (
         <div className="text-center py-12">
-          <div className="text-text-muted mb-4">
-            <i className="fas fa-ban text-4xl opacity-50"></i>
-          </div>
+          <div className="text-4xl mb-4">🚫</div>
           <h3 className="text-lg font-medium text-text-primary mb-2">
-            Keine Sperren gefunden
+            {selectedType === 'all' ? 'Keine Sperren gefunden' : `Keine ${selectedType === 'active' ? 'aktiven' : selectedType === 'completed' ? 'beendeten' : selectedType} Sperren`}
           </h3>
-          <p className="text-text-muted mb-4">
-            Aktuell sind keine Spieler gesperrt.
+          <p className="text-text-muted">
+            {selectedType === 'all' 
+              ? 'Es wurden noch keine Sperren erstellt.'
+              : 'Versuche einen anderen Filter oder erstelle neue Sperren.'
+            }
           </p>
-          <button 
-            onClick={() => setShowAddForm(true)}
-            className="btn-primary"
-          >
-            Erste Sperre hinzufügen
-          </button>
         </div>
       )}
+
+      {/* Add Ban Button */}
+      <div className="mt-6">
+        <button 
+          onClick={handleAddBan}
+          className="w-full btn-primary"
+        >
+          <i className="fas fa-plus mr-2"></i>
+          Neue Sperre hinzufügen
+        </button>
+      </div>
     </div>
   );
 }
