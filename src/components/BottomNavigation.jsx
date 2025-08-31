@@ -2,11 +2,11 @@ import { useState } from 'react';
 
 const tabs = [
   { id: 'matches', icon: 'fas fa-futbol', label: 'Spiele' },
-  { id: 'squad', icon: 'fas fa-users', label: 'Kader' },
-  { id: 'bans', icon: 'fas fa-ban', label: 'Sperren' },
+  { id: 'bans', icon: 'fas fa-ban', label: 'Bans' },
   { id: 'finanzen', icon: 'fas fa-euro-sign', label: 'Finanzen' },
+  { id: 'squad', icon: 'fas fa-users', label: 'Kader' },
   { id: 'stats', icon: 'fas fa-chart-bar', label: 'Stats' },
-  { id: 'spieler', icon: 'fas fa-star', label: 'Spieler' },
+  { id: 'admin', icon: 'fas fa-cog', label: 'Verwaltung' },
 ];
 
 export default function BottomNavigation({ activeTab, onTabChange, onLogout }) {

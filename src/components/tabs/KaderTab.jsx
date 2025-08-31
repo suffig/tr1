@@ -8,6 +8,7 @@ export default function KaderTab() {
   
   const { data: players, loading, error, refetch } = useSupabaseQuery('players', '*');
   const { data: finances } = useSupabaseQuery('finances', '*');
+  const { insert, update, remove } = useSupabaseMutation('players');
   
   const POSITION_ORDER = {
     "TH": 0, "IV": 1, "LV": 2, "RV": 3, "ZDM": 4, "ZM": 5,
@@ -55,6 +56,50 @@ export default function KaderTab() {
     if (teamName === "Real") return "🟣";
     if (teamName === "Ehemalige") return "⚪";
     return "⚽";
+  };
+
+  // Minimal CRUD functions without changing the design
+  const handleEditPlayer = async (player) => {
+    const newName = prompt('Spielername:', player.name);
+    if (!newName || newName === player.name) return;
+    
+    try {
+      await update({ name: newName }, player.id);
+      refetch();
+    } catch (error) {
+      alert('Fehler beim Aktualisieren des Spielers: ' + error.message);
+    }
+  };
+
+  const handleDeletePlayer = async (player) => {
+    if (!confirm(`Sind Sie sicher, dass Sie ${player.name} löschen möchten?`)) return;
+    
+    try {
+      await remove(player.id);
+      refetch();
+    } catch (error) {
+      alert('Fehler beim Löschen des Spielers: ' + error.message);
+    }
+  };
+
+  const handleAddPlayer = async (teamName) => {
+    const name = prompt('Spielername:');
+    if (!name) return;
+    
+    const position = prompt('Position (ST, TH, IV, etc.):', 'ST');
+    if (!position) return;
+    
+    try {
+      await insert({
+        name: name.trim(),
+        team: teamName,
+        position: position.toUpperCase(),
+        goals: 0
+      });
+      refetch();
+    } catch (error) {
+      alert('Fehler beim Hinzufügen des Spielers: ' + error.message);
+    }
   };
 
   if (loading) {
@@ -181,12 +226,14 @@ export default function KaderTab() {
                           </div>
                           <div className="flex items-center space-x-2">
                             <button
+                              onClick={() => handleEditPlayer(player)}
                               className="text-text-muted hover:text-primary-green transition-colors p-1"
                               title="Bearbeiten"
                             >
                               <i className="fas fa-edit text-sm"></i>
                             </button>
                             <button
+                              onClick={() => handleDeletePlayer(player)}
                               className="text-text-muted hover:text-accent-red transition-colors p-1"
                               title="Löschen"
                             >
@@ -208,7 +255,10 @@ export default function KaderTab() {
 
                 {/* Add Player Button */}
                 <div className="mt-4 pt-4 border-t border-border-light">
-                  <button className="w-full btn-secondary text-sm py-2">
+                  <button 
+                    onClick={() => handleAddPlayer(team.name)}
+                    className="w-full btn-secondary text-sm py-2"
+                  >
                     <i className="fas fa-plus mr-2"></i>
                     Spieler zu {team.displayName} hinzufügen
                   </button>

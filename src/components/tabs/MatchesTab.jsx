@@ -29,9 +29,11 @@ export default function MatchesTab() {
   return (
     <div className="p-4 pb-20">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-text-primary mb-2">
-          Spiele
-        </h2>
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-xl font-semibold text-text-primary">
+            Spiele-Übersicht
+          </h2>
+        </div>
         <p className="text-text-muted">
           {matches?.length || 0} Spiele gefunden
         </p>
@@ -50,19 +52,21 @@ export default function MatchesTab() {
                     {new Date(match.datum).toLocaleDateString('de-DE')}
                   </p>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-text-primary">
-                    {match.tore1} : {match.tore2}
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-text-primary">
+                      {match.tore1} : {match.tore2}
+                    </div>
+                    {match.status && (
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                        match.status === 'finished' 
+                          ? 'bg-primary-green/10 text-primary-green'
+                          : 'bg-accent-orange/10 text-accent-orange'
+                      }`}>
+                        {match.status === 'finished' ? 'Beendet' : 'Laufend'}
+                      </span>
+                    )}
                   </div>
-                  {match.status && (
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                      match.status === 'finished' 
-                        ? 'bg-primary-green/10 text-primary-green'
-                        : 'bg-accent-orange/10 text-accent-orange'
-                    }`}>
-                      {match.status === 'finished' ? 'Beendet' : 'Laufend'}
-                    </span>
-                  )}
                 </div>
               </div>
               
@@ -87,6 +91,21 @@ export default function MatchesTab() {
           </p>
         </div>
       )}
+
+      {/* Info Card */}
+      <div className="mt-6 modern-card bg-blue-50 border-blue-200">
+        <div className="flex items-start">
+          <div className="text-blue-600 mr-3">
+            <i className="fas fa-info-circle"></i>
+          </div>
+          <div>
+            <h4 className="font-semibold text-blue-800 mb-1">Hinweis</h4>
+            <p className="text-blue-700 text-sm">
+              Um neue Spiele hinzuzufügen oder zu bearbeiten, nutzen Sie den Verwaltungsbereich.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

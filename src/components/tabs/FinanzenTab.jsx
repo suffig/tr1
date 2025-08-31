@@ -228,36 +228,16 @@ export default function FinanzenTab() {
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="mt-6 space-y-3">
-        <button className="w-full btn-primary">
-          <i className="fas fa-plus mr-2"></i>
-          Neue Transaktion hinzufügen
-        </button>
-        
-        <div className="grid grid-cols-2 gap-3">
-          <button className="btn-secondary">
-            <i className="fas fa-upload mr-2"></i>
-            Einnahme
-          </button>
-          <button className="btn-secondary">
-            <i className="fas fa-download mr-2"></i>
-            Ausgabe
-          </button>
-        </div>
-      </div>
-
-      {/* Development Note */}
-      <div className="mt-6 modern-card bg-yellow-50 border-yellow-200">
+      {/* Info Card */}
+      <div className="mt-6 modern-card bg-purple-50 border-purple-200">
         <div className="flex items-start">
-          <div className="text-yellow-600 mr-3">
+          <div className="text-purple-600 mr-3">
             <i className="fas fa-info-circle"></i>
           </div>
           <div>
-            <h4 className="font-semibold text-yellow-800 mb-1">Finanz-Modul</h4>
-            <p className="text-yellow-700 text-sm">
-              Grundlegende Finanzübersicht implementiert. CRUD-Operationen für Transaktionen 
-              können bei Bedarf vollständig ausgebaut werden.
+            <h4 className="font-semibold text-purple-800 mb-1">Hinweis</h4>
+            <p className="text-purple-700 text-sm">
+              Um neue Transaktionen hinzuzufügen, nutzen Sie den Verwaltungsbereich.
             </p>
           </div>
         </div>

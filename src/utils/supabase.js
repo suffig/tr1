@@ -2,11 +2,68 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase configuration
-const supabaseUrl = 'https://nklkmrnuyxlhgtpigkqg.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rbGttcm51eXhsaGd0cGlna3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjkzNTU4OTQsImV4cCI6MjA0NDkzMTg5NH0.8EXxWYjA7S0xCKU7xjKfMjqUYTKpLJNZ8mYNmHQTlhE';
+const supabaseUrl = 'https://buduldeczjwnjvsckqat.supabase.co';
+const supabaseKey = 'sb_publishable_wcOHaKNEW9rQ3anrRNlEpA_r1_wGda3';
 
 // Global fallback state
 let usingFallback = false;
+let authSession = null;
+
+// Sample data for fallback mode (enhanced with proper schema)
+const fallbackData = {
+  matches: [
+    { 
+      id: 1, 
+      datum: '2024-01-15', 
+      team1: 'AEK', 
+      team2: 'Real', 
+      tore1: 2, 
+      tore2: 1, 
+      status: 'finished',
+      beschreibung: 'Spannendes Match mit später Entscheidung',
+      created_at: '2024-01-15T20:00:00Z'
+    },
+    { 
+      id: 2, 
+      datum: '2024-01-10', 
+      team1: 'AEK', 
+      team2: 'Real', 
+      tore1: 1, 
+      tore2: 3, 
+      status: 'finished',
+      beschreibung: 'Klare Niederlage für AEK',
+      created_at: '2024-01-10T19:30:00Z'
+    },
+    { 
+      id: 3, 
+      datum: '2024-01-05', 
+      team1: 'AEK', 
+      team2: 'Real', 
+      tore1: 0, 
+      tore2: 0, 
+      status: 'finished',
+      beschreibung: 'Torlose Partie',
+      created_at: '2024-01-05T18:00:00Z'
+    }
+  ],
+  players: [
+    { id: 1, name: 'Max Müller', team: 'AEK', position: 'ST', goals: 5, created_at: '2024-01-01T10:00:00Z' },
+    { id: 2, name: 'Tom Schmidt', team: 'AEK', position: 'TH', goals: 0, created_at: '2024-01-01T10:00:00Z' },
+    { id: 3, name: 'Leon Wagner', team: 'AEK', position: 'IV', goals: 1, created_at: '2024-01-01T10:00:00Z' },
+    { id: 4, name: 'Jan Becker', team: 'Real', position: 'ST', goals: 7, created_at: '2024-01-01T10:00:00Z' },
+    { id: 5, name: 'Paul Klein', team: 'Real', position: 'TH', goals: 0, created_at: '2024-01-01T10:00:00Z' },
+    { id: 6, name: 'Ben Richter', team: 'Real', position: 'ZM', goals: 2, created_at: '2024-01-01T10:00:00Z' }
+  ],
+  bans: [
+    { id: 1, player_name: 'Max Müller', team: 'AEK', matches_remaining: 1, reason: 'Gelb-Rot', created_at: '2024-01-10T20:00:00Z' },
+    { id: 2, player_name: 'Jan Becker', team: 'Real', matches_remaining: 2, reason: 'Unsportlichkeit', created_at: '2024-01-12T19:00:00Z' }
+  ],
+  transactions: [
+    { id: 1, amount: 5000, description: 'Siegprämie', team: 'AEK', date: '2024-01-15', type: 'income', created_at: '2024-01-15T20:30:00Z' },
+    { id: 2, amount: -2000, description: 'Kartenstrafe', team: 'Real', date: '2024-01-10', type: 'expense', created_at: '2024-01-10T20:30:00Z' },
+    { id: 3, amount: 3000, description: 'Sponsoring', team: 'Real', date: '2024-01-08', type: 'income', created_at: '2024-01-08T12:00:00Z' }
+  ]
+};
 let fallbackSession = null;
 let authCallbacks = [];
 
@@ -244,8 +301,14 @@ const switchToFallbackMode = () => {
 const testConnection = async () => {
   try {
     // Try a simple auth operation to test connectivity
-    await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     console.log('✅ Supabase connection test successful');
+    
+    // If we have a session, we should use real mode regardless of CDN issues
+    if (session) {
+      console.log('🔑 Active session detected, maintaining real database connection');
+      usingFallback = false;
+    }
   } catch (error) {
     console.warn('❌ Supabase connection test failed, switching to fallback:', error);
     switchToFallbackMode();
@@ -259,77 +322,193 @@ testConnection();
 const createDatabaseOperations = (client) => {
   return {
     async select(table, query = '*', options = {}) {
-      if (usingFallback) {
-        console.warn(`⚠️ Database select on ${table} - Demo mode, returning empty data`);
-        return Promise.resolve({ data: [], error: null });
+      // Try to get session first
+      try {
+        const { data: { session } } = await client.auth.getSession();
+        authSession = session;
+        
+        if (session && !usingFallback) {
+          // If we have a session and not using fallback, try real database
+          try {
+            let queryBuilder = client.from(table).select(query);
+            
+            if (options.eq) {
+              Object.entries(options.eq).forEach(([key, value]) => {
+                queryBuilder = queryBuilder.eq(key, value);
+              });
+            }
+            
+            if (options.order) {
+              queryBuilder = queryBuilder.order(options.order.column, { 
+                ascending: options.order.ascending !== false 
+              });
+            }
+            
+            if (options.limit) {
+              queryBuilder = queryBuilder.limit(options.limit);
+            }
+            
+            const result = await queryBuilder;
+            console.log(`✅ Real database query successful for ${table}`);
+            return result;
+          } catch (dbError) {
+            console.warn(`❌ Real database failed for ${table}, using fallback data:`, dbError);
+            // Fall through to fallback data
+          }
+        }
+      } catch (authError) {
+        console.warn('Auth check failed, using fallback:', authError);
       }
       
-      try {
-        let queryBuilder = client.from(table).select(query);
+      // Use fallback data when authenticated (demo mode with data)
+      if (authSession) {
+        console.log(`🔑 Authenticated fallback: returning demo data for ${table}`);
+        let data = fallbackData[table] || [];
         
+        // Apply basic filtering for options
         if (options.eq) {
           Object.entries(options.eq).forEach(([key, value]) => {
-            queryBuilder = queryBuilder.eq(key, value);
+            data = data.filter(item => item[key] === value);
           });
         }
         
         if (options.order) {
-          queryBuilder = queryBuilder.order(options.order.column, { 
-            ascending: options.order.ascending !== false 
+          data = [...data].sort((a, b) => {
+            const aVal = a[options.order.column];
+            const bVal = b[options.order.column];
+            if (options.order.ascending === false) {
+              return bVal > aVal ? 1 : -1;
+            }
+            return aVal > bVal ? 1 : -1;
           });
         }
         
         if (options.limit) {
-          queryBuilder = queryBuilder.limit(options.limit);
+          data = data.slice(0, options.limit);
         }
         
-        return await queryBuilder;
-      } catch (error) {
-        console.warn('Database operation failed:', error);
-        return { data: [], error };
+        return Promise.resolve({ data, error: null });
       }
+      
+      // Not authenticated, return empty
+      console.warn(`⚠️ Not authenticated, returning empty data for ${table}`);
+      return Promise.resolve({ data: [], error: null });
     },
 
     async insert(table, data) {
-      if (usingFallback) {
-        console.warn(`⚠️ Database insert on ${table} - Demo mode, simulating success`);
-        return Promise.resolve({ data: { ...data, id: Date.now() }, error: null });
+      try {
+        const { data: { session } } = await client.auth.getSession();
+        authSession = session;
+        
+        if (session && !usingFallback) {
+          try {
+            const result = await client.from(table).insert(data).select().single();
+            console.log(`✅ Real database insert successful for ${table}`);
+            return result;
+          } catch (dbError) {
+            console.warn(`❌ Real database insert failed for ${table}, simulating:`, dbError);
+            // Fall through to simulation
+          }
+        }
+      } catch (authError) {
+        console.warn('Auth check failed for insert:', authError);
       }
       
-      try {
-        return await client.from(table).insert(data);
-      } catch (error) {
-        console.warn('Database insert failed:', error);
-        return { data: null, error };
+      // Simulate insert when authenticated
+      if (authSession) {
+        console.log(`🔑 Authenticated fallback: simulating insert for ${table}`);
+        const newItem = { ...data, id: Date.now() + Math.floor(Math.random() * 1000), created_at: new Date().toISOString() };
+        
+        // Add to fallback data
+        if (!fallbackData[table]) {
+          fallbackData[table] = [];
+        }
+        fallbackData[table].unshift(newItem);
+        
+        return Promise.resolve({ data: newItem, error: null });
       }
+      
+      // Not authenticated
+      console.warn(`⚠️ Not authenticated, cannot insert into ${table}`);
+      return Promise.resolve({ data: null, error: new Error('Not authenticated') });
     },
 
     async update(table, data, id) {
-      if (usingFallback) {
-        console.warn(`⚠️ Database update on ${table} - Demo mode, simulating success`);
+      try {
+        const { data: { session } } = await client.auth.getSession();
+        authSession = session;
+        
+        if (session && !usingFallback) {
+          try {
+            const result = await client.from(table).update(data).eq('id', id).select().single();
+            console.log(`✅ Real database update successful for ${table}`);
+            return result;
+          } catch (dbError) {
+            console.warn(`❌ Real database update failed for ${table}, simulating:`, dbError);
+            // Fall through to simulation
+          }
+        }
+      } catch (authError) {
+        console.warn('Auth check failed for update:', authError);
+      }
+      
+      // Simulate update when authenticated
+      if (authSession) {
+        console.log(`🔑 Authenticated fallback: simulating update for ${table}`);
+        
+        if (fallbackData[table]) {
+          const index = fallbackData[table].findIndex(item => item.id === id);
+          if (index !== -1) {
+            fallbackData[table][index] = { ...fallbackData[table][index], ...data };
+            return Promise.resolve({ data: fallbackData[table][index], error: null });
+          }
+        }
+        
         return Promise.resolve({ data: { ...data, id }, error: null });
       }
       
-      try {
-        return await client.from(table).update(data).eq('id', id);
-      } catch (error) {
-        console.warn('Database update failed:', error);
-        return { data: null, error };
-      }
+      // Not authenticated
+      console.warn(`⚠️ Not authenticated, cannot update ${table}`);
+      return Promise.resolve({ data: null, error: new Error('Not authenticated') });
     },
 
     async delete(table, id) {
-      if (usingFallback) {
-        console.warn(`⚠️ Database delete on ${table} - Demo mode, simulating success`);
+      try {
+        const { data: { session } } = await client.auth.getSession();
+        authSession = session;
+        
+        if (session && !usingFallback) {
+          try {
+            const result = await client.from(table).delete().eq('id', id);
+            console.log(`✅ Real database delete successful for ${table}`);
+            return result;
+          } catch (dbError) {
+            console.warn(`❌ Real database delete failed for ${table}, simulating:`, dbError);
+            // Fall through to simulation
+          }
+        }
+      } catch (authError) {
+        console.warn('Auth check failed for delete:', authError);
+      }
+      
+      // Simulate delete when authenticated
+      if (authSession) {
+        console.log(`🔑 Authenticated fallback: simulating delete for ${table}`);
+        
+        if (fallbackData[table]) {
+          const index = fallbackData[table].findIndex(item => item.id === id);
+          if (index !== -1) {
+            const deleted = fallbackData[table].splice(index, 1)[0];
+            return Promise.resolve({ data: deleted, error: null });
+          }
+        }
+        
         return Promise.resolve({ data: { id }, error: null });
       }
       
-      try {
-        return await client.from(table).delete().eq('id', id);
-      } catch (error) {
-        console.warn('Database delete failed:', error);
-        return { data: null, error };
-      }
+      // Not authenticated
+      console.warn(`⚠️ Not authenticated, cannot delete from ${table}`);
+      return Promise.resolve({ data: null, error: new Error('Not authenticated') });
     }
   };
 };

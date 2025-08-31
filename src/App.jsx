@@ -11,7 +11,7 @@ const KaderTab = lazy(() => import('./components/tabs/KaderTab'));
 const BansTab = lazy(() => import('./components/tabs/BansTab'));
 const FinanzenTab = lazy(() => import('./components/tabs/FinanzenTab'));
 const StatsTab = lazy(() => import('./components/tabs/StatsTab'));
-const SpielerTab = lazy(() => import('./components/tabs/SpielerTab'));
+const AdminTab = lazy(() => import('./components/tabs/AdminTab'));
 
 function App() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -57,16 +57,16 @@ function App() {
     switch (activeTab) {
       case 'matches':
         return <MatchesTab />;
-      case 'squad':
-        return <KaderTab />;
       case 'bans':
         return <BansTab />;
       case 'finanzen':
         return <FinanzenTab />;
+      case 'squad':
+        return <KaderTab />;
       case 'stats':
         return <StatsTab />;
-      case 'spieler':
-        return <SpielerTab />;
+      case 'admin':
+        return <AdminTab />;
       default:
         return <MatchesTab />;
     }

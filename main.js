@@ -310,6 +310,7 @@ function handleVisibilityChange() {
                 if (typeof resetMatchesState === "function") resetMatchesState();
                 if (typeof resetStatsState === "function") resetStatsState();
                 if (typeof resetSpielerState === "function") resetSpielerState();
+                if (typeof resetAchievementsState === "function") resetAchievementsState();
                 setupTabButtons();
                 subscribeAllLiveSync();
                 renderCurrentTab(); // <-- erzwingt Daten-Reload!
