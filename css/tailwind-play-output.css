@@ -2234,10 +2234,8 @@ div:not(.text-white):not(.text-red-400):not(.text-blue-400):not(.text-green-400)
     #tab-loader {
       -webkit-backdrop-filter: blur(8px);
     }
-  }
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   }
-}
 
 /* --- KADER-DETAILS: Spieler-Karten, Teamfarben, Badges --- */
 .player-card {

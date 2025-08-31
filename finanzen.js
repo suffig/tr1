@@ -2,12 +2,41 @@ import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { supabase } from './supabaseClient.js';
 import { matches } from './matches.js';
 import { ErrorHandler } from './utils.js';
+import { getPlayersByTeam } from './data.js';
 
 let finances = {
     aekAthen: { balance: 0, debt: 0 },
     realMadrid: { balance: 0, debt: 0 }
 };
 let transactions = [];
+
+// Helper function to calculate team market value
+function getKaderMarktwert(players) {
+    return players.reduce((sum, p) => {
+        let v = (typeof p.value === "number" ? p.value : (p.value ? parseFloat(p.value) : 0));
+        return sum + v;
+    }, 0);
+}
+
+// Function to calculate total capital (cash + market values)
+async function calculateTotalCapital() {
+    try {
+        const [aekPlayers, realPlayers] = await Promise.all([
+            getPlayersByTeam("AEK"),
+            getPlayersByTeam("Real")
+        ]);
+        
+        const aekBalance = finances.aekAthen.balance || 0;
+        const realBalance = finances.realMadrid.balance || 0;
+        const aekMarketValue = getKaderMarktwert(aekPlayers) * 1000000; // Convert to euros
+        const realMarketValue = getKaderMarktwert(realPlayers) * 1000000; // Convert to euros
+        
+        return aekBalance + realBalance + aekMarketValue + realMarketValue;
+    } catch (error) {
+        console.error('Error calculating total capital:', error);
+        return (finances.aekAthen.balance || 0) + (finances.realMadrid.balance || 0);
+    }
+}
 
 // Lädt alle Finanzen und Transaktionen und ruft das Rendern auf
 async function loadFinancesAndTransactions(renderFn = renderFinanzenTabInner) {
@@ -68,10 +97,12 @@ async function saveTransaction(trans) {
 
 export async function renderFinanzenTab(containerId = "app") {
 	console.log("renderFinanzenTab aufgerufen!", { containerId });
-    await loadFinancesAndTransactions(renderFinanzenTabInner);
+    await loadFinancesAndTransactions(async () => await renderFinanzenTabInner(containerId));
 }
 
-function renderFinanzenTabInner(containerId = "app") {
+async function renderFinanzenTabInner(containerId = "app") {
+    const totalCapital = await calculateTotalCapital();
+    
     const app = document.getElementById(containerId);
     app.innerHTML = `
         <div class="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
@@ -87,8 +118,8 @@ function renderFinanzenTabInner(containerId = "app") {
                     <span class="font-bold text-lg">AEK</span>
                 </div>
                 <div class="space-y-1 text-sm">
-                    <div>Kontostand: <span class="font-bold text-blue-200">${(finances.aekAthen.balance || 0).toLocaleString('de-DE')} €</span></div>
-                    <div>Schulden: <span class="font-bold text-blue-200">${(finances.aekAthen.debt || 0).toLocaleString('de-DE')} €</span></div>
+                    <div>Kontostand: <span class="font-bold text-blue-200">${Math.round(finances.aekAthen.balance || 0).toLocaleString('de-DE')} €</span></div>
+                    <div>Schulden: <span class="font-bold text-blue-200">${Math.round(finances.aekAthen.debt || 0).toLocaleString('de-DE')} €</span></div>
                 </div>
             </div>
             <div class="bg-red-700 text-red-100 rounded-lg p-3 flex-1 min-w-0 border border-red-600 shadow-lg">
@@ -97,8 +128,18 @@ function renderFinanzenTabInner(containerId = "app") {
                     <span class="font-bold text-lg">Real</span>
                 </div>
                 <div class="space-y-1 text-sm">
-                    <div>Kontostand: <span class="font-bold text-red-200">${(finances.realMadrid.balance || 0).toLocaleString('de-DE')} €</span></div>
-                    <div>Schulden: <span class="font-bold text-red-200">${(finances.realMadrid.debt || 0).toLocaleString('de-DE')} €</span></div>
+                    <div>Kontostand: <span class="font-bold text-red-200">${Math.round(finances.realMadrid.balance || 0).toLocaleString('de-DE')} €</span></div>
+                    <div>Schulden: <span class="font-bold text-red-200">${Math.round(finances.realMadrid.debt || 0).toLocaleString('de-DE')} €</span></div>
+                </div>
+            </div>
+            <div class="bg-green-700 text-green-100 rounded-lg p-3 flex-1 min-w-0 border border-green-600 shadow-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                    <span class="font-bold text-lg">Gesamt</span>
+                </div>
+                <div class="space-y-1 text-sm">
+                    <div>Gesamtkapital: <span class="font-bold text-green-200">${Math.round(totalCapital).toLocaleString('de-DE')} €</span></div>
+                    <div class="text-xs text-green-300">Geld + Marktwerte</div>
                 </div>
             </div>
         </div>
@@ -307,7 +348,7 @@ function renderTransactions() {
                     </td>
                     <td class="p-3 ${getCellBgClass(t.team)}">${t.info || '-'}</td>
                     <td class="p-3 font-bold ${getCellBgClass(t.team)} ${t.amount >= 0 ? 'text-green-400' : 'text-red-400'} rounded-r">
-                        ${t.amount >= 0 ? '+' : ''}${t.amount.toLocaleString('de-DE')}€
+                        ${t.amount >= 0 ? '+' : ''}${Math.round(t.amount).toLocaleString('de-DE')}€
                     </td>
                 </tr>
             `;
@@ -331,7 +372,7 @@ function renderTransactions() {
                     <div class="flex justify-between items-start mb-2">
                     <div class="text-sm transaction-description">${new Date(t.date).toLocaleDateString('de-DE')}</div>
                         <div class="text-lg font-bold ${t.amount >= 0 ? 'text-green-700' : 'text-red-700'}">
-                            ${t.amount >= 0 ? '+' : ''}${t.amount.toLocaleString('de-DE')}€
+                            ${t.amount >= 0 ? '+' : ''}${Math.round(t.amount).toLocaleString('de-DE')}€
                         </div>
                     </div>
                     <div class="text-base font-semibold transaction-description mb-1">${t.type}</div>
@@ -390,7 +431,7 @@ function renderTransactions() {
                     <td class="p-3 ${getCellBgClass(t.team)} font-semibold">${t.team}</td>
                     <td class="p-3 ${getCellBgClass(t.team)}">${t.info || '-'}</td>
                     <td class="p-3 font-bold ${getCellBgClass(t.team)} ${t.amount >= 0 ? 'text-green-400 dark:text-green-400' : 'text-red-400 dark:text-red-400'}">
-                        ${t.amount >= 0 ? '+' : ''}${t.amount.toLocaleString('de-DE')}
+                        ${t.amount >= 0 ? '+' : ''}${Math.round(t.amount).toLocaleString('de-DE')}
                     </td>
                 </tr>
             `;
@@ -408,7 +449,7 @@ function renderTransactions() {
                     <div class="flex justify-between items-start mb-2">
                         <div class="text-sm transaction-description">${new Date(t.date).toLocaleDateString('de-DE')}</div>
                         <div class="text-lg font-bold ${t.amount >= 0 ? 'text-green-700' : 'text-red-700'}">
-                            ${t.amount >= 0 ? '+' : ''}${t.amount.toLocaleString('de-DE')}€
+                            ${t.amount >= 0 ? '+' : ''}${Math.round(t.amount).toLocaleString('de-DE')}€
                         </div>
                     </div>
                     <div class="text-base font-semibold transaction-description mb-1">${t.type}</div>
