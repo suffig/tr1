@@ -2,8 +2,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase configuration
-const supabaseUrl = 'https://nklkmrnuyxlhgtpigkqg.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rbGttcm51eXhsaGd0cGlna3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjkzNTU4OTQsImV4cCI6MjA0NDkzMTg5NH0.8EXxWYjA7S0xCKU7xjKfMjqUYTKpLJNZ8mYNmHQTlhE';
+const supabaseUrl = 'https://buduldeczjwnjvsckqat.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1ZHVsZGVjempqdm52c2NrcWF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIzNzQwOTIsImV4cCI6MjA0Nzk1MDA5Mn0.wcOHaKNEW9rQ3anrRNlEpA_r1_wGda3';
 
 // Global fallback state
 let usingFallback = false;

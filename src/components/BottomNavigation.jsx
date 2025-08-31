@@ -2,9 +2,10 @@ import { useState } from 'react';
 
 const tabs = [
   { id: 'matches', icon: 'fas fa-futbol', label: 'Spiele' },
+  { id: 'bans', icon: 'fas fa-ban', label: 'Bans' },
+  { id: 'finanzen', icon: 'fas fa-euro-sign', label: 'Finanzen' },
   { id: 'squad', icon: 'fas fa-users', label: 'Kader' },
   { id: 'stats', icon: 'fas fa-chart-bar', label: 'Stats' },
-  { id: 'finanzen', icon: 'fas fa-euro-sign', label: 'Finanzen' },
   { id: 'admin', icon: 'fas fa-cog', label: 'Verwaltung' },
 ];
 

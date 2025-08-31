@@ -57,12 +57,12 @@ function App() {
     switch (activeTab) {
       case 'matches':
         return <MatchesTab />;
-      case 'squad':
-        return <KaderTab />;
       case 'bans':
         return <BansTab />;
       case 'finanzen':
         return <FinanzenTab />;
+      case 'squad':
+        return <KaderTab />;
       case 'stats':
         return <StatsTab />;
       case 'admin':

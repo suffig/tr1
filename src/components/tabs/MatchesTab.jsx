@@ -1,4 +1,4 @@
-import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
+import { useSupabaseQuery } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
 
 export default function MatchesTab() {
@@ -7,66 +7,6 @@ export default function MatchesTab() {
     '*',
     { order: { column: 'datum', ascending: false }, limit: 50 }
   );
-  const { insert, update, remove } = useSupabaseMutation('matches');
-
-  // Minimal CRUD functions without changing the design
-  const handleAddMatch = async () => {
-    const team1 = prompt('Heimteam:');
-    if (!team1) return;
-    
-    const team2 = prompt('Gastteam:');
-    if (!team2) return;
-    
-    const datum = prompt('Datum (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-    if (!datum) return;
-    
-    const tore1 = prompt('Tore Heimteam:', '0');
-    const tore2 = prompt('Tore Gastteam:', '0');
-    
-    try {
-      await insert({
-        team1: team1.trim(),
-        team2: team2.trim(),
-        datum: datum,
-        tore1: parseInt(tore1) || 0,
-        tore2: parseInt(tore2) || 0,
-        status: 'finished',
-        beschreibung: ''
-      });
-      refetch();
-    } catch (error) {
-      alert('Fehler beim Hinzufügen des Spiels: ' + error.message);
-    }
-  };
-
-  const handleEditMatch = async (match) => {
-    const newScore1 = prompt('Tore ' + match.team1 + ':', match.tore1.toString());
-    if (newScore1 === null) return;
-    
-    const newScore2 = prompt('Tore ' + match.team2 + ':', match.tore2.toString());
-    if (newScore2 === null) return;
-    
-    try {
-      await update({
-        tore1: parseInt(newScore1) || 0,
-        tore2: parseInt(newScore2) || 0
-      }, match.id);
-      refetch();
-    } catch (error) {
-      alert('Fehler beim Aktualisieren des Spiels: ' + error.message);
-    }
-  };
-
-  const handleDeleteMatch = async (match) => {
-    if (!confirm(`Sind Sie sicher, dass Sie das Spiel ${match.team1} vs ${match.team2} löschen möchten?`)) return;
-    
-    try {
-      await remove(match.id);
-      refetch();
-    } catch (error) {
-      alert('Fehler beim Löschen des Spiels: ' + error.message);
-    }
-  };
 
   if (loading) {
     return <LoadingSpinner message="Lade Spiele..." />;
@@ -91,15 +31,8 @@ export default function MatchesTab() {
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl font-semibold text-text-primary">
-            Spiele
+            Spiele-Übersicht
           </h2>
-          <button 
-            onClick={handleAddMatch}
-            className="btn-primary text-sm"
-          >
-            <i className="fas fa-plus mr-2"></i>
-            Neues Spiel
-          </button>
         </div>
         <p className="text-text-muted">
           {matches?.length || 0} Spiele gefunden
@@ -134,22 +67,6 @@ export default function MatchesTab() {
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-col space-y-1">
-                    <button
-                      onClick={() => handleEditMatch(match)}
-                      className="text-text-muted hover:text-primary-green transition-colors p-1"
-                      title="Bearbeiten"
-                    >
-                      <i className="fas fa-edit text-sm"></i>
-                    </button>
-                    <button
-                      onClick={() => handleDeleteMatch(match)}
-                      className="text-text-muted hover:text-accent-red transition-colors p-1"
-                      title="Löschen"
-                    >
-                      <i className="fas fa-trash text-sm"></i>
-                    </button>
-                  </div>
                 </div>
               </div>
               
@@ -174,6 +91,21 @@ export default function MatchesTab() {
           </p>
         </div>
       )}
+
+      {/* Info Card */}
+      <div className="mt-6 modern-card bg-blue-50 border-blue-200">
+        <div className="flex items-start">
+          <div className="text-blue-600 mr-3">
+            <i className="fas fa-info-circle"></i>
+          </div>
+          <div>
+            <h4 className="font-semibold text-blue-800 mb-1">Hinweis</h4>
+            <p className="text-blue-700 text-sm">
+              Um neue Spiele hinzuzufügen oder zu bearbeiten, nutzen Sie den Verwaltungsbereich.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
