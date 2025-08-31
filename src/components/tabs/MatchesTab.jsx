@@ -5,7 +5,7 @@ export default function MatchesTab() {
   const { data: matches, loading, error, refetch } = useSupabaseQuery(
     'matches',
     '*',
-    { order: { column: 'datum', ascending: false }, limit: 50 }
+    { order: { column: 'date', ascending: false }, limit: 50 }
   );
 
   if (loading) {
@@ -46,16 +46,16 @@ export default function MatchesTab() {
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
                   <h3 className="font-semibold text-text-primary">
-                    {match.team1} vs {match.team2}
+                    {match.teama} vs {match.teamb}
                   </h3>
                   <p className="text-sm text-text-muted">
-                    {new Date(match.datum).toLocaleDateString('de-DE')}
+                    {new Date(match.date).toLocaleDateString('de-DE')}
                   </p>
                 </div>
                 <div className="flex items-center space-x-3">
                   <div className="text-right">
                     <div className="text-lg font-bold text-text-primary">
-                      {match.tore1} : {match.tore2}
+                      {match.goalsa} : {match.goalsb}
                     </div>
                     {match.status && (
                       <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
@@ -69,12 +69,6 @@ export default function MatchesTab() {
                   </div>
                 </div>
               </div>
-              
-              {match.beschreibung && (
-                <p className="text-sm text-text-muted border-t pt-3 mt-3">
-                  {match.beschreibung}
-                </p>
-              )}
             </div>
           ))}
         </div>

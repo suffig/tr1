@@ -1,8 +1,11 @@
 import { useSupabaseMutation } from '../../../hooks/useSupabase';
 
 const TRANSACTION_TYPES = [
-  { value: 'Einnahme', label: 'Einnahme', icon: '📈' },
-  { value: 'Ausgabe', label: 'Ausgabe', icon: '📉' },
+  { value: 'Preisgeld', label: 'Preisgeld', icon: '🏆' },
+  { value: 'Strafe', label: 'Strafe', icon: '📉' },
+  { value: 'Spielerkauf', label: 'Spielerkauf', icon: '👤' },
+  { value: 'SdS Bonus', label: 'Spieler des Spiels Bonus', icon: '⭐' },
+  { value: 'Sonstiges', label: 'Sonstiges', icon: '💰' },
 ];
 
 const TEAMS = [
@@ -17,25 +20,26 @@ export default function AddTransactionTab() {
     const team = prompt(`Team (${TEAMS.map(t => t.value).join(', ')}):`, 'AEK');
     if (!team) return;
     
-    const art = prompt(`Art (${TRANSACTION_TYPES.map(t => t.value).join(', ')}):`, 'Einnahme');
-    if (!art) return;
+    const type = prompt(`Typ (${TRANSACTION_TYPES.map(t => t.value).join(', ')}):`, 'Preisgeld');
+    if (!type) return;
     
-    const beschreibung = prompt('Beschreibung:');
-    if (!beschreibung) return;
+    const info = prompt('Beschreibung:');
+    if (!info) return;
     
-    const betrag = prompt('Betrag (in Euro):');
-    if (!betrag || isNaN(betrag)) return;
+    const amount = prompt('Betrag (in Euro):');
+    if (!amount || isNaN(amount)) return;
     
-    const datum = prompt('Datum (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-    if (!datum) return;
+    const date = prompt('Datum (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+    if (!date) return;
     
     try {
       await insert({
+        date: date,
+        type: type.trim(),
         team: team.trim(),
-        art: art.trim(),
-        beschreibung: beschreibung.trim(),
-        betrag: parseFloat(betrag),
-        datum: datum,
+        amount: parseFloat(amount),
+        info: info.trim(),
+        match_id: null
       });
       alert('Transaktion erfolgreich hinzugefügt!');
     } catch (error) {

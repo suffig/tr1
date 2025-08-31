@@ -1583,7 +1583,7 @@ button:hover, .btn:hover {
 .indicator-squad    { background: linear-gradient(135deg, #2563eb, #3b82f6); box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3); }
 .indicator-matches  { background: linear-gradient(135deg, #dc2626, #ef4444); box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3); }
 .indicator-bans     { background: linear-gradient(135deg, #d97706, #f59e0b); box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3); }
-.indicator-finanzen { background: linear-gradient(135deg, #059669, #10b981); box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3); }
+.indicator-finanzen { background: linear-gradient(135deg, #0891b2, #06b6d4); box-shadow: 0 2px 8px rgba(8, 145, 178, 0.3); }
 .indicator-stats    { background: linear-gradient(135deg, #7c3aed, #8b5cf6); box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3); }
 .indicator-spieler  { background: linear-gradient(135deg, #ea580c, #f97316); box-shadow: 0 2px 8px rgba(234, 88, 12, 0.3); }
 

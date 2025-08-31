@@ -33,11 +33,11 @@ export default function FinanzenTab() {
 
   const getTransactionTypeColor = (type) => {
     switch (type) {
-      case 'Einnahme':
-      case 'einnahme':
+      case 'Preisgeld':
+      case 'Sonstiges':
         return 'text-primary-green';
-      case 'Ausgabe':
-      case 'ausgabe':
+      case 'Strafe':
+      case 'Spielerkauf':
         return 'text-accent-red';
       default:
         return 'text-text-primary';
@@ -46,12 +46,16 @@ export default function FinanzenTab() {
 
   const getTransactionIcon = (type) => {
     switch (type) {
-      case 'Einnahme':
-      case 'einnahme':
+      case 'Preisgeld':
+        return '🏆';
+      case 'Sonstiges':
         return '📈';
-      case 'Ausgabe':
-      case 'ausgabe':
+      case 'Strafe':
         return '📉';
+      case 'Spielerkauf':
+        return '👤';
+      case 'SdS Bonus':
+        return '⭐';
       default:
         return '💰';
     }
@@ -157,13 +161,13 @@ export default function FinanzenTab() {
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center p-3 bg-primary-green/10 rounded-lg">
             <div className="text-lg font-bold text-primary-green">
-              {selectedTeamTransactions.filter(t => t.art === 'Einnahme' || t.art === 'einnahme').length}
+              {selectedTeamTransactions.filter(t => t.amount > 0).length}
             </div>
             <div className="text-sm text-text-muted">Einnahmen</div>
           </div>
           <div className="text-center p-3 bg-accent-red/10 rounded-lg">
             <div className="text-lg font-bold text-accent-red">
-              {selectedTeamTransactions.filter(t => t.art === 'Ausgabe' || t.art === 'ausgabe').length}
+              {selectedTeamTransactions.filter(t => t.amount < 0).length}
             </div>
             <div className="text-sm text-text-muted">Ausgaben</div>
           </div>
@@ -182,34 +186,34 @@ export default function FinanzenTab() {
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-3">
                   <div className="text-xl">
-                    {getTransactionIcon(transaction.art)}
+                    {getTransactionIcon(transaction.type)}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">
                       <h5 className="font-medium text-text-primary">
-                        {transaction.beschreibung || 'Transaktion'}
+                        {transaction.info || 'Transaktion'}
                       </h5>
                       <span className={`text-sm font-medium ${
-                        transaction.art === 'Einnahme' || transaction.art === 'einnahme' 
+                        transaction.amount > 0 
                           ? 'text-primary-green' 
                           : 'text-accent-red'
                       }`}>
-                        {transaction.art}
+                        {transaction.type}
                       </span>
                     </div>
                     
-                    {transaction.datum && (
+                    {transaction.date && (
                       <p className="text-xs text-text-muted">
-                        {new Date(transaction.datum).toLocaleDateString('de-DE')}
+                        {new Date(transaction.date).toLocaleDateString('de-DE')}
                       </p>
                     )}
                   </div>
                 </div>
                 
                 <div className="text-right">
-                  <div className={`text-lg font-bold ${getTransactionTypeColor(transaction.art)}`}>
-                    {transaction.art === 'Ausgabe' || transaction.art === 'ausgabe' ? '-' : '+'}
-                    {formatCurrency(Math.abs(transaction.betrag || 0))}
+                  <div className={`text-lg font-bold ${getTransactionTypeColor(transaction.type)}`}>
+                    {transaction.amount < 0 ? '-' : '+'}
+                    {formatCurrency(Math.abs(transaction.amount || 0))}
                   </div>
                 </div>
               </div>

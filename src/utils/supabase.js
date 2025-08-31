@@ -14,36 +14,54 @@ const fallbackData = {
   matches: [
     { 
       id: 1, 
-      datum: '2024-01-15', 
-      team1: 'AEK', 
-      team2: 'Real', 
-      tore1: 2, 
-      tore2: 1, 
-      status: 'finished',
-      beschreibung: 'Spannendes Match mit später Entscheidung',
-      created_at: '2024-01-15T20:00:00Z'
+      date: '2024-01-15', 
+      teama: 'AEK', 
+      teamb: 'Real', 
+      goalsa: 2, 
+      goalsb: 1, 
+      goalslista: ['Max Müller', 'Leon Wagner'],
+      goalslistb: ['Jan Becker'],
+      yellowa: 1,
+      reda: 0,
+      yellowb: 2,
+      redb: 0,
+      manofthematch: 'Max Müller',
+      prizeaek: 5000,
+      prizereal: 3000
     },
     { 
       id: 2, 
-      datum: '2024-01-10', 
-      team1: 'AEK', 
-      team2: 'Real', 
-      tore1: 1, 
-      tore2: 3, 
-      status: 'finished',
-      beschreibung: 'Klare Niederlage für AEK',
-      created_at: '2024-01-10T19:30:00Z'
+      date: '2024-01-10', 
+      teama: 'AEK', 
+      teamb: 'Real', 
+      goalsa: 1, 
+      goalsb: 3, 
+      goalslista: ['Max Müller'],
+      goalslistb: ['Jan Becker', 'Paul Klein', 'Ben Richter'],
+      yellowa: 2,
+      reda: 1,
+      yellowb: 0,
+      redb: 0,
+      manofthematch: 'Jan Becker',
+      prizeaek: 2000,
+      prizereal: 5000
     },
     { 
       id: 3, 
-      datum: '2024-01-05', 
-      team1: 'AEK', 
-      team2: 'Real', 
-      tore1: 0, 
-      tore2: 0, 
-      status: 'finished',
-      beschreibung: 'Torlose Partie',
-      created_at: '2024-01-05T18:00:00Z'
+      date: '2024-01-05', 
+      teama: 'AEK', 
+      teamb: 'Real', 
+      goalsa: 0, 
+      goalsb: 0, 
+      goalslista: [],
+      goalslistb: [],
+      yellowa: 1,
+      reda: 0,
+      yellowb: 1,
+      redb: 0,
+      manofthematch: null,
+      prizeaek: 2500,
+      prizereal: 2500
     }
   ],
   players: [
@@ -55,13 +73,13 @@ const fallbackData = {
     { id: 6, name: 'Ben Richter', team: 'Real', position: 'ZM', goals: 2, created_at: '2024-01-01T10:00:00Z' }
   ],
   bans: [
-    { id: 1, player_name: 'Max Müller', team: 'AEK', matches_remaining: 1, reason: 'Gelb-Rot', created_at: '2024-01-10T20:00:00Z' },
-    { id: 2, player_name: 'Jan Becker', team: 'Real', matches_remaining: 2, reason: 'Unsportlichkeit', created_at: '2024-01-12T19:00:00Z' }
+    { id: 1, player_id: 1, team: 'AEK', type: 'Gelb-Rote Karte', totalgames: 1, matchesserved: 0, reason: 'Gelb-Rot' },
+    { id: 2, player_id: 4, team: 'Real', type: 'Unsportlichkeit', totalgames: 2, matchesserved: 0, reason: 'Unsportlichkeit' }
   ],
   transactions: [
-    { id: 1, amount: 5000, description: 'Siegprämie', team: 'AEK', date: '2024-01-15', type: 'income', created_at: '2024-01-15T20:30:00Z' },
-    { id: 2, amount: -2000, description: 'Kartenstrafe', team: 'Real', date: '2024-01-10', type: 'expense', created_at: '2024-01-10T20:30:00Z' },
-    { id: 3, amount: 3000, description: 'Sponsoring', team: 'Real', date: '2024-01-08', type: 'income', created_at: '2024-01-08T12:00:00Z' }
+    { id: 1, amount: 5000, info: 'Siegprämie', team: 'AEK', date: '2024-01-15', type: 'Preisgeld', match_id: 1 },
+    { id: 2, amount: -2000, info: 'Kartenstrafe', team: 'Real', date: '2024-01-10', type: 'Strafe', match_id: 2 },
+    { id: 3, amount: 3000, info: 'Sponsoring', team: 'Real', date: '2024-01-08', type: 'Sonstiges', match_id: null }
   ]
 };
 let fallbackSession = null;

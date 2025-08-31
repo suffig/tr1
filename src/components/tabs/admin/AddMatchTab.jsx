@@ -4,27 +4,34 @@ export default function AddMatchTab() {
   const { insert } = useSupabaseMutation('matches');
 
   const handleAddMatch = async () => {
-    const team1 = prompt('Heimteam:');
-    if (!team1) return;
+    const teama = prompt('Heimteam:');
+    if (!teama) return;
     
-    const team2 = prompt('Gastteam:');
-    if (!team2) return;
+    const teamb = prompt('Gastteam:');
+    if (!teamb) return;
     
-    const datum = prompt('Datum (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-    if (!datum) return;
+    const date = prompt('Datum (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+    if (!date) return;
     
-    const tore1 = prompt('Tore Heimteam:', '0');
-    const tore2 = prompt('Tore Gastteam:', '0');
+    const goalsa = prompt('Tore Heimteam:', '0');
+    const goalsb = prompt('Tore Gastteam:', '0');
     
     try {
       await insert({
-        team1: team1.trim(),
-        team2: team2.trim(),
-        datum: datum,
-        tore1: parseInt(tore1) || 0,
-        tore2: parseInt(tore2) || 0,
-        status: 'finished',
-        beschreibung: ''
+        date: date,
+        teama: teama.trim(),
+        teamb: teamb.trim(),
+        goalsa: parseInt(goalsa) || 0,
+        goalsb: parseInt(goalsb) || 0,
+        goalslista: [],
+        goalslistb: [],
+        yellowa: 0,
+        reda: 0,
+        yellowb: 0,
+        redb: 0,
+        manofthematch: null,
+        prizeaek: 0,
+        prizereal: 0
       });
       alert('Spiel erfolgreich hinzugefügt!');
     } catch (error) {

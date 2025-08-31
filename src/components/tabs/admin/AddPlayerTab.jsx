@@ -58,6 +58,7 @@ export default function AddPlayerTab() {
         <div className="text-center py-8">
           <div className="text-4xl mb-4">👤</div>
           <h4 className="text-lg font-medium text-text-primary mb-2">
+            <i className="fas fa-user-plus mr-2"></i>
             Spieler hinzufügen
           </h4>
           <p className="text-text-muted mb-6">

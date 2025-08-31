@@ -56,13 +56,13 @@ export default function BansTab() {
 
   const filteredBans = bans?.filter(ban => {
     if (selectedType === 'all') return true;
-    if (selectedType === 'active') return ban.anzahl_spiele > 0;
-    if (selectedType === 'completed') return ban.anzahl_spiele === 0;
-    return ban.art === selectedType;
+    if (selectedType === 'active') return (ban.totalgames - ban.matchesserved) > 0;
+    if (selectedType === 'completed') return (ban.totalgames - ban.matchesserved) === 0;
+    return ban.type === selectedType;
   }) || [];
 
-  const activeBans = bans?.filter(ban => ban.anzahl_spiele > 0) || [];
-  const completedBans = bans?.filter(ban => ban.anzahl_spiele === 0) || [];
+  const activeBans = bans?.filter(ban => (ban.totalgames - ban.matchesserved) > 0) || [];
+  const completedBans = bans?.filter(ban => (ban.totalgames - ban.matchesserved) === 0) || [];
 
   if (loading) {
     return <LoadingSpinner message="Lade Sperren..." />;
@@ -84,7 +84,7 @@ export default function BansTab() {
             ...BAN_TYPES.map(type => ({
               key: type.value,
               label: type.label,
-              count: bans?.filter(ban => ban.art === type.value).length || 0
+              count: bans?.filter(ban => ban.type === type.value).length || 0
             }))
           ].map((filter) => (
             <button
@@ -138,25 +138,25 @@ export default function BansTab() {
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4">
                   <div className="text-2xl">
-                    {getBanIcon(ban.art)}
+                    {getBanIcon(ban.type)}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <h3 className="font-semibold text-text-primary">
-                        {getPlayerName(ban.spieler_id)}
+                        {getPlayerName(ban.player_id)}
                       </h3>
                       <span className="text-sm text-text-muted">
-                        ({getPlayerTeam(ban.spieler_id)})
+                        ({getPlayerTeam(ban.player_id)})
                       </span>
                     </div>
                     
                     <div className="flex items-center space-x-2 mb-2">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium border ${getBanTypeColor(ban.art)}`}>
-                        {ban.art}
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium border ${getBanTypeColor(ban.type)}`}>
+                        {ban.type}
                       </span>
-                      {ban.anzahl_spiele > 0 ? (
+                      {(ban.totalgames - ban.matchesserved) > 0 ? (
                         <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                          {ban.anzahl_spiele} Spiel{ban.anzahl_spiele !== 1 ? 'e' : ''} verbleibend
+                          {ban.totalgames - ban.matchesserved} Spiel{(ban.totalgames - ban.matchesserved) !== 1 ? 'e' : ''} verbleibend
                         </span>
                       ) : (
                         <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
@@ -165,15 +165,9 @@ export default function BansTab() {
                       )}
                     </div>
 
-                    {ban.beschreibung && (
+                    {ban.reason && (
                       <p className="text-sm text-text-muted">
-                        {ban.beschreibung}
-                      </p>
-                    )}
-                    
-                    {ban.datum && (
-                      <p className="text-xs text-text-muted mt-2">
-                        Erstellt: {new Date(ban.datum).toLocaleDateString('de-DE')}
+                        {ban.reason}
                       </p>
                     )}
                   </div>

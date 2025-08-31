@@ -32,11 +32,12 @@ export default function AddBanTab() {
     
     try {
       await insert({
-        spieler_id: player.id,
-        art: selectedBanType.value,
-        anzahl_spiele: selectedBanType.duration,
-        beschreibung: '',
-        datum: new Date().toISOString().split('T')[0]
+        player_id: player.id,
+        team: player.team,
+        type: selectedBanType.value,
+        totalgames: selectedBanType.duration,
+        matchesserved: 0,
+        reason: selectedBanType.value
       });
       alert('Sperre erfolgreich hinzugefügt!');
     } catch (error) {
