@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>FIFA Tracker - Direct Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="assets/fonts/fontawesome-icons.css">
+    <style>
+        body { background: #1e293b; color: white; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4">FIFA Tracker - Test</h1>
+        
+        <div class="flex gap-4 mb-4">
+            <button id="test-kader" class="bg-blue-600 text-white px-4 py-2 rounded">Test Kader</button>
+            <button id="test-finanzen" class="bg-green-600 text-white px-4 py-2 rounded">Test Finanzen</button>
+            <button id="test-matches" class="bg-red-600 text-white px-4 py-2 rounded">Test Matches</button>
+        </div>
+        
+        <div id="app" class="mt-4">
+            <p>Wähle einen Test...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { renderKaderTab } from './kader.js';
+        import { renderFinanzenTab } from './finanzen.js';
+        import { renderMatchesTab } from './matches.js';
+        
+        document.getElementById('test-kader').onclick = () => {
+            renderKaderTab('app');
+        };
+        
+        document.getElementById('test-finanzen').onclick = () => {
+            renderFinanzenTab('app');
+        };
+        
+        document.getElementById('test-matches').onclick = () => {
+            renderMatchesTab('app');
+        };
+    </script>
+</body>
+</html>
