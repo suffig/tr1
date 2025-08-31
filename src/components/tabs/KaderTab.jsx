@@ -4,7 +4,7 @@ import LoadingSpinner from '../LoadingSpinner';
 import { POSITIONS, TEAMS } from '../../utils/errorHandling';
 
 export default function KaderTab() {
-  const [openPanel, setOpenPanel] = useState('aek');
+  const [openPanel, setOpenPanel] = useState(null);
   
   const { data: players, loading, error, refetch } = useSupabaseQuery('players', '*');
   const { data: finances } = useSupabaseQuery('finances', '*');
@@ -39,21 +39,21 @@ export default function KaderTab() {
   const getTeamCardClass = (teamName) => {
     const baseClass = "modern-card";
     if (teamName === "AEK") return `${baseClass} border-l-4 border-blue-400`;
-    if (teamName === "Real") return `${baseClass} border-l-4 border-purple-400`;
+    if (teamName === "Real") return `${baseClass} border-l-4 border-red-400`;
     if (teamName === "Ehemalige") return `${baseClass} border-l-4 border-slate-400`;
     return baseClass;
   };
 
   const getTeamColor = (teamName) => {
     if (teamName === "AEK") return "text-blue-600";
-    if (teamName === "Real") return "text-purple-600";
+    if (teamName === "Real") return "text-red-600";
     if (teamName === "Ehemalige") return "text-slate-600";
     return "text-gray-600";
   };
 
   const getTeamIcon = (teamName) => {
     if (teamName === "AEK") return "🔵";
-    if (teamName === "Real") return "🟣";
+    if (teamName === "Real") return "🔴";
     if (teamName === "Ehemalige") return "⚪";
     return "⚽";
   };
@@ -139,7 +139,7 @@ export default function KaderTab() {
       displayName: 'Real Madrid', 
       players: realPlayers,
       balance: getTeamBalance('Real'),
-      icon: '🟣'
+      icon: '🔴'
     },
     { 
       id: 'ehemalige', 
