@@ -15,18 +15,18 @@ export default function StatsTab() {
 
   // Calculate total goals
   const totalGoals = matches?.reduce((total, match) => {
-    return total + (match.tore1 || 0) + (match.tore2 || 0);
+    return total + (match.goalsa || 0) + (match.goalsb || 0);
   }, 0) || 0;
 
   // Calculate wins per team
   const aekWins = matches?.filter(match => 
-    (match.team1 === 'AEK' && match.tore1 > match.tore2) ||
-    (match.team2 === 'AEK' && match.tore2 > match.tore1)
+    (match.teama === 'AEK' && match.goalsa > match.goalsb) ||
+    (match.teamb === 'AEK' && match.goalsb > match.goalsa)
   ).length || 0;
 
   const realWins = matches?.filter(match => 
-    (match.team1 === 'Real' && match.tore1 > match.tore2) ||
-    (match.team2 === 'Real' && match.tore2 > match.tore1)
+    (match.teama === 'Real' && match.goalsa > match.goalsb) ||
+    (match.teamb === 'Real' && match.goalsb > match.goalsa)
   ).length || 0;
 
   if (loading) {
@@ -141,22 +141,22 @@ export default function StatsTab() {
         {matches && matches.length > 0 ? (
           <div className="space-y-3">
             {matches
-              .sort((a, b) => new Date(b.datum) - new Date(a.datum))
+              .sort((a, b) => new Date(b.date) - new Date(a.date))
               .slice(0, 5)
               .map((match) => (
                 <div key={match.id} className="modern-card">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium text-text-primary">
-                        {match.team1} vs {match.team2}
+                        {match.teama} vs {match.teamb}
                       </div>
                       <div className="text-sm text-text-muted">
-                        {new Date(match.datum).toLocaleDateString('de-DE')}
+                        {new Date(match.date).toLocaleDateString('de-DE')}
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-bold text-text-primary">
-                        {match.tore1} : {match.tore2}
+                        {match.goalsa} : {match.goalsb}
                       </div>
                     </div>
                   </div>

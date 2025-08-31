@@ -170,12 +170,6 @@ export default function BansTab() {
                         {ban.reason}
                       </p>
                     )}
-                    
-                    {ban.datum && (
-                      <p className="text-xs text-text-muted mt-2">
-                        Erstellt: {new Date(ban.datum).toLocaleDateString('de-DE')}
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>
