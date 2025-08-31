@@ -10,6 +10,7 @@ lerna-debug.log*
 
 # Build outputs
 dist-ssr/
+dist/
 *.local
 
 # Environment variables
