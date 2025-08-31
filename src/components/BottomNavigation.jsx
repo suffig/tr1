@@ -3,10 +3,9 @@ import { useState } from 'react';
 const tabs = [
   { id: 'matches', icon: 'fas fa-futbol', label: 'Spiele' },
   { id: 'squad', icon: 'fas fa-users', label: 'Kader' },
-  { id: 'bans', icon: 'fas fa-ban', label: 'Sperren' },
   { id: 'stats', icon: 'fas fa-chart-bar', label: 'Stats' },
-  { id: 'achievements', icon: 'fas fa-trophy', label: 'Awards' },
   { id: 'finanzen', icon: 'fas fa-euro-sign', label: 'Finanzen' },
+  { id: 'admin', icon: 'fas fa-cog', label: 'Verwaltung' },
 ];
 
 export default function BottomNavigation({ activeTab, onTabChange, onLogout }) {

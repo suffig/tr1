@@ -653,6 +653,12 @@ export async function renderStatsTab(containerId = "app") {
                     </div>
                 </div>
             </div>
+            
+            <!-- NEW: Team Analysis & Transfer Recommendations -->
+            <div class="rounded-xl shadow border bg-gray-800 p-4 mb-4">
+                <h3 class="font-bold text-lg mb-4 text-white">🔍 Team-Analyse & Empfehlungen</h3>
+                ${generateTeamAnalysis(stats, matches, players, bans)}
+            </div>
         </div>
     `;
 
@@ -669,5 +675,167 @@ export async function renderStatsTab(containerId = "app") {
             }
         }, 0);
     }
+}
+
+// NEW: Generate team analysis and transfer recommendations
+function generateTeamAnalysis(stats, matches, players, bans) {
+    const aekPlayers = players.filter(p => p.team === 'AEK');
+    const realPlayers = players.filter(p => p.team === 'Real');
+    
+    // Team balance analysis
+    const aekBalance = analyzeTeamBalance(aekPlayers);
+    const realBalance = analyzeTeamBalance(realPlayers);
+    
+    // Recent form analysis
+    const recentForm = stats.calculateRecentForm(5);
+    
+    // Generate recommendations
+    const aekRecommendations = generateTransferRecommendations(aekPlayers, aekBalance, recentForm.aek);
+    const realRecommendations = generateTransferRecommendations(realPlayers, realBalance, recentForm.real);
+    
+    return `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- AEK Analysis -->
+            <div class="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+                <h4 class="font-bold text-blue-300 mb-3 flex items-center">
+                    <i class="fas fa-users mr-2"></i>
+                    AEK Team-Analyse
+                </h4>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Spieler gesamt:</span>
+                        <span class="text-white font-semibold">${aekPlayers.length}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Durchschnittswert:</span>
+                        <span class="text-white font-semibold">€${Math.round(aekPlayers.reduce((sum, p) => sum + (p.value || 0), 0) / aekPlayers.length || 0).toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Aktuelle Form:</span>
+                        <span class="text-white font-semibold">${recentForm.aek.join('-')}</span>
+                    </div>
+                </div>
+                
+                <div class="mt-3 pt-3 border-t border-blue-700">
+                    <h5 class="font-semibold text-blue-200 mb-2">🎯 Empfehlungen:</h5>
+                    <div class="space-y-1 text-xs">
+                        ${aekRecommendations.map(rec => `
+                            <div class="bg-blue-800/30 rounded px-2 py-1 text-blue-100">
+                                ${rec}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Real Analysis -->
+            <div class="bg-red-900/20 border border-red-700 rounded-lg p-4">
+                <h4 class="font-bold text-red-300 mb-3 flex items-center">
+                    <i class="fas fa-users mr-2"></i>
+                    Real Team-Analyse
+                </h4>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Spieler gesamt:</span>
+                        <span class="text-white font-semibold">${realPlayers.length}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Durchschnittswert:</span>
+                        <span class="text-white font-semibold">€${Math.round(realPlayers.reduce((sum, p) => sum + (p.value || 0), 0) / realPlayers.length || 0).toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Aktuelle Form:</span>
+                        <span class="text-white font-semibold">${recentForm.real.join('-')}</span>
+                    </div>
+                </div>
+                
+                <div class="mt-3 pt-3 border-t border-red-700">
+                    <h5 class="font-semibold text-red-200 mb-2">🎯 Empfehlungen:</h5>
+                    <div class="space-y-1 text-xs">
+                        ${realRecommendations.map(rec => `
+                            <div class="bg-red-800/30 rounded px-2 py-1 text-red-100">
+                                ${rec}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Analyze team balance by position
+function analyzeTeamBalance(players) {
+    const positions = {
+        'TH': players.filter(p => p.position === 'TH').length,
+        'IV': players.filter(p => p.position === 'IV').length,
+        'LV': players.filter(p => p.position === 'LV').length,
+        'RV': players.filter(p => p.position === 'RV').length,
+        'ZM': players.filter(p => p.position === 'ZM').length,
+        'LM': players.filter(p => p.position === 'LM').length,
+        'RM': players.filter(p => p.position === 'RM').length,
+        'ST': players.filter(p => p.position === 'ST').length,
+        'ZOM': players.filter(p => p.position === 'ZOM').length
+    };
+    
+    return {
+        total: players.length,
+        positions,
+        avgGoals: players.reduce((sum, p) => sum + (p.goals || 0), 0) / players.length || 0,
+        avgValue: players.reduce((sum, p) => sum + (p.value || 0), 0) / players.length || 0,
+        topScorer: players.reduce((max, p) => (p.goals || 0) > (max.goals || 0) ? p : max, { goals: 0 })
+    };
+}
+
+// Generate transfer recommendations based on team analysis
+function generateTransferRecommendations(players, balance, recentForm) {
+    const recommendations = [];
+    
+    // Check for position gaps
+    if (balance.positions.TH === 0) {
+        recommendations.push("🚨 Kritisch: Kein Torwart! Sofort einen TH verpflichten.");
+    } else if (balance.positions.TH === 1) {
+        recommendations.push("⚠️ Nur ein Torwart - Backup TH empfohlen.");
+    }
+    
+    if (balance.positions.ST === 0) {
+        recommendations.push("🚨 Kritisch: Kein Stürmer! ST dringend benötigt.");
+    } else if (balance.positions.ST === 1) {
+        recommendations.push("⚡ Nur ein Stürmer - zweiter ST würde helfen.");
+    }
+    
+    if (balance.positions.IV < 2) {
+        recommendations.push("🛡️ Zu wenig Innenverteidiger - mindestens 2 IV empfohlen.");
+    }
+    
+    if (balance.positions.ZM === 0) {
+        recommendations.push("⚠️ Kein zentraler Mittelfeldspieler - ZM verstärken.");
+    }
+    
+    // Form-based recommendations
+    const formScore = recentForm.filter(r => r === 'W').length - recentForm.filter(r => r === 'L').length;
+    if (formScore <= -2) {
+        recommendations.push("📉 Schlechte Form - Verstärkungen in Angriff oder Mittelfeld.");
+    } else if (formScore >= 3) {
+        recommendations.push("📈 Gute Form - Team ist gut aufgestellt!");
+    }
+    
+    // Squad size recommendations
+    if (balance.total < 11) {
+        recommendations.push("👥 Squad zu klein - mehr Spieler für Rotationen.");
+    } else if (balance.total > 18) {
+        recommendations.push("👥 Squad sehr groß - eventuell Spieler abgeben.");
+    }
+    
+    // Performance-based recommendations
+    if (balance.avgGoals < 0.5) {
+        recommendations.push("⚽ Wenig Tore - offensive Verstärkungen nötig.");
+    }
+    
+    if (recommendations.length === 0) {
+        recommendations.push("✅ Team ist ausgewogen aufgestellt!");
+    }
+    
+    return recommendations;
 }
 export function resetStatsState() {}
