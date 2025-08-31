@@ -598,11 +598,11 @@ const SUPABASE_URL = (typeof process !== 'undefined' && process?.env?.VITE_SUPAB
                      'https://buduldeczjwnjvsckqat.supabase.co';
 const SUPABASE_ANON_KEY = (typeof process !== 'undefined' && process?.env?.VITE_SUPABASE_ANON_KEY) || 
                           (typeof process !== 'undefined' && process?.env?.REACT_APP_SUPABASE_ANON_KEY) || 
-                          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1ZHVsZGVjempqdm52c2NrcWF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIzNzQwOTIsImV4cCI6MjA0Nzk1MDA5Mn0.wcOHaKNEW9rQ3anrRNlEpA_r1_wGda3';
+                          'sb_publishable_wcOHaKNEW9rQ3anrRNlEpA_r1_wGda3';
 
 // Alternative: you can also hardcode your values here for static hosting
-// const SUPABASE_URL = 'https://yourproject.supabase.co';
-// const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+// const SUPABASE_URL = 'https://buduldeczjwnjvsckqat.supabase.co';
+// const SUPABASE_ANON_KEY = 'sb_publishable_wcOHaKNEW9rQ3anrRNlEpA_r1_wGda3';
 
 // Try to create real Supabase client first, fallback if not available
 let supabase;
