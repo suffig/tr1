@@ -12,8 +12,6 @@ let finances = {
     realMadrid: { balance: 0 }
 };
 let transactions = [];
-let matches = [];
-let bans = [];
 
 const POSITION_ORDER = {
     "TH": 0, "IV": 1, "LV": 2, "RV": 3, "ZDM": 4, "ZM": 5,
@@ -39,14 +37,12 @@ async function loadPlayersAndFinances(renderFn = renderPlayerLists) {
         const appDiv = document.getElementById('app');
         if (appDiv) appDiv.appendChild(loadingDiv);
 
-        const [playersResult, finResult, transResult, matchesResult, bansResult] = await Promise.allSettled([
+        const [playersResult, finResult, transResult] = await Promise.allSettled([
             supabaseDb.select('players', '*'),
             supabaseDb.select('finances', '*'),
             supabaseDb.select('transactions', '*', { 
                 order: { column: 'id', ascending: false } 
-            }),
-            supabaseDb.select('matches', '*'),
-            supabaseDb.select('bans', '*')
+            })
         ]);
 
         if (playersResult.status === 'fulfilled' && playersResult.value.data) {
@@ -64,12 +60,6 @@ async function loadPlayersAndFinances(renderFn = renderPlayerLists) {
         }
         if (transResult.status === 'fulfilled' && transResult.value.data) {
             transactions = transResult.value.data;
-        }
-        if (matchesResult.status === 'fulfilled' && matchesResult.value.data) {
-            matches = matchesResult.value.data;
-        }
-        if (bansResult.status === 'fulfilled' && bansResult.value.data) {
-            bans = bansResult.value.data;
         }
 
         if (loadingDiv.parentNode) {
@@ -150,8 +140,16 @@ async function renderPlayerAnalytics() {
         const analyticsContent = document.getElementById('player-analytics-content');
         if (!analyticsContent) return;
 
-        // Use already loaded data instead of fetching again
-        const players = [...aekAthen, ...realMadrid, ...ehemalige];
+        // Load fresh data
+        const [
+            { data: matches = [] },
+            { data: players = [] },
+            { data: bans = [] }
+        ] = await Promise.all([
+            supabaseDb.select('matches', '*'),
+            supabaseDb.select('players', '*'),
+            supabaseDb.select('bans', '*')
+        ]);
 
         const aekPlayers = players.filter(p => p.team === "AEK");
         const realPlayers = players.filter(p => p.team === "Real");
@@ -340,10 +338,10 @@ function accordionPanelHtml(team, key, gradientClass, teamKey) {
 function renderPlayerLists() {
     // Always update market values in accordion headers, regardless of panel state
     const aekMwSpan = document.getElementById('aek-marktwert');
-    if (aekMwSpan) aekMwSpan.innerText = Math.round(getKaderMarktwert(aekAthen)).toLocaleString('de-DE') + "M €";
+    if (aekMwSpan) aekMwSpan.innerText = getKaderMarktwert(aekAthen).toLocaleString('de-DE') + "M €";
     
     const realMwSpan = document.getElementById('real-marktwert');
-    if (realMwSpan) realMwSpan.innerText = Math.round(getKaderMarktwert(realMadrid)).toLocaleString('de-DE') + "M €";
+    if (realMwSpan) realMwSpan.innerText = getKaderMarktwert(realMadrid).toLocaleString('de-DE') + "M €";
 
     // Only render player lists if panels are open
     if (openPanel === 'aek' && document.getElementById('team-aek-players')) {
@@ -626,7 +624,5 @@ export function resetKaderState() {
     ehemalige = [];
     finances = { aekAthen: { balance: 0 }, realMadrid: { balance: 0 } };
     transactions = [];
-    matches = [];
-    bans = [];
     openPanel = null;
 }
