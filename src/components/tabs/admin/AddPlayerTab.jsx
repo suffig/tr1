@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSupabaseMutation } from '../../../hooks/useSupabase';
 
 const POSITIONS = [
@@ -10,38 +11,57 @@ const POSITIONS = [
 ];
 
 const TEAMS = [
-  { value: 'AEK', label: 'AEK Athen' },
-  { value: 'Real', label: 'Real Madrid' },
-  { value: 'Ehemalige', label: 'Ehemalige' },
+  { value: 'AEK', label: 'AEK Athen', color: 'blue' },
+  { value: 'Real', label: 'Real Madrid', color: 'red' },
+  { value: 'Ehemalige', label: 'Ehemalige', color: 'gray' },
 ];
 
 export default function AddPlayerTab() {
   const { insert } = useSupabaseMutation('players');
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    team: '',
+    position: '',
+    goals: 0
+  });
+  const [loading, setLoading] = useState(false);
 
-  const handleAddPlayer = async () => {
-    const name = prompt('Spielername:');
-    if (!name) return;
-    
-    const team = prompt(`Team (${TEAMS.map(t => t.value).join(', ')}):`, 'AEK');
-    if (!team) return;
-    
-    const position = prompt(`Position (${POSITIONS.map(p => p.value).join(', ')}):`, 'ST');
-    if (!position) return;
-    
-    const goals = prompt('Anzahl Tore (optional):', '0');
-    
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
     try {
       await insert({
-        name: name.trim(),
-        team: team.trim(),
-        position: position.trim().toUpperCase(),
-        goals: parseInt(goals) || 0,
+        name: formData.name.trim(),
+        team: formData.team.trim(),
+        position: formData.position.trim().toUpperCase(),
+        goals: parseInt(formData.goals) || 0,
       });
+      
+      // Reset form and close modal
+      setFormData({
+        name: '',
+        team: '',
+        position: '',
+        goals: 0
+      });
+      setShowModal(false);
+      
+      // Show success message
       alert('Spieler erfolgreich hinzugefügt!');
     } catch (error) {
       alert('Fehler beim Hinzufügen des Spielers: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const isFormValid = formData.name && formData.team && formData.position;
 
   return (
     <div className="p-4">
@@ -66,7 +86,7 @@ export default function AddPlayerTab() {
           </p>
           
           <button 
-            onClick={handleAddPlayer}
+            onClick={() => setShowModal(true)}
             className="btn-primary"
           >
             <i className="fas fa-plus mr-2"></i>
@@ -75,13 +95,140 @@ export default function AddPlayerTab() {
         </div>
       </div>
 
+      {/* Player Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-secondary rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-text-primary">Neuer Spieler</h3>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-text-muted hover:text-text-primary text-2xl"
+                  disabled={loading}
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Player Name */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Spielername *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    className="form-input"
+                    placeholder="z.B. Max Mustermann"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Team Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Team *
+                  </label>
+                  <select
+                    value={formData.team}
+                    onChange={(e) => handleInputChange('team', e.target.value)}
+                    className="form-input"
+                    required
+                    disabled={loading}
+                  >
+                    <option value="">Team wählen</option>
+                    {TEAMS.map((team) => (
+                      <option key={team.value} value={team.value}>
+                        {team.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Position */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Position *
+                  </label>
+                  <select
+                    value={formData.position}
+                    onChange={(e) => handleInputChange('position', e.target.value)}
+                    className="form-input"
+                    required
+                    disabled={loading}
+                  >
+                    <option value="">Position wählen</option>
+                    {POSITIONS.map((position) => (
+                      <option key={position.value} value={position.value}>
+                        {position.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Goals */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Anzahl Tore
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.goals}
+                    onChange={(e) => handleInputChange('goals', e.target.value)}
+                    className="form-input"
+                    placeholder="0"
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2 border border-border-light rounded-lg text-text-secondary hover:bg-bg-tertiary transition-colors"
+                    disabled={loading}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!isFormValid || loading}
+                    className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="spinner w-4 h-4 mr-2"></div>
+                        Speichern...
+                      </div>
+                    ) : (
+                      'Speichern'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Teams Reference */}
       <div className="mt-6 modern-card">
         <h4 className="font-semibold text-text-primary mb-3">Verfügbare Teams</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {TEAMS.map((team) => (
             <div key={team.value} className="p-3 bg-bg-secondary rounded-lg text-center">
-              <span className="font-medium text-text-primary">{team.label}</span>
+              <span className={`font-medium ${
+                team.color === 'blue' ? 'text-blue-600' : 
+                team.color === 'red' ? 'text-red-600' : 'text-gray-600'
+              }`}>
+                {team.color === 'blue' ? '🔵' : team.color === 'red' ? '🔴' : '⚫'} {team.label}
+              </span>
               <div className="text-xs text-text-muted mt-1">({team.value})</div>
             </div>
           ))}
