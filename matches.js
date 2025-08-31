@@ -139,12 +139,12 @@ class MatchAnalytics {
 class MatchesDataManager {
     constructor() {
         this.matches = [];
-        this.aekAthen = [];
-        this.realMadrid = [];
+        this.aek = [];
+        this.real = [];
         this.bans = [];
         this.finances = {
-            aekAthen: { balance: 0, debt: 0 },
-            realMadrid: { balance: 0, debt: 0 }
+            AEK: { balance: 0, debt: 0 },
+            Real: { balance: 0, debt: 0 }
         };
         this.spielerDesSpiels = [];
         this.transactions = [];
@@ -179,16 +179,16 @@ class MatchesDataManager {
             
             // Filter players by team
             const allPlayers = data.players || [];
-            this.aekAthen = allPlayers.filter(p => p.team === "AEK");
-            this.realMadrid = allPlayers.filter(p => p.team === "Real");
+            this.aek = allPlayers.filter(p => p.team === "AEK");
+            this.real = allPlayers.filter(p => p.team === "Real");
             
             this.bans = data.bans || [];
             
             // Process finances
             const financesData = data.finances || [];
             this.finances = {
-                aekAthen: financesData.find(f => f.team === "AEK") || { balance: 0, debt: 0 },
-                realMadrid: financesData.find(f => f.team === "Real") || { balance: 0, debt: 0 }
+                AEK: financesData.find(f => f.team === "AEK") || { balance: 0, debt: 0 },
+                Real: financesData.find(f => f.team === "Real") || { balance: 0, debt: 0 }
             };
             
             this.spielerDesSpiels = data.spieler_des_spiels || [];
@@ -237,10 +237,10 @@ class MatchesDataManager {
 
     reset() {
         this.matches = [];
-        this.aekAthen = [];
-        this.realMadrid = [];
+        this.aek = [];
+        this.real = [];
         this.bans = [];
-        this.finances = { aekAthen: { balance: 0, debt: 0 }, realMadrid: { balance: 0, debt: 0 } };
+        this.finances = { AEK: { balance: 0, debt: 0 }, Real: { balance: 0, debt: 0 } };
         this.spielerDesSpiels = [];
         this.transactions = [];
         this.matchesInitialized = false;
@@ -726,7 +726,7 @@ function matchHtml(match, nr) {
                 if (match.goalslista && match.goalslista.some(g => g.player === match.manofthematch)) return 'AEK';
                 if (match.goalslistb && match.goalslistb.some(g => g.player === match.manofthematch)) return 'Real';
                 // Fallback: check if player is in AEK or Real team
-                return matchesData.aekAthen.find(p => p.name === match.manofthematch) ? 'AEK' : 'Real';
+                return matchesData.aek.find(p => p.name === match.manofthematch) ? 'AEK' : 'Real';
               })()})</span>
             </span>
           </div>
@@ -770,13 +770,13 @@ function openMatchForm(id) {
         }
 
         // Validate player data is available
-        if (!matchesData.aekAthen.length && !matchesData.realMadrid.length) {
+        if (!matchesData.aek.length && !matchesData.real.length) {
             ErrorHandler.showUserError('Keine Spielerdaten verfügbar. Bitte laden Sie die Seite neu.');
             return;
         }
 
         // Spieler-Optionen SORTIERT nach SdS-Anzahl (absteigend), dann nach Toren (absteigend) - safely
-        const aekSorted = [...matchesData.aekAthen].sort((a, b) => {
+        const aekSorted = [...matchesData.aek].sort((a, b) => {
             const aSdsCount = getSdsCount(a.name, "AEK");
             const bSdsCount = getSdsCount(b.name, "AEK");
             if (aSdsCount !== bSdsCount) return bSdsCount - aSdsCount; // Sort by SdS count first
@@ -784,7 +784,7 @@ function openMatchForm(id) {
             const bGoals = b.goals || 0;
             return bGoals - aGoals; // Then by goals
         });
-        const realSorted = [...matchesData.realMadrid].sort((a, b) => {
+        const realSorted = [...matchesData.real].sort((a, b) => {
             const aSdsCount = getSdsCount(a.name, "Real");
             const bSdsCount = getSdsCount(b.name, "Real");
             if (aSdsCount !== bSdsCount) return bSdsCount - aSdsCount; // Sort by SdS count first
@@ -1513,13 +1513,13 @@ async function submitMatchForm(event, id) {
     // SdS Bonus
     let sdsBonusAek = 0, sdsBonusReal = 0;
     if (manofthematch) {
-        if (matchesData.aekAthen.find(p => p.name === manofthematch)) sdsBonusAek = 100000;
-        if (matchesData.realMadrid.find(p => p.name === manofthematch)) sdsBonusReal = 100000;
+        if (matchesData.aek.find(p => p.name === manofthematch)) sdsBonusAek = 100000;
+        if (matchesData.real.find(p => p.name === manofthematch)) sdsBonusReal = 100000;
     }
 
     // Spieler des Spiels-Statistik (Tabelle spieler_des_spiels)
     if (manofthematch) {
-        let t = matchesData.aekAthen.find(p => p.name === manofthematch) ? "AEK" : "Real";
+        let t = matchesData.aek.find(p => p.name === manofthematch) ? "AEK" : "Real";
         const { data: existing } = await supabase.from('spieler_des_spiels').select('*').eq('name', manofthematch).eq('team', t);
         if (existing && existing.length > 0) {
             await supabase.from('spieler_des_spiels').update({ count: existing[0].count + 1 }).eq('id', existing[0].id);
@@ -1676,11 +1676,11 @@ async function submitMatchForm(event, id) {
 
     if (winner && loser) {
         const debts = {
-            AEK: matchesData.finances.aekAthen.debt || 0,
-            Real: matchesData.finances.realMadrid.debt || 0,
+            AEK: matchesData.finances.AEK.debt || 0,
+            Real: matchesData.finances.Real.debt || 0,
         };
-        const aekSds = manofthematch && matchesData.aekAthen.find(p => p.name === manofthematch) ? 1 : 0;
-        const realSds = manofthematch && matchesData.realMadrid.find(p => p.name === manofthematch) ? 1 : 0;
+        const aekSds = manofthematch && matchesData.aek.find(p => p.name === manofthematch) ? 1 : 0;
+        const realSds = manofthematch && matchesData.real.find(p => p.name === manofthematch) ? 1 : 0;
 
         const aekBetrag = calcEchtgeldbetrag(aekOldBalance, prizeaek, aekSds);
         const realBetrag = calcEchtgeldbetrag(realOldBalance, prizereal, realSds);
