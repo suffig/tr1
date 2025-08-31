@@ -5,8 +5,8 @@ import { ErrorHandler } from './utils.js';
 import { getPlayersByTeam } from './data.js';
 
 let finances = {
-    aekAthen: { balance: 0, debt: 0 },
-    realMadrid: { balance: 0, debt: 0 }
+    AEK: { balance: 0, debt: 0 },
+    Real: { balance: 0, debt: 0 }
 };
 let transactions = [];
 
@@ -26,15 +26,15 @@ async function calculateTotalCapital() {
             getPlayersByTeam("Real")
         ]);
         
-        const aekBalance = finances.aekAthen.balance || 0;
-        const realBalance = finances.realMadrid.balance || 0;
+        const aekBalance = finances.AEK.balance || 0;
+        const realBalance = finances.Real.balance || 0;
         const aekMarketValue = getKaderMarktwert(aekPlayers) * 1000000; // Convert to euros
         const realMarketValue = getKaderMarktwert(realPlayers) * 1000000; // Convert to euros
         
         return aekBalance + realBalance + aekMarketValue + realMarketValue;
     } catch (error) {
         console.error('Error calculating total capital:', error);
-        return (finances.aekAthen.balance || 0) + (finances.realMadrid.balance || 0);
+        return (finances.AEK.balance || 0) + (finances.Real.balance || 0);
     }
 }
 
@@ -46,13 +46,13 @@ async function loadFinancesAndTransactions(renderFn = renderFinanzenTabInner) {
     }
     if (finData && finData.length) {
         finances = {
-            aekAthen: finData.find(f => f.team === "AEK") || { balance: 0, debt: 0 },
-            realMadrid: finData.find(f => f.team === "Real") || { balance: 0, debt: 0 }
+            AEK: finData.find(f => f.team === "AEK") || { balance: 0, debt: 0 },
+            Real: finData.find(f => f.team === "Real") || { balance: 0, debt: 0 }
         };
     } else {
         finances = {
-            aekAthen: { balance: 0, debt: 0 },
-            realMadrid: { balance: 0, debt: 0 }
+            AEK: { balance: 0, debt: 0 },
+            Real: { balance: 0, debt: 0 }
         };
     }
 
@@ -80,7 +80,7 @@ async function saveTransaction(trans) {
         ErrorHandler.showUserError(`Fehler beim Speichern der Transaktion: ${insertError.message}`, "error");
         return;
     }
-    const teamKey = trans.team === "AEK" ? "aekAthen" : "realMadrid";
+    const teamKey = trans.team; // Direct team name mapping
     let updateObj = {};
     if (trans.type === "Echtgeld-Ausgleich") {
         updateObj.debt = (finances[teamKey].debt || 0) + trans.amount;
@@ -118,8 +118,8 @@ async function renderFinanzenTabInner(containerId = "app") {
                     <span class="font-bold text-lg">AEK</span>
                 </div>
                 <div class="space-y-1 text-sm">
-                    <div>Kontostand: <span class="font-bold text-blue-200">${Math.round(finances.aekAthen.balance || 0).toLocaleString('de-DE')} €</span></div>
-                    <div>Schulden: <span class="font-bold text-blue-200">${Math.round(finances.aekAthen.debt || 0).toLocaleString('de-DE')} €</span></div>
+                    <div>Kontostand: <span class="font-bold text-blue-200">${Math.round(finances.AEK.balance || 0).toLocaleString('de-DE')} €</span></div>
+                    <div>Schulden: <span class="font-bold text-blue-200">${Math.round(finances.AEK.debt || 0).toLocaleString('de-DE')} €</span></div>
                 </div>
             </div>
             <div class="bg-red-700 text-red-100 rounded-lg p-3 flex-1 min-w-0 border border-red-600 shadow-lg">
@@ -128,8 +128,8 @@ async function renderFinanzenTabInner(containerId = "app") {
                     <span class="font-bold text-lg">Real</span>
                 </div>
                 <div class="space-y-1 text-sm">
-                    <div>Kontostand: <span class="font-bold text-red-200">${Math.round(finances.realMadrid.balance || 0).toLocaleString('de-DE')} €</span></div>
-                    <div>Schulden: <span class="font-bold text-red-200">${Math.round(finances.realMadrid.debt || 0).toLocaleString('de-DE')} €</span></div>
+                    <div>Kontostand: <span class="font-bold text-red-200">${Math.round(finances.Real.balance || 0).toLocaleString('de-DE')} €</span></div>
+                    <div>Schulden: <span class="font-bold text-red-200">${Math.round(finances.Real.debt || 0).toLocaleString('de-DE')} €</span></div>
                 </div>
             </div>
             <div class="bg-green-700 text-green-100 rounded-lg p-3 flex-1 min-w-0 border border-green-600 shadow-lg">
@@ -557,8 +557,8 @@ function openTransForm() {
 
 export function resetFinanzenState() {
     finances = {
-        aekAthen: { balance: 0, debt: 0 },
-        realMadrid: { balance: 0, debt: 0 }
+        AEK: { balance: 0, debt: 0 },
+        Real: { balance: 0, debt: 0 }
     };
     transactions = [];
 }

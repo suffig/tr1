@@ -77,8 +77,8 @@ const createFallbackClient = () => {
       { id: 18, amount: 1500, info: 'SdS Bonus: Max Müller', team: 'AEK', date: '2024-08-05', type: 'SdS Bonus', match_id: 4 }
     ],
     finances: [
-      { id: 1, team: 'AEK', budget: 150000, created_at: '2024-01-01' },
-      { id: 2, team: 'Real', budget: 175000, created_at: '2024-01-01' }
+      { id: 1, team: 'AEK', balance: 150000, debt: 0, created_at: '2024-01-01' },
+      { id: 2, team: 'Real', balance: 175000, debt: 0, created_at: '2024-01-01' }
     ],
     spieler_des_spiels: [
       { id: 1, name: 'Max Müller', team: 'AEK', count: 3, created_at: '2024-08-01' },
