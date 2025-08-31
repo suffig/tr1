@@ -15,8 +15,8 @@ export default function FinanzenTab() {
   const loading = financesLoading || transactionsLoading;
 
   const getTeamFinances = (teamName) => {
-    if (!finances) return { balance: 0 };
-    return finances.find(f => f.team === teamName) || { balance: 0 };
+    if (!finances) return { balance: 0, debt: 0 };
+    return finances.find(f => f.team === teamName) || { balance: 0, debt: 0 };
   };
 
   const getTeamTransactions = (teamName) => {
@@ -90,21 +90,21 @@ export default function FinanzenTab() {
             <span className="text-2xl mr-2">🔵</span>
             <h3 className="font-semibold text-blue-600">AEK Athen</h3>
           </div>
-          <div className="text-2xl font-bold text-text-primary">
-            {formatCurrency(aekFinances.balance)}
+          <div className="space-y-1 text-sm">
+            <div>Kontostand: <span className="font-bold text-blue-600">{formatCurrency(aekFinances.balance)}</span></div>
+            <div>Schulden: <span className="font-bold text-blue-600">{formatCurrency(aekFinances.debt || 0)}</span></div>
           </div>
-          <div className="text-sm text-text-muted">Aktueller Kontostand</div>
         </div>
 
-        <div className="modern-card text-center border-l-4 border-purple-400">
+        <div className="modern-card text-center border-l-4 border-red-400">
           <div className="flex items-center justify-center mb-2">
-            <span className="text-2xl mr-2">🟣</span>
-            <h3 className="font-semibold text-purple-600">Real Madrid</h3>
+            <span className="text-2xl mr-2">🔴</span>
+            <h3 className="font-semibold text-red-600">Real Madrid</h3>
           </div>
-          <div className="text-2xl font-bold text-text-primary">
-            {formatCurrency(realFinances.balance)}
+          <div className="space-y-1 text-sm">
+            <div>Kontostand: <span className="font-bold text-red-600">{formatCurrency(realFinances.balance)}</span></div>
+            <div>Schulden: <span className="font-bold text-red-600">{formatCurrency(realFinances.debt || 0)}</span></div>
           </div>
-          <div className="text-sm text-text-muted">Aktueller Kontostand</div>
         </div>
 
         <div className="modern-card text-center border-l-4 border-primary-green">
@@ -134,11 +134,11 @@ export default function FinanzenTab() {
                 selectedTeam === team
                   ? team === 'AEK' 
                     ? 'bg-blue-600 text-white' 
-                    : 'bg-purple-600 text-white'
+                    : 'bg-red-600 text-white'
                   : 'bg-bg-secondary text-text-muted hover:bg-bg-tertiary border border-border-light'
               }`}
             >
-              {team === 'AEK' ? '🔵 AEK Athen' : '🟣 Real Madrid'}
+              {team === 'AEK' ? '🔵 AEK Athen' : '🔴 Real Madrid'}
             </button>
           ))}
         </div>
@@ -148,7 +148,7 @@ export default function FinanzenTab() {
       <div className="modern-card mb-6">
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-semibold text-text-primary">
-            {selectedTeam === 'AEK' ? '🔵 AEK Athen' : '🟣 Real Madrid'} - Details
+            {selectedTeam === 'AEK' ? '🔵 AEK Athen' : '🔴 Real Madrid'} - Details
           </h4>
           <div className="text-right">
             <div className="text-lg font-bold text-text-primary">
