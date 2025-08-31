@@ -10,6 +10,7 @@ import { renderMatchesTab } from './matches.js';
 import { renderStatsTab } from './stats.js';
 import { renderFinanzenTab } from './finanzen.js';
 import { renderSpielerTab } from './spieler.js';
+import { renderAchievementsTab } from './achievements.js';
 
 // --- NEU: Reset-Functions für alle Module importieren ---
 import { resetKaderState } from './kader.js';
@@ -19,6 +20,7 @@ import { resetMatchesState } from './matches.js';
 // Falls du sie hast:
 import { resetStatsState } from './stats.js';
 import { resetSpielerState } from './spieler.js';
+import { resetAchievementsState } from './achievements.js';
 
 let currentTab = "matches";
 let liveSyncInitialized = false;
@@ -310,6 +312,7 @@ function handleVisibilityChange() {
                 if (typeof resetMatchesState === "function") resetMatchesState();
                 if (typeof resetStatsState === "function") resetStatsState();
                 if (typeof resetSpielerState === "function") resetSpielerState();
+                if (typeof resetAchievementsState === "function") resetAchievementsState();
                 setupTabButtons();
                 subscribeAllLiveSync();
                 renderCurrentTab(); // <-- erzwingt Daten-Reload!
@@ -405,7 +408,8 @@ async function renderCurrentTab() {
             'matches': () => renderMatchesTab("app"),
             'stats': () => renderStatsTab("app"),
             'finanzen': () => renderFinanzenTab("app"),
-            'spieler': () => renderSpielerTab("app")
+            'spieler': () => renderSpielerTab("app"),
+            'achievements': () => renderAchievementsTab("app")
         };
         
         const renderer = tabRenderers[currentTab];
@@ -435,6 +439,7 @@ function setupBottomNav() {
     document.getElementById("nav-finanzen")?.addEventListener("click", e => { e.preventDefault(); switchTab("finanzen"); });
     document.getElementById("nav-stats")?.addEventListener("click", e => { e.preventDefault(); switchTab("stats"); });
     document.getElementById("nav-spieler")?.addEventListener("click", e => { e.preventDefault(); switchTab("spieler"); });
+    document.getElementById("nav-achievements")?.addEventListener("click", e => { e.preventDefault(); switchTab("achievements"); });
 }
 window.addEventListener('DOMContentLoaded', setupBottomNav);
 
