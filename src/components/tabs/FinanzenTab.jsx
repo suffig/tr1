@@ -36,10 +36,14 @@ export default function FinanzenTab() {
   const calculateTotalCapital = () => {
     const aekBalance = getTeamFinances('AEK').balance || 0;
     const realBalance = getTeamFinances('Real').balance || 0;
-    const aekSquadValue = getTeamSquadValue('AEK');
-    const realSquadValue = getTeamSquadValue('Real');
+    const aekSquadValueMillions = getTeamSquadValue('AEK');
+    const realSquadValueMillions = getTeamSquadValue('Real');
     
-    return Math.round(aekBalance + realBalance + aekSquadValue + realSquadValue);
+    // Convert squad values from millions to euros for total capital calculation
+    const aekSquadValueEuros = aekSquadValueMillions * 1_000_000;
+    const realSquadValueEuros = realSquadValueMillions * 1_000_000;
+    
+    return Math.round(aekBalance + realBalance + aekSquadValueEuros + realSquadValueEuros);
   };
 
   const getTeamTransactions = (teamName) => {
@@ -59,9 +63,15 @@ export default function FinanzenTab() {
   };
 
   const formatCurrencyInMillions = (amount) => {
-    // Convert to millions and format with 1 decimal place
+    // Takes a euro amount and displays it in millions
+    // Input: euro amount, Output: "X.XM €"
     const amountInMillions = (amount || 0) / 1000000;
     return `${amountInMillions.toFixed(1)}M €`;
+  };
+
+  const formatPlayerValue = (value) => {
+    // Helper function for player values which are already stored in millions
+    return `${(value || 0).toFixed(1)}M €`;
   };
 
   const getTransactionTypeColor = (type) => {
@@ -205,7 +215,7 @@ export default function FinanzenTab() {
           </div>
           <div className="space-y-1 text-sm">
             <div>Kontostand: <span className="font-bold text-blue-600">{formatCurrency(aekFinances.balance)}</span></div>
-            <div>Kaderwert: <span className="font-bold text-blue-600">{formatCurrencyInMillions(getTeamSquadValue('AEK'))}</span></div>
+            <div>Kaderwert: <span className="font-bold text-blue-600">{formatPlayerValue(getTeamSquadValue('AEK'))}</span></div>
             <div>Schulden: <span className="font-bold text-blue-600">{formatCurrency(aekFinances.debt || 0)}</span></div>
           </div>
         </div>
@@ -217,7 +227,7 @@ export default function FinanzenTab() {
           </div>
           <div className="space-y-1 text-sm">
             <div>Kontostand: <span className="font-bold text-red-600">{formatCurrency(realFinances.balance)}</span></div>
-            <div>Kaderwert: <span className="font-bold text-red-600">{formatCurrencyInMillions(getTeamSquadValue('Real'))}</span></div>
+            <div>Kaderwert: <span className="font-bold text-red-600">{formatPlayerValue(getTeamSquadValue('Real'))}</span></div>
             <div>Schulden: <span className="font-bold text-red-600">{formatCurrency(realFinances.debt || 0)}</span></div>
           </div>
         </div>
@@ -480,7 +490,23 @@ export default function FinanzenTab() {
             <i className="fas fa-info-circle"></i>
           </div>
           <div>
-            <h4 className="font-semibold text-blue-800 mb-1">Hinweis</h4>
+            <h4 className="font-semibold text-blue-800 mb-1">Hinweis zu Marktwerten</h4>
+            <p className="text-blue-700 text-sm">
+              Spieler-Marktwerte werden in der Datenbank in Millionen Euro gespeichert (z.B. 12.5 = 12,5M €).
+              Für die Gesamtkapital-Berechnung werden diese automatisch in Euro umgerechnet.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Previous Info Card */}
+      <div className="mt-6 modern-card bg-blue-50 border-blue-200">
+        <div className="flex items-start">
+          <div className="text-blue-600 mr-3">
+            <i className="fas fa-info-circle"></i>
+          </div>
+          <div>
+            <h4 className="font-semibold text-blue-800 mb-1">Transaktionen verwalten</h4>
             <p className="text-blue-700 text-sm">
               Um neue Transaktionen hinzuzufügen, nutzen Sie den Verwaltungsbereich.
             </p>
