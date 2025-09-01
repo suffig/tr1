@@ -49,6 +49,59 @@ export default function KaderTab() {
     return baseClass;
   };
 
+  // Team analysis functions
+  const generatePlayerReport = () => {
+    if (!players || players.length === 0) {
+      alert('Keine Spieler für Report verfügbar');
+      return;
+    }
+    
+    const report = players.map(p => 
+      `${p.name} (${p.team}): ${p.goals || 0} Tore, ${p.position || 'Unbekannt'}, Wert: ${formatCurrencyInMillions(p.value || 0)}`
+    ).join('\n');
+    
+    alert(`📊 Spieler-Report:\n\n${report}`);
+  };
+
+  const balanceTeams = () => {
+    const aekCount = getTeamPlayers("AEK").length;
+    const realCount = getTeamPlayers("Real").length;
+    const difference = Math.abs(aekCount - realCount);
+    
+    if (difference <= 1) {
+      alert('✅ Teams sind bereits ausgeglichen!');
+    } else {
+      const needMore = aekCount > realCount ? 'Real Madrid' : 'AEK Athen';
+      alert(`⚖️ Team-Balance:\n${needMore} benötigt ${difference} weitere Spieler für ausgeglichene Teams.`);
+    }
+  };
+
+  const suggestTransfers = () => {
+    if (!players || players.length < 4) {
+      alert('🔄 Nicht genügend Spieler für Transfer-Analyse');
+      return;
+    }
+    
+    const aekPlayers = getTeamPlayers("AEK");
+    const realPlayers = getTeamPlayers("Real");
+    const suggestions = [];
+    
+    // Simple transfer suggestions based on team imbalance
+    if (aekPlayers.length > realPlayers.length + 2) {
+      const leastValuable = aekPlayers.sort((a, b) => (a.value || 0) - (b.value || 0))[0];
+      suggestions.push(`🔄 ${leastValuable.name} von AEK zu Real transferieren`);
+    } else if (realPlayers.length > aekPlayers.length + 2) {
+      const leastValuable = realPlayers.sort((a, b) => (a.value || 0) - (b.value || 0))[0];
+      suggestions.push(`🔄 ${leastValuable.name} von Real zu AEK transferieren`);
+    }
+    
+    if (suggestions.length === 0) {
+      suggestions.push('✅ Teams sind gut ausbalanciert - keine Transfers nötig');
+    }
+    
+    alert(`🔄 Transfer-Empfehlungen:\n\n${suggestions.join('\n')}`);
+  };
+
   const getTeamColor = (teamName) => {
     if (teamName === "AEK") return "text-blue-600";
     if (teamName === "Real") return "text-red-600";
@@ -147,6 +200,34 @@ export default function KaderTab() {
         <p className="text-text-muted">
           {players?.length || 0} Spieler insgesamt
         </p>
+      </div>
+
+      {/* Quick Actions Panel */}
+      <div className="modern-card mb-6">
+        <h3 className="font-bold text-lg mb-4">⚡ Schnell-Aktionen</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button
+            onClick={generatePlayerReport}
+            className="flex items-center justify-center space-x-2 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <span>📊</span>
+            <span>Spieler-Report</span>
+          </button>
+          <button
+            onClick={balanceTeams}
+            className="flex items-center justify-center space-x-2 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <span>⚖️</span>
+            <span>Teams ausgleichen</span>
+          </button>
+          <button
+            onClick={suggestTransfers}
+            className="flex items-center justify-center space-x-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <span>🔄</span>
+            <span>Transfer-Tipps</span>
+          </button>
+        </div>
       </div>
 
       {/* Team Accordions */}
