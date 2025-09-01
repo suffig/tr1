@@ -1,5 +1,5 @@
 import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
-import { supabase } from './supabaseClient.js';
+import { dataManager } from './dataManager.js';
 import { matches } from './matches.js';
 import { ErrorHandler } from './utils.js';
 import { getPlayersByTeam } from './data.js';
@@ -40,58 +40,74 @@ async function calculateTotalCapital() {
 
 // Lädt alle Finanzen und Transaktionen und ruft das Rendern auf
 async function loadFinancesAndTransactions(renderFn = renderFinanzenTabInner) {
-    const { data: finData, error: finError } = await supabase.from('finances').select('*');
-    if (finError) {
-        ErrorHandler.showUserError(`Fehler beim Laden der Finanzen: ${finError.message}`, "error");
-    }
-    if (finData && finData.length) {
-        finances = {
-            AEK: finData.find(f => f.team === "AEK") || { balance: 0, debt: 0 },
-            Real: finData.find(f => f.team === "Real") || { balance: 0, debt: 0 }
-        };
-    } else {
-        finances = {
-            AEK: { balance: 0, debt: 0 },
-            Real: { balance: 0, debt: 0 }
-        };
-    }
+    try {
+        const data = await dataManager.loadAllAppData();
+        
+        const finData = data.finances || [];
+        const transData = data.transactions || [];
 
-    const { data: transData, error: transError } = await supabase.from('transactions').select('*').order('id', { ascending: false });
-    if (transError) {
-        ErrorHandler.showUserError(`Fehler beim Laden der Transaktionen: ${transError.message}`, "error");
+        if (finData.length) {
+            finances = {
+                AEK: finData.find(f => f.team === "AEK") || { balance: 0, debt: 0 },
+                Real: finData.find(f => f.team === "Real") || { balance: 0, debt: 0 }
+            };
+        } else {
+            finances = {
+                AEK: { balance: 0, debt: 0 },
+                Real: { balance: 0, debt: 0 }
+            };
+        }
+
+        transactions = transData;
+        console.log('Loaded transactions:', transactions.length, transactions);
+        renderFn("app");
+        
+    } catch (error) {
+        console.error('Error loading finances and transactions:', error);
+        ErrorHandler.showUserError(`Fehler beim Laden der Finanzdaten: ${error.message}`, "error");
+        renderFn("app");
     }
-    transactions = transData || [];
-    console.log('Loaded transactions:', transactions.length, transactions);
-    renderFn("app");
 }
 
 // Transaktion in die DB schreiben und Finanzen aktualisieren
 async function saveTransaction(trans) {
-    trans.amount = parseInt(trans.amount, 10) || 0;
-    const { error: insertError } = await supabase.from('transactions').insert([{
-        date: trans.date,
-        type: trans.type,
-        team: trans.team,
-        amount: trans.amount,
-        info: trans.info || null,
-        match_id: trans.match_id || null
-    }]);
-    if (insertError) {
-        ErrorHandler.showUserError(`Fehler beim Speichern der Transaktion: ${insertError.message}`, "error");
-        return;
-    }
-    const teamKey = trans.team; // Direct team name mapping
-    let updateObj = {};
-    if (trans.type === "Echtgeld-Ausgleich") {
-        updateObj.debt = (finances[teamKey].debt || 0) + trans.amount;
-    } else {
-        let newBalance = (finances[teamKey].balance || 0) + trans.amount;
-        if (newBalance < 0) newBalance = 0;
-        updateObj.balance = newBalance;
-    }
-    const { error: updateError } = await supabase.from('finances').update(updateObj).eq('team', trans.team);
-    if (updateError) {
-        ErrorHandler.showUserError(`Fehler beim Aktualisieren der Finanzen: ${updateError.message}`, "error");
+    try {
+        trans.amount = parseInt(trans.amount, 10) || 0;
+        
+        // Insert transaction using dataManager
+        const transactionData = {
+            date: trans.date,
+            type: trans.type,
+            team: trans.team,
+            amount: trans.amount,
+            info: trans.info || null,
+            match_id: trans.match_id || null
+        };
+        
+        const insertResult = await dataManager.insert('transactions', transactionData);
+        if (insertResult.error) {
+            throw new Error(`Transaction insert failed: ${insertResult.error.message}`);
+        }
+        
+        // Update finances
+        const teamKey = trans.team; // Direct team name mapping
+        let updateObj = {};
+        if (trans.type === "Echtgeld-Ausgleich") {
+            updateObj.debt = (finances[teamKey].debt || 0) + trans.amount;
+        } else {
+            let newBalance = (finances[teamKey].balance || 0) + trans.amount;
+            if (newBalance < 0) newBalance = 0;
+            updateObj.balance = newBalance;
+        }
+        
+        const updateResult = await dataManager.update('finances', updateObj, { team: trans.team });
+        if (updateResult.error) {
+            throw new Error(`Finance update failed: ${updateResult.error.message}`);
+        }
+        
+    } catch (error) {
+        console.error('Error saving transaction:', error);
+        ErrorHandler.showUserError(`Fehler beim Speichern der Transaktion: ${error.message}`, "error");
     }
 }
 

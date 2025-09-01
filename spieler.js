@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient.js';
+import { dataManager } from './dataManager.js';
 
 export async function renderSpielerTab(containerId = "app") {
 	console.log("renderSpielerTab aufgerufen!", { containerId });
@@ -97,22 +97,25 @@ export async function renderSpielerTab(containerId = "app") {
     }
 
     async function renderTorschuetzen() {
-        // Spieler laden
-        const { data: players, error: errP } = await supabase.from('players').select('*');
-        if (errP) {
-            document.getElementById('spieler-content').innerHTML =
-                `<div class="text-red-700 dark:text-red-300 p-4">Fehler beim Laden der Daten: ${errP?.message || ''}</div>`;
-            return;
-        }
+        try {
+            // Use dataManager for consistent database access
+            const data = await dataManager.loadAllAppData();
+            const players = data.players || [];
 
-        let scorerArr = (players || [])
-            .filter(p => p.goals && p.goals > 0)
-            .map(p => ({
-                team: p.team,
-                name: p.name,
-                goals: p.goals || 0
-            }));
-        scorerArr.sort((a, b) => b.goals - a.goals);
+            if (!players.length) {
+                document.getElementById('spieler-content').innerHTML =
+                    `<div class="text-gray-700 dark:text-gray-300 p-4 text-center">Keine Spieler gefunden. Bitte fügen Sie zunächst Spieler hinzu.</div>`;
+                return;
+            }
+
+            let scorerArr = players
+                .filter(p => p.goals && p.goals > 0)
+                .map(p => ({
+                    team: p.team,
+                    name: p.name,
+                    goals: p.goals || 0
+                }));
+            scorerArr.sort((a, b) => b.goals - a.goals);
 
         // Top 3 mit Abzeichen
         const top3 = scorerArr.slice(0, 3);
@@ -190,18 +193,28 @@ export async function renderSpielerTab(containerId = "app") {
         }
 
         document.getElementById('spieler-content').innerHTML = top3Html + tableHtml;
+        
+        } catch (error) {
+            console.error('Error loading players:', error);
+            document.getElementById('spieler-content').innerHTML =
+                `<div class="text-red-700 dark:text-red-300 p-4">Fehler beim Laden der Spielerdaten: ${error?.message || 'Unbekannter Fehler'}</div>`;
+        }
     }
 
     async function renderSdS() {
-        const { data: sdsArr, error } = await supabase.from('spieler_des_spiels').select('*');
-        if (error) {
-            document.getElementById('spieler-content').innerHTML =
-                `<div class="text-red-700 dark:text-red-300 p-4">Fehler beim Laden der Spieler des Spiels: ${error.message}</div>`;
-            return;
-        }
-        // Hole alle Spieler für aktuelle Teams
-        const { data: players } = await supabase.from('players').select('name, team');
-        let arr = [...sdsArr].sort((a, b) => b.count - a.count);
+        try {
+            // Use dataManager for consistent database access
+            const data = await dataManager.loadAllAppData();
+            const sdsArr = data.spieler_des_spiels || [];
+            const players = data.players || [];
+
+            if (!sdsArr.length) {
+                document.getElementById('spieler-content').innerHTML =
+                    `<div class="text-gray-700 dark:text-gray-300 p-4 text-center">Noch keine Spieler des Spiels vergeben.</div>`;
+                return;
+            }
+
+            let arr = [...sdsArr].sort((a, b) => b.count - a.count);
 
         // Team immer aktuell aus players, fallback auf SdS-Tabelle
         arr = arr.map(s => {
@@ -287,6 +300,12 @@ export async function renderSpielerTab(containerId = "app") {
         }
 
         document.getElementById('spieler-content').innerHTML = top3Html + tableHtml;
+        
+        } catch (error) {
+            console.error('Error loading SdS data:', error);
+            document.getElementById('spieler-content').innerHTML =
+                `<div class="text-red-700 dark:text-red-300 p-4">Fehler beim Laden der SdS-Daten: ${error?.message || 'Unbekannter Fehler'}</div>`;
+        }
     }
 }
 export function resetSpielerState() {}

@@ -1,11 +1,12 @@
-import { supabase } from './supabaseClient.js';
+import { dataManager } from './dataManager.js';
 
 // Enhanced statistics calculations
 class StatsCalculator {
-    constructor(matches, players, bans) {
+    constructor(matches, players, bans, spielerDesSpiels) {
         this.matches = matches || [];
         this.players = players || [];
         this.bans = bans || [];
+        this.spielerDesSpiels = spielerDesSpiels || [];
         this.aekPlayers = players.filter(p => p.team === "AEK");
         this.realPlayers = players.filter(p => p.team === "Real");
     }
@@ -57,16 +58,23 @@ class StatsCalculator {
         return { aek: aekForm, real: realForm };
     }
 
-    // Advanced player statistics
+    // Enhanced player statistics with correct database values
     calculatePlayerStats() {
         const playerStats = this.players.map(player => {
             const matchesPlayed = this.countPlayerMatches(player.id);
             const goals = player.goals || 0;
             const playerBans = this.bans.filter(b => b.player_id === player.id);
             
+            // Get SdS count from spieler_des_spiels table
+            const sdsRecord = this.spielerDesSpiels.find(sds => 
+                sds.name === player.name && sds.team === player.team
+            );
+            const sdsCount = sdsRecord ? (sdsRecord.count || 0) : 0;
+            
             return {
                 ...player,
                 matchesPlayed,
+                sdsCount,
                 goalsPerGame: matchesPlayed > 0 ? (goals / matchesPlayed).toFixed(2) : '0.00',
                 totalBans: playerBans.length,
                 disciplinaryScore: this.calculateDisciplinaryScore(playerBans)
@@ -199,69 +207,112 @@ class StatsCalculator {
         return stats;
     }
 
-    // NEW: Player performance analysis
-    calculatePlayerStats() {
-        const playerStats = {
-            mostGoalsInSingleGame: 0,
-            topScorer: null,
-            mostBannedPlayer: null,
-            teamWithMostBans: null
+    // Enhanced statistics processing for goals (excluding own goals from player stats)
+    calculateGoalStatistics() {
+        const goalStats = {
+            totalGoals: 0,
+            playerGoals: 0,
+            ownGoals: 0,
+            topScorers: {
+                AEK: null,
+                Real: null
+            }
         };
 
-        // Find highest single game goal count
         this.matches.forEach(match => {
-            if (match.goalslista) {
+            // Process AEK goals
+            if (match.goalslista && Array.isArray(match.goalslista)) {
                 match.goalslista.forEach(scorer => {
-                    if (scorer.count > playerStats.mostGoalsInSingleGame) {
-                        playerStats.mostGoalsInSingleGame = scorer.count;
-                        const player = this.aekPlayers.find(p => p.id === scorer.player_id);
-                        playerStats.topScorer = player ? player.name : scorer.player;
+                    if (typeof scorer === 'string') {
+                        if (scorer.startsWith('Eigentore_')) {
+                            goalStats.ownGoals++;
+                        } else {
+                            goalStats.playerGoals++;
+                        }
+                        goalStats.totalGoals++;
+                    } else if (scorer && scorer.player) {
+                        const count = scorer.count || 1;
+                        if (scorer.player.startsWith('Eigentore_')) {
+                            goalStats.ownGoals += count;
+                        } else {
+                            goalStats.playerGoals += count;
+                        }
+                        goalStats.totalGoals += count;
                     }
                 });
             }
-            if (match.goalslistb) {
+
+            // Process Real goals  
+            if (match.goalslistb && Array.isArray(match.goalslistb)) {
                 match.goalslistb.forEach(scorer => {
-                    if (scorer.count > playerStats.mostGoalsInSingleGame) {
-                        playerStats.mostGoalsInSingleGame = scorer.count;
-                        const player = this.realPlayers.find(p => p.id === scorer.player_id);
-                        playerStats.topScorer = player ? player.name : scorer.player;
+                    if (typeof scorer === 'string') {
+                        if (scorer.startsWith('Eigentore_')) {
+                            goalStats.ownGoals++;
+                        } else {
+                            goalStats.playerGoals++;
+                        }
+                        goalStats.totalGoals++;
+                    } else if (scorer && scorer.player) {
+                        const count = scorer.count || 1;
+                        if (scorer.player.startsWith('Eigentore_')) {
+                            goalStats.ownGoals += count;
+                        } else {
+                            goalStats.playerGoals += count;
+                        }
+                        goalStats.totalGoals += count;
                     }
                 });
             }
         });
 
-        return playerStats;
+        // Find top scorers based on database values
+        if (this.aekPlayers.length > 0) {
+            goalStats.topScorers.AEK = this.aekPlayers.reduce((max, player) => 
+                (player.goals || 0) > (max.goals || 0) ? player : max
+            );
+        }
+        
+        if (this.realPlayers.length > 0) {
+            goalStats.topScorers.Real = this.realPlayers.reduce((max, player) => 
+                (player.goals || 0) > (max.goals || 0) ? player : max
+            );
+        }
+
+        return goalStats;
     }
 }
 
 export async function renderStatsTab(containerId = "app") {
 	console.log("renderStatsTab aufgerufen!", { containerId });
-    // Lade Daten
-    const [
-        { data: bans = [], error: errorBans },
-        { data: matches = [], error: errorMatches },
-        { data: players = [], error: errorPlayers }
-    ] = await Promise.all([
-        supabase.from('bans').select('*'),
-        supabase.from('matches').select('*'),
-        supabase.from('players').select('*')
-    ]);
-    if (errorBans || errorMatches || errorPlayers) {
-        document.getElementById(containerId).innerHTML =
-            `<div class="text-red-700 dark:text-red-300 p-4">Fehler beim Laden der Statistiken: ${errorBans?.message || ''} ${errorMatches?.message || ''} ${errorPlayers?.message || ''}</div>`;
-        return;
-    }
-
-    // Initialize enhanced statistics calculator
-    const stats = new StatsCalculator(matches, players, bans);
     
-    // Calculate enhanced statistics
-    const teamRecords = stats.calculateTeamRecords();
-    const recentForm = stats.calculateRecentForm(5);
-    const playerStats = stats.calculatePlayerStats();
-    const headToHead = stats.calculateHeadToHead();
-    const performanceTrends = stats.calculatePerformanceTrends();
-    const advancedStats = stats.calculateAdvancedStats();
+    // Load all data using dataManager for consistency
+    try {
+        const data = await dataManager.loadAllAppData();
+        
+        const {
+            matches = [],
+            players = [],
+            bans = [],
+            spieler_des_spiels = []
+        } = data;
+
+        if (!matches.length && !players.length) {
+            document.getElementById(containerId).innerHTML =
+                `<div class="text-gray-700 dark:text-gray-300 p-4 text-center">Keine Daten verfügbar. Bitte fügen Sie zunächst Spieler und Matches hinzu.</div>`;
+            return;
+        }
+
+        // Initialize enhanced statistics calculator with all data
+        const stats = new StatsCalculator(matches, players, bans, spieler_des_spiels);
+        
+        // Calculate enhanced statistics
+        const teamRecords = stats.calculateTeamRecords();
+        const recentForm = stats.calculateRecentForm(5);
+        const playerStats = stats.calculatePlayerStats();
+        const headToHead = stats.calculateHeadToHead();
+        const performanceTrends = stats.calculatePerformanceTrends();
+        const advancedStats = stats.calculateAdvancedStats();
+        const goalStatistics = stats.calculateGoalStatistics();
 
     // Spielerlisten
     const aekPlayers = players.filter(p => p.team === "AEK");
@@ -656,17 +707,83 @@ export async function renderStatsTab(containerId = "app") {
                 ${bansTableHtml}
             </div>
 
-            <!-- Geschossene Tore -->
-            <div class="flex gap-4 mb-2">
-                <div class="flex-1 flex flex-col items-center justify-center rounded-xl bg-blue-50 text-blue-900 border border-blue-200 shadow px-4 py-3 min-w-[130px]">
-                    <span class="font-bold text-lg flex items-center gap-2">AEK: <span class="text-2xl">${totalToreAek}</span></span>
-                    <span class="flex items-center gap-1 mt-1 text-base">${topScorerAek ? `👑 <span class="font-semibold">${topScorerAek.name}</span> <span class="text-xs">(${topScorerAek.goals})</span>` : "–"}</span>
+        // Enhanced goal statistics section
+        <div class="rounded-xl shadow border bg-gray-800 p-4 mb-4">
+            <h3 class="font-bold text-lg mb-4 text-white flex items-center gap-2">
+                <span class="text-xl">⚽</span>
+                Torstatistiken (Database Values)
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div class="bg-green-900/20 border border-green-700 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-green-400">${goalStatistics.totalGoals}</div>
+                    <div class="text-sm text-gray-300">Gesamt Tore</div>
                 </div>
-                <div class="flex-1 flex flex-col items-center justify-center rounded-xl bg-red-50 text-red-900 border border-red-200 shadow px-4 py-3 min-w-[130px]">
-                    <span class="font-bold text-lg flex items-center gap-2">Real: <span class="text-2xl">${totalToreReal}</span></span>
-                    <span class="flex items-center gap-1 mt-1 text-base">${topScorerReal ? `👑 <span class="font-semibold">${topScorerReal.name}</span> <span class="text-xs">(${topScorerReal.goals})</span>` : "–"}</span>
+                <div class="bg-blue-900/20 border border-blue-700 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-400">${goalStatistics.playerGoals}</div>
+                    <div class="text-sm text-gray-300">Spieler Tore</div>
+                </div>
+                <div class="bg-orange-900/20 border border-orange-700 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-orange-400">${goalStatistics.ownGoals}</div>
+                    <div class="text-sm text-gray-300">Eigentore</div>
+                </div>
+                <div class="bg-purple-900/20 border border-purple-700 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-purple-400">${totalMatches}</div>
+                    <div class="text-sm text-gray-300">Matches</div>
                 </div>
             </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+                    <h4 class="font-bold text-blue-300 mb-2">AEK Top Scorer</h4>
+                    ${goalStatistics.topScorers.AEK ? `
+                        <div class="text-white font-semibold">${goalStatistics.topScorers.AEK.name}</div>
+                        <div class="text-blue-300 text-2xl font-bold">${goalStatistics.topScorers.AEK.goals || 0} Tore</div>
+                    ` : '<div class="text-gray-400">Keine Tore</div>'}
+                </div>
+                <div class="bg-red-900/20 border border-red-700 rounded-lg p-4">
+                    <h4 class="font-bold text-red-300 mb-2">Real Top Scorer</h4>
+                    ${goalStatistics.topScorers.Real ? `
+                        <div class="text-white font-semibold">${goalStatistics.topScorers.Real.name}</div>
+                        <div class="text-red-300 text-2xl font-bold">${goalStatistics.topScorers.Real.goals || 0} Tore</div>
+                    ` : '<div class="text-gray-400">Keine Tore</div>'}
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced SdS statistics section -->
+        <div class="rounded-xl shadow border bg-gray-800 p-4 mb-4">
+            <h3 class="font-bold text-lg mb-4 text-white flex items-center gap-2">
+                <span class="text-xl">⭐</span>
+                Spieler des Spiels (Database Values)
+            </h3>
+            
+            ${spieler_des_spiels.length > 0 ? `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${spieler_des_spiels.slice(0, 10).map((sds, index) => {
+                        const teamClass = sds.team === 'AEK' ? 'border-blue-700 bg-blue-900/20' : 'border-red-700 bg-red-900/20';
+                        const textClass = sds.team === 'AEK' ? 'text-blue-300' : 'text-red-300';
+                        
+                        return `
+                            <div class="flex items-center justify-between p-3 rounded-lg border ${teamClass}">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-yellow-400 text-xl">⭐</span>
+                                    <div>
+                                        <div class="font-semibold text-white">${sds.name}</div>
+                                        <div class="text-sm ${textClass}">${sds.team}</div>
+                                    </div>
+                                </div>
+                                <div class="text-2xl font-bold text-yellow-400">${sds.count}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            ` : `
+                <div class="text-center text-gray-400 py-8">
+                    Noch keine Spieler des Spiels vergeben
+                </div>
+            `}
+        </div>
             
             <!-- Karten (modern, mit schönen Badges & Durchschnitt) -->
             <div class="rounded-xl shadow border bg-gray-800 p-4 mb-2 flex flex-col gap-4">
