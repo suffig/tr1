@@ -11,6 +11,12 @@ import { renderStatsTab } from './stats.js';
 import { renderFinanzenTab } from './finanzen.js';
 import { renderSpielerTab } from './spieler.js';
 
+// --- NEU: Enhanced features ---
+import { DataExportImport } from './exportImport.js';
+import { AchievementSystem, checkAchievementsAfterMatch } from './achievements.js';
+import TouchGestureHandler from './touchGestures.js';
+import { FormationVisualizer } from './formationVisualizer.js';
+
 // --- NEU: Reset-Functions für alle Module importieren ---
 import { resetKaderState } from './kader.js';
 import { resetBansState } from './bans.js';

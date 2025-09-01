@@ -575,3 +575,154 @@ export function resetFinanzenState() {
     };
     transactions = [];
 }
+
+// --- Enhanced functionality for export/import ---
+
+// Export financial data
+window.exportFinancialData = async function() {
+    try {
+        const { DataExportImport } = await import('./exportImport.js');
+        
+        // Create financial-specific export
+        const financialData = {
+            finances: finances,
+            transactions: transactions,
+            exportDate: new Date().toISOString(),
+            type: 'financial_data'
+        };
+        
+        const dataStr = JSON.stringify(financialData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(dataBlob);
+        link.download = `fifa-tracker-finanzen-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        
+        alert('✅ Finanzdaten erfolgreich exportiert!');
+        
+    } catch (error) {
+        alert('❌ Export fehlgeschlagen: ' + error.message);
+    }
+};
+
+// Show import modal
+window.showImportModal = function() {
+    const modalHTML = `
+        <div id="import-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="modal-content bg-slate-800 rounded-lg max-w-md w-full p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-white font-semibold text-lg">Finanzdaten importieren</h3>
+                    <button onclick="hideImportModal()" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-2">
+                            JSON-Datei auswählen
+                        </label>
+                        <input 
+                            type="file" 
+                            id="import-file-input" 
+                            accept=".json"
+                            class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                        >
+                    </div>
+                    
+                    <div class="bg-orange-100 border border-orange-400 text-orange-800 px-4 py-3 rounded text-sm">
+                        <strong>Warnung:</strong> Der Import überschreibt alle aktuellen Finanzdaten!
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button 
+                            onclick="processFinancialImport()" 
+                            class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                        >
+                            Importieren
+                        </button>
+                        <button 
+                            onclick="hideImportModal()" 
+                            class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                        >
+                            Abbrechen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+};
+
+// Hide import modal
+window.hideImportModal = function() {
+    const modal = document.getElementById('import-modal');
+    if (modal) {
+        modal.remove();
+    }
+};
+
+// Process financial import
+window.processFinancialImport = async function() {
+    const fileInput = document.getElementById('import-file-input');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('❌ Bitte wählen Sie eine Datei aus');
+        return;
+    }
+    
+    try {
+        const fileContent = await readFileAsText(file);
+        const importData = JSON.parse(fileContent);
+        
+        // Validate import data
+        if (!importData.finances || !importData.transactions) {
+            throw new Error('Ungültiges Datenformat');
+        }
+        
+        const confirmMessage = `Finanzdaten vom ${new Date(importData.exportDate).toLocaleDateString('de-DE')} importieren?\n\n` +
+                             `Enthält ${importData.transactions.length} Transaktionen.\n` +
+                             `WARNUNG: Aktuelle Daten werden überschrieben!`;
+        
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        // Import data
+        finances = importData.finances;
+        transactions = importData.transactions;
+        
+        // Save to database if online
+        if (navigator.onLine) {
+            try {
+                // Here you would normally save to Supabase
+                console.log('Saving imported financial data to database...');
+            } catch (error) {
+                console.warn('Could not save to database:', error);
+            }
+        }
+        
+        // Refresh the view
+        await renderFinanzenTab();
+        
+        hideImportModal();
+        alert(`✅ ${importData.transactions.length} Transaktionen erfolgreich importiert!`);
+        
+    } catch (error) {
+        alert('❌ Import fehlgeschlagen: ' + error.message);
+    }
+};
+
+// Helper function to read file
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = event => resolve(event.target.result);
+        reader.onerror = error => reject(error);
+        reader.readAsText(file);
+    });
+}

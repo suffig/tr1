@@ -204,19 +204,41 @@ async function renderPlayerAnalytics() {
                     </div>
                 </div>
 
-                <!-- Quick Actions -->
+                <!-- Enhanced Quick Actions -->
                 <div class="bg-gray-700 rounded-lg p-3">
-                    <h4 class="font-bold text-white mb-2 text-sm">Schnell-Aktionen</h4>
-                    <div class="space-y-2">
-                        <button onclick="generatePlayerReport()" class="w-full bg-blue-600 text-white py-1 px-2 rounded text-xs hover:bg-blue-700">
-                            📊 Spieler-Report
+                    <h4 class="font-bold text-white mb-2 text-sm">Team-Tools & Analyse</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="generatePlayerReport()" class="bg-blue-600 text-white py-1 px-2 rounded text-xs hover:bg-blue-700 flex items-center justify-center">
+                            <i class="fas fa-chart-line mr-1"></i>
+                            Report
                         </button>
-                        <button onclick="balanceTeams()" class="w-full bg-green-600 text-white py-1 px-2 rounded text-xs hover:bg-green-700">
-                            ⚖️ Teams ausgleichen
+                        <button onclick="balanceTeams()" class="bg-green-600 text-white py-1 px-2 rounded text-xs hover:bg-green-700 flex items-center justify-center">
+                            <i class="fas fa-balance-scale mr-1"></i>
+                            Balance
                         </button>
-                        <button onclick="suggestTransfers()" class="w-full bg-purple-600 text-white py-1 px-2 rounded text-xs hover:bg-purple-700">
-                            🔄 Transfer-Tipps
+                        <button onclick="suggestTransfers()" class="bg-purple-600 text-white py-1 px-2 rounded text-xs hover:bg-purple-700 flex items-center justify-center">
+                            <i class="fas fa-exchange-alt mr-1"></i>
+                            Transfers
                         </button>
+                        <button onclick="toggleFormationView()" class="bg-indigo-600 text-white py-1 px-2 rounded text-xs hover:bg-indigo-700 flex items-center justify-center">
+                            <i class="fas fa-chess-board mr-1"></i>
+                            Formation
+                        </button>
+                        <button onclick="exportSquadData()" class="bg-orange-600 text-white py-1 px-2 rounded text-xs hover:bg-orange-700 flex items-center justify-center">
+                            <i class="fas fa-download mr-1"></i>
+                            Export
+                        </button>
+                        <button onclick="showAchievements()" class="bg-yellow-600 text-white py-1 px-2 rounded text-xs hover:bg-yellow-700 flex items-center justify-center">
+                            <i class="fas fa-trophy mr-1"></i>
+                            Erfolge
+                        </button>
+                    </div>
+                    
+                    <!-- Formation View Container -->
+                    <div id="formation-view" class="hidden mt-3">
+                        <div class="bg-slate-800 rounded-lg p-2 border border-slate-600">
+                            <div id="formation-container"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -614,3 +636,126 @@ export function resetKaderState() {
     transactions = [];
     openPanel = null;
 }
+
+// --- Enhanced functionality for new features ---
+
+// Formation visualization
+window.toggleFormationView = function() {
+    const formationView = document.getElementById('formation-view');
+    const button = event.target;
+    
+    if (formationView && formationView.classList.contains('hidden')) {
+        formationView.classList.remove('hidden');
+        button.innerHTML = '<i class="fas fa-chess-board mr-1"></i>Hide';
+        
+        // Initialize formation visualizer
+        import('./formationVisualizer.js').then(module => {
+            const { FormationVisualizer } = module;
+            const visualizer = new FormationVisualizer();
+            visualizer.renderFormationView('formation-container', 'AEK');
+        }).catch(error => {
+            console.error('Formation visualizer not available:', error);
+            alert('❌ Formation-Visualizer nicht verfügbar');
+        });
+    } else if (formationView) {
+        formationView.classList.add('hidden');
+        button.innerHTML = '<i class="fas fa-chess-board mr-1"></i>Formation';
+    }
+};
+
+// Export squad data
+window.exportSquadData = async function() {
+    try {
+        const { DataExportImport } = await import('./exportImport.js');
+        const result = await DataExportImport.exportAllData();
+        if (result.success) {
+            alert('✅ ' + result.message);
+        } else {
+            alert('❌ Export fehlgeschlagen: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Export-Funktion nicht verfügbar: ' + error.message);
+    }
+};
+
+// Show achievements
+window.showAchievements = async function() {
+    try {
+        const { AchievementSystem } = await import('./achievements.js');
+        const achievements = await AchievementSystem.getAllAchievements();
+        
+        if (achievements.length === 0) {
+            alert('🏆 Noch keine Erfolge freigeschaltet!\n\nSpiele mehr Matches um Erfolge zu sammeln.');
+            return;
+        }
+        
+        const totalPoints = achievements.reduce((sum, a) => sum + (a.points || 0), 0);
+        const achievementNames = achievements.map(a => {
+            const baseAchievement = AchievementSystem.achievements[a.base_achievement];
+            return `• ${baseAchievement?.name || 'Unbekannt'} (+${a.points}P)`;
+        }).join('\n');
+        
+        alert(`🏆 Deine Erfolge (${totalPoints} Punkte):\n\n${achievementNames}`);
+    } catch (error) {
+        alert('❌ Erfolge können nicht geladen werden: ' + error.message);
+    }
+};
+
+// Enhanced player report with more stats
+window.generatePlayerReport = async function() {
+    try {
+        const data = await dataManager.loadAllAppData();
+        const players = data.players || [];
+        const matches = data.matches || [];
+        
+        if (players.length === 0) {
+            alert('📊 Keine Spieler vorhanden für Report');
+            return;
+        }
+        
+        const playerStats = players.map(player => {
+            const playerMatches = matches.filter(m => 
+                m.aek_players?.includes(player.id) || 
+                m.real_players?.includes(player.id)
+            );
+            
+            const goals = playerMatches.reduce((sum, match) => {
+                const teamGoals = player.team === 'AEK' ? (match.aek_goals || []) : (match.real_goals || []);
+                return sum + teamGoals.filter(g => g.player_id === player.id).length;
+            }, 0);
+            
+            const wins = playerMatches.filter(match => {
+                if (player.team === 'AEK') {
+                    return (match.aek_score || 0) > (match.real_score || 0);
+                } else {
+                    return (match.real_score || 0) > (match.aek_score || 0);
+                }
+            }).length;
+            
+            const winRate = playerMatches.length > 0 ? (wins / playerMatches.length * 100).toFixed(1) : '0';
+            const goalsPerGame = playerMatches.length > 0 ? (goals / playerMatches.length).toFixed(2) : '0.00';
+            
+            return {
+                name: player.name,
+                team: player.team,
+                matches: playerMatches.length,
+                goals,
+                wins,
+                winRate,
+                goalsPerGame
+            };
+        });
+        
+        // Sort by goals descending
+        playerStats.sort((a, b) => b.goals - a.goals);
+        
+        const report = playerStats.map(p => 
+            `${p.name} (${p.team}): ${p.goals} Tore in ${p.matches} Spielen (${p.goalsPerGame}/Spiel), ${p.wins} Siege (${p.winRate}%)`
+        ).join('\n');
+        
+        alert(`📊 Detaillierter Spieler-Report:\n\n${report}`);
+        
+    } catch (error) {
+        alert('❌ Fehler beim Erstellen des Reports: ' + error.message);
+    }
+};

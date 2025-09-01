@@ -1892,3 +1892,68 @@ export function resetMatchesState() {
 }
 
 export {matchesData as matches};
+
+// --- Enhanced functionality for achievements ---
+
+// Hook into match saving to check achievements
+const achievementCheckedMatches = new Set();
+
+// Listen for match save success messages to trigger achievement checks
+const originalAlert = window.alert;
+if (!window.alertEnhanced) {
+    window.alertEnhanced = true;
+    window.alert = function(message) {
+        originalAlert.call(this, message);
+        
+        // Check for match save success
+        if (message && message.includes('Spiel erfolgreich')) {
+            // Trigger achievement check for the last match
+            setTimeout(async () => {
+                try {
+                    const { checkAchievementsAfterMatch } = await import('./achievements.js');
+                    const { dataManager } = await import('./dataManager.js');
+                    const data = await dataManager.loadAllAppData();
+                    const latestMatch = data.matches?.[data.matches.length - 1];
+                    
+                    if (latestMatch && !achievementCheckedMatches.has(latestMatch.id)) {
+                        achievementCheckedMatches.add(latestMatch.id);
+                        await checkAchievementsAfterMatch(latestMatch);
+                    }
+                } catch (error) {
+                    console.error('Achievement check failed:', error);
+                }
+            }, 1000);
+        }
+    };
+}
+
+// Enhanced match statistics
+window.showMatchStatistics = function() {
+    if (matches.length === 0) {
+        alert('📊 Keine Spiele vorhanden für Statistiken');
+        return;
+    }
+    
+    const stats = {
+        totalMatches: matches.length,
+        aekWins: matches.filter(m => (m.goalsa || 0) > (m.goalsb || 0)).length,
+        realWins: matches.filter(m => (m.goalsb || 0) > (m.goalsa || 0)).length,
+        draws: matches.filter(m => (m.goalsa || 0) === (m.goalsb || 0)).length,
+        totalGoals: matches.reduce((sum, m) => sum + (m.goalsa || 0) + (m.goalsb || 0), 0),
+        highestScore: Math.max(...matches.map(m => Math.max(m.goalsa || 0, m.goalsb || 0))),
+        averageGoals: 0
+    };
+    
+    stats.averageGoals = (stats.totalGoals / stats.totalMatches).toFixed(1);
+    
+    const report = `🏆 Match-Statistiken:\n\n` +
+                  `Gesamt: ${stats.totalMatches} Spiele\n` +
+                  `AEK Siege: ${stats.aekWins}\n` +
+                  `Real Siege: ${stats.realWins}\n` +
+                  `Unentschieden: ${stats.draws}\n\n` +
+                  `Tore gesamt: ${stats.totalGoals}\n` +
+                  `Ø Tore/Spiel: ${stats.averageGoals}\n` +
+                  `Höchstes Ergebnis: ${stats.highestScore} Tore`;
+    
+    alert(report);
+};
