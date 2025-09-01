@@ -1,79 +1,79 @@
--- Enhanced Database Schema for FIFA Tracker v1
--- Based on tracker_full_v1 requirements
+-- Database Schema for FIFA Tracker v1
+-- Aligned with tracker_full_v1 reference implementation
 
 -- 1. Players table
 CREATE TABLE IF NOT EXISTS players (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  team VARCHAR(50) NOT NULL DEFAULT 'AEK',
-  position VARCHAR(10),
-  goals INTEGER DEFAULT 0,
-  value DECIMAL(10,2) DEFAULT 0,
-  status VARCHAR(20) DEFAULT 'active',
-  created_at TIMESTAMP DEFAULT NOW()
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  name text NOT NULL,
+  team text NOT NULL,
+  value numeric,
+  goals integer DEFAULT 0,
+  position text,
+  CONSTRAINT players_pkey PRIMARY KEY (id)
 );
 
--- 2. Matches table (enhanced with JSON fields for goal scorers)
+-- 2. Matches table 
 CREATE TABLE IF NOT EXISTS matches (
-  id SERIAL PRIMARY KEY,
-  date DATE NOT NULL,
-  teama VARCHAR(50) NOT NULL DEFAULT 'AEK',
-  teamb VARCHAR(50) NOT NULL DEFAULT 'Real',
-  goalsa INTEGER DEFAULT 0,
-  goalsb INTEGER DEFAULT 0,
-  goalslista JSONB DEFAULT '[]',
-  goalslistb JSONB DEFAULT '[]',
-  yellowa INTEGER DEFAULT 0,
-  reda INTEGER DEFAULT 0,
-  yellowb INTEGER DEFAULT 0,
-  redb INTEGER DEFAULT 0,
-  manofthematch VARCHAR(100),
-  prizeaek INTEGER DEFAULT 0,
-  prizereal INTEGER DEFAULT 0,
-  created_at TIMESTAMP DEFAULT NOW()
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  date date NOT NULL,
+  teama text NOT NULL,
+  teamb text NOT NULL,
+  goalsa integer NOT NULL,
+  goalsb integer NOT NULL,
+  goalslista jsonb,
+  goalslistb jsonb,
+  yellowa integer,
+  reda integer,
+  yellowb integer,
+  redb integer,
+  manofthematch text,
+  prizeaek integer,
+  prizereal integer,
+  CONSTRAINT matches_pkey PRIMARY KEY (id)
 );
 
 -- 3. Transactions table
 CREATE TABLE IF NOT EXISTS transactions (
-  id SERIAL PRIMARY KEY,
-  date DATE NOT NULL,
-  type VARCHAR(50) NOT NULL,
-  team VARCHAR(50) NOT NULL,
-  amount INTEGER NOT NULL,
-  info TEXT,
-  match_id INTEGER REFERENCES matches(id) ON DELETE SET NULL,
-  created_at TIMESTAMP DEFAULT NOW()
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  date date NOT NULL,
+  type text NOT NULL,
+  team text NOT NULL,
+  amount integer NOT NULL,
+  info text,
+  match_id integer,
+  CONSTRAINT transactions_pkey PRIMARY KEY (id)
 );
 
 -- 4. Finances table
 CREATE TABLE IF NOT EXISTS finances (
-  id SERIAL PRIMARY KEY,
-  team VARCHAR(50) NOT NULL UNIQUE,
-  balance INTEGER DEFAULT 0,
-  debt INTEGER DEFAULT 0,
-  created_at TIMESTAMP DEFAULT NOW()
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  team text NOT NULL,
+  balance integer NOT NULL DEFAULT 0,
+  debt integer NOT NULL DEFAULT 0,
+  CONSTRAINT finances_pkey PRIMARY KEY (id)
 );
 
 -- 5. Bans table
 CREATE TABLE IF NOT EXISTS bans (
-  id SERIAL PRIMARY KEY,
-  player_id INTEGER REFERENCES players(id) ON DELETE CASCADE,
-  team VARCHAR(50) NOT NULL,
-  type VARCHAR(50) NOT NULL,
-  totalgames INTEGER DEFAULT 1,
-  matchesserved INTEGER DEFAULT 0,
-  reason TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  player_id bigint,
+  team text NOT NULL,
+  type text NOT NULL,
+  totalgames integer NOT NULL,
+  matchesserved integer NOT NULL DEFAULT 0,
+  reason text,
+  CONSTRAINT bans_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_bans_player FOREIGN KEY (player_id) REFERENCES players(id),
+  CONSTRAINT bans_player_id_fkey FOREIGN KEY (player_id) REFERENCES players(id)
 );
 
 -- 6. Player of the match statistics
 CREATE TABLE IF NOT EXISTS spieler_des_spiels (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  team VARCHAR(50) NOT NULL,
-  count INTEGER DEFAULT 1,
-  created_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(name, team)
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  name text NOT NULL,
+  team text NOT NULL,
+  count integer NOT NULL DEFAULT 1,
+  CONSTRAINT spieler_des_spiels_pkey PRIMARY KEY (id)
 );
 
 -- Insert default finance records if they don't exist

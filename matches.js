@@ -562,22 +562,14 @@ function attachMatchEventListeners(uniqueDates) {
 function matchHtml(match, nr) {
     function goalsHtml(goals) {
         if (!goals || !goals.length) return `<span class="text-gray-600 text-sm italic">Keine Torschützen</span>`;
-        return goals
-            .map(g => {
-                // Handle both string array format (legacy) and object format (new)
-                if (typeof g === 'string') {
-                    return `<span class="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-green-100 rounded-lg px-3 py-1 text-sm font-medium shadow-md">
-                        ${g} 
-                        <span class="inline-block rounded-md px-2 py-1 border font-bold text-xs bg-green-700 border-green-600 text-green-100">1</span>
-                    </span>`;
-                } else {
-                    return `<span class="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-green-100 rounded-lg px-3 py-1 text-sm font-medium shadow-md">
-                        ${g.player} 
-                        <span class="inline-block rounded-md px-2 py-1 border font-bold text-xs bg-green-700 border-green-600 text-green-100">${g.count}</span>
-                    </span>`;
-                }
-            })
-            .join(' ');
+        
+        // Display as comma-separated string format like the original tracker
+        const goalsString = goals.map(g => {
+            // Handle both string and object formats
+            return typeof g === 'string' ? g : g.player;
+        }).map(name => `"${name}"`).join(',');
+        
+        return `<span class="text-gray-200 text-sm font-mono bg-gray-700 px-2 py-1 rounded border">${goalsString}</span>`;
     }
     
     function prizeHtml(amount, team) {

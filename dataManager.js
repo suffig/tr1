@@ -20,60 +20,53 @@ class DataManager {
     initValidationRules() {
         return {
             players: {
-                name: { required: true, type: 'string', minLength: 1, maxLength: 100 },
-                team: { required: true, type: 'string', enum: ['AEK', 'Real', 'Ehemalige'] },
-                position: { required: true, type: 'string', enum: ['TH','LV','RV','IV','ZDM','ZM','ZOM','LM','RM','LF','RF','ST','AV','OM'] },
-                value: { required: false, type: 'number', min: 0, max: 999999999 },
-                goals: { required: false, type: 'number', min: 0, max: 9999 },
-                status: { required: false, type: 'string', enum: ['active', 'inactive', 'retired'] },
-                created_at: { required: false, type: 'string' }
+                name: { required: true, type: 'string', minLength: 1 },
+                team: { required: true, type: 'string' },
+                value: { required: false, type: 'number', min: 0 },
+                goals: { required: false, type: 'number', min: 0 },
+                position: { required: false, type: 'string' }
             },
             matches: {
                 date: { required: true, type: 'string' },
-                teama: { required: false, type: 'string' },
-                teamb: { required: false, type: 'string' },
-                goalsa: { required: false, type: 'number', min: 0, max: 50 },
-                goalsb: { required: false, type: 'number', min: 0, max: 50 },
+                teama: { required: true, type: 'string' },
+                teamb: { required: true, type: 'string' },
+                goalsa: { required: true, type: 'number', min: 0 },
+                goalsb: { required: true, type: 'number', min: 0 },
                 goalslista: { required: false },
                 goalslistb: { required: false },
-                yellowa: { required: false, type: 'number', min: 0, max: 50 },
-                reda: { required: false, type: 'number', min: 0, max: 50 },
-                yellowb: { required: false, type: 'number', min: 0, max: 50 },
-                redb: { required: false, type: 'number', min: 0, max: 50 },
-                manofthematch: { required: false, type: 'string', maxLength: 100 },
+                yellowa: { required: false, type: 'number', min: 0 },
+                reda: { required: false, type: 'number', min: 0 },
+                yellowb: { required: false, type: 'number', min: 0 },
+                redb: { required: false, type: 'number', min: 0 },
+                manofthematch: { required: false, type: 'string' },
                 prizeaek: { required: false, type: 'number' },
-                prizereal: { required: false, type: 'number' },
-                created_at: { required: false, type: 'string' }
+                prizereal: { required: false, type: 'number' }
             },
             bans: {
-                player_id: { required: true, type: 'number' },
-                team: { required: false, type: 'string', enum: ['AEK', 'Real'] },
-                type: { required: false, type: 'string', maxLength: 100 },
-                totalgames: { required: false, type: 'number', min: 0, max: 20 },
-                matchesserved: { required: false, type: 'number', min: 0, max: 20 },
-                reason: { required: false, type: 'string', maxLength: 200 },
-                created_at: { required: false, type: 'string' }
+                player_id: { required: false, type: 'number' },
+                team: { required: true, type: 'string' },
+                type: { required: true, type: 'string' },
+                totalgames: { required: true, type: 'number', min: 0 },
+                matchesserved: { required: false, type: 'number', min: 0 },
+                reason: { required: false, type: 'string' }
             },
             transactions: {
                 date: { required: true, type: 'string' },
-                type: { required: true, type: 'string', minLength: 1, maxLength: 100 },
-                team: { required: true, type: 'string', enum: ['AEK', 'Real'] },
+                type: { required: true, type: 'string' },
+                team: { required: true, type: 'string' },
                 amount: { required: true, type: 'number' },
-                info: { required: false, type: 'string', maxLength: 200 },
-                match_id: { required: false, type: 'number' },
-                created_at: { required: false, type: 'string' }
+                info: { required: false, type: 'string' },
+                match_id: { required: false, type: 'number' }
             },
             finances: {
-                team: { required: true, type: 'string', enum: ['AEK', 'Real'] },
+                team: { required: true, type: 'string' },
                 balance: { required: false, type: 'number' },
-                debt: { required: false, type: 'number' },
-                created_at: { required: false, type: 'string' }
+                debt: { required: false, type: 'number' }
             },
             spieler_des_spiels: {
-                name: { required: true, type: 'string', minLength: 1, maxLength: 100 },
-                team: { required: true, type: 'string', enum: ['AEK', 'Real'] },
-                count: { required: false, type: 'number', min: 0, max: 9999 },
-                created_at: { required: false, type: 'string' }
+                name: { required: true, type: 'string', minLength: 1 },
+                team: { required: true, type: 'string' },
+                count: { required: false, type: 'number', min: 0 }
             }
         };
     }
