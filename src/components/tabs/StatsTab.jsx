@@ -4,8 +4,9 @@ import LoadingSpinner from '../LoadingSpinner';
 export default function StatsTab() {
   const { data: matches, loading: matchesLoading } = useSupabaseQuery('matches', '*');
   const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
+  const { data: sdsData, loading: sdsLoading } = useSupabaseQuery('spieler_des_spiels', '*');
   
-  const loading = matchesLoading || playersLoading;
+  const loading = matchesLoading || playersLoading || sdsLoading;
 
   // Basic statistics calculations
   const totalMatches = matches?.length || 0;
@@ -68,10 +69,22 @@ export default function StatsTab() {
     return Object.values(scorers).sort((a, b) => b.goals - a.goals).slice(0, 5);
   };
 
-  // Calculate Player of the Match (SdS) counts
+  // Calculate Player of the Match (SdS) counts from both sources
   const calculateSdsStats = () => {
     const sdsCount = {};
     
+    // First, add data from the dedicated spieler_des_spiels table
+    sdsData?.forEach(sdsEntry => {
+      const player = players?.find(p => p.name === sdsEntry.name && p.team === sdsEntry.team);
+      sdsCount[sdsEntry.name] = {
+        name: sdsEntry.name,
+        count: sdsEntry.count || 0,
+        team: sdsEntry.team,
+        value: player?.value || 0
+      };
+    });
+    
+    // Then, add data from matches table (manofthematch field)
     matches?.forEach(match => {
       if (match.manofthematch) {
         if (!sdsCount[match.manofthematch]) {
@@ -87,7 +100,7 @@ export default function StatsTab() {
       }
     });
     
-    return Object.values(sdsCount).sort((a, b) => b.count - a.count).slice(0, 5);
+    return Object.values(sdsCount).sort((a, b) => b.count - a.count).slice(0, 10); // Show top 10 instead of 5
   };
 
   const topScorers = calculateTopScorers();

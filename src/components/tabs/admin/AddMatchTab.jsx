@@ -218,9 +218,9 @@ export default function AddMatchTab() {
 
       {/* Match Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-bg-secondary rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-bg-secondary rounded-lg w-full max-w-lg max-h-[95vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold text-text-primary">Neues Spiel</h3>
                 <button
@@ -278,7 +278,7 @@ export default function AddMatchTab() {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     {/* AEK Scoring */}
                     <div className="space-y-3">
                       <div className="text-center">
@@ -295,11 +295,11 @@ export default function AddMatchTab() {
                                 <div className="text-sm font-medium text-gray-700">{player.name}</div>
                                 <div className="text-xs text-gray-500">{player.position}</div>
                               </div>
-                              <div className="flex items-center space-x-2">
+                              <div className="flex items-center space-x-2 sm:space-x-2">
                                 <button
                                   type="button"
                                   onClick={() => removePlayerGoal('AEK', player.name)}
-                                  className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                                  className="w-10 h-10 sm:w-8 sm:h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors touch-manipulation"
                                   disabled={loading || goalCount === 0}
                                 >
                                   −
@@ -310,7 +310,7 @@ export default function AddMatchTab() {
                                 <button
                                   type="button"
                                   onClick={() => addPlayerGoal('AEK', player.name)}
-                                  className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                                  className="w-10 h-10 sm:w-8 sm:h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors touch-manipulation"
                                   disabled={loading}
                                 >
                                   +
@@ -331,7 +331,7 @@ export default function AddMatchTab() {
                           <button
                             type="button"
                             onClick={() => adjustOwnGoals('AEK', -1)}
-                            className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                            className="w-10 h-10 sm:w-8 sm:h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors touch-manipulation"
                             disabled={loading || formData.ownGoalsA === 0}
                           >
                             −
@@ -342,7 +342,7 @@ export default function AddMatchTab() {
                           <button
                             type="button"
                             onClick={() => adjustOwnGoals('AEK', 1)}
-                            className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                            className="w-10 h-10 sm:w-8 sm:h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors touch-manipulation"
                             disabled={loading}
                           >
                             +
@@ -371,7 +371,7 @@ export default function AddMatchTab() {
                                 <button
                                   type="button"
                                   onClick={() => removePlayerGoal('Real', player.name)}
-                                  className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                                  className="w-10 h-10 sm:w-8 sm:h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors touch-manipulation"
                                   disabled={loading || goalCount === 0}
                                 >
                                   −
@@ -382,7 +382,7 @@ export default function AddMatchTab() {
                                 <button
                                   type="button"
                                   onClick={() => addPlayerGoal('Real', player.name)}
-                                  className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                                  className="w-10 h-10 sm:w-8 sm:h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors touch-manipulation"
                                   disabled={loading}
                                 >
                                   +
@@ -403,7 +403,7 @@ export default function AddMatchTab() {
                           <button
                             type="button"
                             onClick={() => adjustOwnGoals('Real', -1)}
-                            className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                            className="w-10 h-10 sm:w-8 sm:h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors touch-manipulation"
                             disabled={loading || formData.ownGoalsB === 0}
                           >
                             −
@@ -414,7 +414,7 @@ export default function AddMatchTab() {
                           <button
                             type="button"
                             onClick={() => adjustOwnGoals('Real', 1)}
-                            className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                            className="w-10 h-10 sm:w-8 sm:h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors touch-manipulation"
                             disabled={loading}
                           >
                             +
@@ -428,7 +428,7 @@ export default function AddMatchTab() {
                 {/* Cards */}
                 <div className="border-t pt-4">
                   <h4 className="text-sm font-medium text-text-primary mb-3">🟨🟥 Karten</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-3">
                       <p className="text-xs text-blue-600 font-medium">Heimteam</p>
                       <div className="grid grid-cols-2 gap-2">
@@ -497,7 +497,7 @@ export default function AddMatchTab() {
                 {/* Prize Money */}
                 <div className="border-t pt-4">
                   <h4 className="text-sm font-medium text-text-primary mb-3">💰 Preisgelder (automatisch berechnet)</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-text-primary mb-2">
                         Preisgeld AEK (€)
