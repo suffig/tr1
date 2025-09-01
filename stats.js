@@ -10,10 +10,10 @@ class StatsCalculator {
         this.realPlayers = players.filter(p => p.team === "Real");
     }
 
-    // Calculate Win-Draw-Loss records
+    // Calculate Win-Loss records (draws removed as requested)
     calculateTeamRecords() {
-        const aekRecord = { wins: 0, draws: 0, losses: 0 };
-        const realRecord = { wins: 0, draws: 0, losses: 0 };
+        const aekRecord = { wins: 0, losses: 0 };
+        const realRecord = { wins: 0, losses: 0 };
 
         this.matches.forEach(match => {
             const aekGoals = match.goalsa || 0;
@@ -25,10 +25,8 @@ class StatsCalculator {
             } else if (realGoals > aekGoals) {
                 realRecord.wins++;
                 aekRecord.losses++;
-            } else {
-                aekRecord.draws++;
-                realRecord.draws++;
             }
+            // Note: Draw games are excluded from statistics as requested
         });
 
         return { aek: aekRecord, real: realRecord };
@@ -94,7 +92,7 @@ class StatsCalculator {
         }, 0);
     }
 
-    // Performance trends
+    // Performance trends (draws removed)
     calculatePerformanceTrends() {
         const monthlyStats = {};
         
@@ -105,7 +103,7 @@ class StatsCalculator {
             if (!monthlyStats[monthKey]) {
                 monthlyStats[monthKey] = {
                     aekGoals: 0, realGoals: 0, matches: 0,
-                    aekWins: 0, realWins: 0, draws: 0
+                    aekWins: 0, realWins: 0
                 };
             }
             
@@ -118,19 +116,18 @@ class StatsCalculator {
             
             if (aekGoals > realGoals) monthlyStats[monthKey].aekWins++;
             else if (realGoals > aekGoals) monthlyStats[monthKey].realWins++;
-            else monthlyStats[monthKey].draws++;
+            // Note: Draw games are excluded from statistics as requested
         });
 
         return monthlyStats;
     }
 
-    // Head-to-head statistics
+    // Head-to-head statistics (draws removed)
     calculateHeadToHead() {
         const h2h = {
             totalMatches: this.matches.length,
             aekWins: 0,
             realWins: 0,
-            draws: 0,
             aekGoals: 0,
             realGoals: 0,
             biggestAekWin: { diff: 0, score: '', date: '' },
@@ -163,12 +160,77 @@ class StatsCalculator {
                         date: match.date || ''
                     };
                 }
-            } else {
-                h2h.draws++;
             }
+            // Note: Draw games are excluded from statistics as requested
         });
 
         return h2h;
+    }
+
+    // NEW: Additional meaningful statistics
+    calculateAdvancedStats() {
+        const stats = {
+            // Goal scoring patterns
+            highScoringGames: this.matches.filter(m => (m.goalsa || 0) + (m.goalsb || 0) >= 5).length,
+            cleanSheets: {
+                aek: this.matches.filter(m => (m.goalsb || 0) === 0 && (m.goalsa || 0) > 0).length,
+                real: this.matches.filter(m => (m.goalsa || 0) === 0 && (m.goalsb || 0) > 0).length
+            },
+            
+            // Card statistics
+            cardHeavyGames: this.matches.filter(m => 
+                (m.yellowa || 0) + (m.yellowb || 0) + (m.reda || 0) + (m.redb || 0) >= 6
+            ).length,
+            
+            // Scoring streaks and patterns
+            biggestWinMargin: Math.max(
+                ...this.matches.map(m => Math.abs((m.goalsa || 0) - (m.goalsb || 0)))
+            ),
+            
+            // Average cards per team
+            avgCardsPerGame: {
+                aek: this.matches.length > 0 ? 
+                    (this.matches.reduce((sum, m) => sum + (m.yellowa || 0) + (m.reda || 0), 0) / this.matches.length).toFixed(1) : 0,
+                real: this.matches.length > 0 ? 
+                    (this.matches.reduce((sum, m) => sum + (m.yellowb || 0) + (m.redb || 0), 0) / this.matches.length).toFixed(1) : 0
+            }
+        };
+
+        return stats;
+    }
+
+    // NEW: Player performance analysis
+    calculatePlayerStats() {
+        const playerStats = {
+            mostGoalsInSingleGame: 0,
+            topScorer: null,
+            mostBannedPlayer: null,
+            teamWithMostBans: null
+        };
+
+        // Find highest single game goal count
+        this.matches.forEach(match => {
+            if (match.goalslista) {
+                match.goalslista.forEach(scorer => {
+                    if (scorer.count > playerStats.mostGoalsInSingleGame) {
+                        playerStats.mostGoalsInSingleGame = scorer.count;
+                        const player = this.aekPlayers.find(p => p.id === scorer.player_id);
+                        playerStats.topScorer = player ? player.name : scorer.player;
+                    }
+                });
+            }
+            if (match.goalslistb) {
+                match.goalslistb.forEach(scorer => {
+                    if (scorer.count > playerStats.mostGoalsInSingleGame) {
+                        playerStats.mostGoalsInSingleGame = scorer.count;
+                        const player = this.realPlayers.find(p => p.id === scorer.player_id);
+                        playerStats.topScorer = player ? player.name : scorer.player;
+                    }
+                });
+            }
+        });
+
+        return playerStats;
     }
 }
 
@@ -199,6 +261,7 @@ export async function renderStatsTab(containerId = "app") {
     const playerStats = stats.calculatePlayerStats();
     const headToHead = stats.calculateHeadToHead();
     const performanceTrends = stats.calculatePerformanceTrends();
+    const advancedStats = stats.calculateAdvancedStats();
 
     // Spielerlisten
     const aekPlayers = players.filter(p => p.team === "AEK");
@@ -385,8 +448,8 @@ export async function renderStatsTab(containerId = "app") {
                 <div class="bg-gray-700 p-3 rounded-lg">
                     <div class="font-bold text-sm mb-2">${month}</div>
                     <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="text-blue-300">AEK: ${data.aekWins}W-${data.draws}D-${data.realWins}L</div>
-                        <div class="text-red-300">Real: ${data.realWins}W-${data.draws}D-${data.aekWins}L</div>
+                        <div class="text-blue-300">AEK: ${data.aekWins}W-${data.realWins}L</div>
+                        <div class="text-red-300">Real: ${data.realWins}W-${data.aekWins}L</div>
                         <div class="text-blue-300">Ø Tore: ${aekAvg}</div>
                         <div class="text-red-300">Ø Tore: ${realAvg}</div>
                     </div>
@@ -410,14 +473,10 @@ export async function renderStatsTab(containerId = "app") {
                     <span class="text-xl">⚡</span>
                     Head-to-Head Bilanz
                 </div>
-                <div class="grid grid-cols-3 gap-4 text-center mb-4">
+                <div class="grid grid-cols-2 gap-4 text-center mb-4">
                     <div class="bg-blue-100 text-blue-900 rounded-lg p-3">
                         <div class="text-2xl font-bold">${headToHead.aekWins}</div>
                         <div class="text-sm">AEK Siege</div>
-                    </div>
-                    <div class="bg-gray-100 text-gray-900 rounded-lg p-3">
-                        <div class="text-2xl font-bold">${headToHead.draws}</div>
-                        <div class="text-sm">Unentschieden</div>
                     </div>
                     <div class="bg-red-100 text-red-900 rounded-lg p-3">
                         <div class="text-2xl font-bold">${headToHead.realWins}</div>
@@ -447,7 +506,7 @@ export async function renderStatsTab(containerId = "app") {
                     <div class="space-y-2">
                         <div class="flex justify-between">
                             <span>Bilanz:</span>
-                            <span class="font-bold">${teamRecords.aek.wins}W-${teamRecords.aek.draws}D-${teamRecords.aek.losses}L</span>
+                            <span class="font-bold">${teamRecords.aek.wins}W-${teamRecords.aek.losses}L</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Siegquote:</span>
@@ -477,7 +536,7 @@ export async function renderStatsTab(containerId = "app") {
                     <div class="space-y-2">
                         <div class="flex justify-between">
                             <span>Bilanz:</span>
-                            <span class="font-bold">${teamRecords.real.wins}W-${teamRecords.real.draws}D-${teamRecords.real.losses}L</span>
+                            <span class="font-bold">${teamRecords.real.wins}W-${teamRecords.real.losses}L</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Siegquote:</span>
@@ -788,6 +847,68 @@ export async function renderStatsTab(containerId = "app") {
                                     <span class="text-white">${topScorerReal ? ((topScorerReal.goals / totalToreReal) * 100).toFixed(1) : 0}%</span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NEW: Advanced Statistics -->
+            <div class="rounded-xl shadow border bg-gray-800 p-4 mb-4">
+                <h3 class="font-bold text-lg mb-4 text-white">📈 Erweiterte Statistiken</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-purple-900/20 border border-purple-700 rounded-lg p-4">
+                        <h4 class="font-bold text-purple-300 mb-2">⚽ Torstatistiken</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-300">Torreichste Spiele (5+ Tore):</span>
+                                <span class="text-white font-semibold">${advancedStats.highScoringGames}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-300">Größter Sieg-Abstand:</span>
+                                <span class="text-white font-semibold">${advancedStats.biggestWinMargin} Tore</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-300">AEK Clean Sheets:</span>
+                                <span class="text-blue-300 font-semibold">${advancedStats.cleanSheets.aek}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-300">Real Clean Sheets:</span>
+                                <span class="text-red-300 font-semibold">${advancedStats.cleanSheets.real}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4">
+                        <h4 class="font-bold text-yellow-300 mb-2">🟨 Kartenstatistiken</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-300">Kartenreiche Spiele (6+ Karten):</span>
+                                <span class="text-white font-semibold">${advancedStats.cardHeavyGames}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-300">Ø Karten AEK/Spiel:</span>
+                                <span class="text-blue-300 font-semibold">${advancedStats.avgCardsPerGame.aek}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-300">Ø Karten Real/Spiel:</span>
+                                <span class="text-red-300 font-semibold">${advancedStats.avgCardsPerGame.real}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-green-900/20 border border-green-700 rounded-lg p-4">
+                        <h4 class="font-bold text-green-300 mb-2">🏆 Rekorde</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-300">Meiste Tore in einem Spiel:</span>
+                                <span class="text-white font-semibold">${playerStats.mostGoalsInSingleGame} Tore</span>
+                            </div>
+                            ${playerStats.topScorer ? `
+                            <div class="flex justify-between">
+                                <span class="text-gray-300">Torschütze des Rekords:</span>
+                                <span class="text-white font-semibold">${playerStats.topScorer}</span>
+                            </div>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
