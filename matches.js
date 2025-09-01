@@ -563,13 +563,22 @@ function matchHtml(match, nr) {
     function goalsHtml(goals) {
         if (!goals || !goals.length) return `<span class="text-gray-600 text-sm italic">Keine Torschützen</span>`;
         
-        // Display as comma-separated string format like the original tracker
-        const goalsString = goals.map(g => {
-            // Handle both string and object formats
-            return typeof g === 'string' ? g : g.player;
-        }).map(name => `"${name}"`).join(',');
+        // Aggregate goal counts per player (like before)
+        const goalCounts = {};
+        goals.forEach(g => {
+            const playerName = typeof g === 'string' ? g : g.player;
+            if (playerName) {
+                goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+            }
+        });
         
-        return `<span class="text-gray-200 text-sm font-mono bg-gray-700 px-2 py-1 rounded border">${goalsString}</span>`;
+        // Create individual badges for each player with goal count
+        const playerBadges = Object.entries(goalCounts).map(([playerName, count]) => {
+            const displayText = count > 1 ? `${playerName} ${count}x` : playerName;
+            return `<span class="inline-flex items-center gap-1 bg-gray-700 text-gray-200 px-2 py-1 rounded text-sm font-medium border border-gray-500">${displayText}</span>`;
+        }).join(' ');
+        
+        return playerBadges;
     }
     
     function prizeHtml(amount, team) {
