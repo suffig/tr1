@@ -14,6 +14,20 @@ export default function MatchesTab() {
 
   const isLoading = loading || playersLoading;
 
+  // Helper function to get player name and value
+  const getPlayerInfo = (playerId, playerName) => {
+    if (!players) return { name: playerName || 'Unbekannt', value: 0 };
+    const player = players.find(p => p.id === playerId || p.name === playerName);
+    return {
+      name: player?.name || playerName || 'Unbekannt',
+      value: player?.value || 0,
+      team: player?.team || 'Unbekannt'
+    };
+  };
+
+  // Helper function to get player name only (for backwards compatibility)
+  const getPlayerName = (playerName) => playerName || 'Unbekannt';
+
   const toggleMatchDetails = (matchId) => {
     const newExpanded = new Set(expandedMatches);
     if (newExpanded.has(matchId)) {
@@ -77,12 +91,6 @@ export default function MatchesTab() {
     ];
     
     return colorSchemes[index % colorSchemes.length];
-  };
-
-  const getPlayerName = (playerId) => {
-    if (!players || !playerId) return 'Unbekannt';
-    const player = players.find(p => p.id === playerId);
-    return player ? player.name : 'Unbekannt';
   };
 
   if (isLoading) {
@@ -186,35 +194,93 @@ export default function MatchesTab() {
                         
                         {isExpanded && (
                           <div className="px-4 pb-4 border-t border-gray-200 bg-gray-50">
-                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                               
                               {/* Goal Scorers */}
                               <div className="space-y-2">
                                 <h4 className="font-semibold text-text-primary flex items-center">
                                   ⚽ Torschützen
                                 </h4>
-                                <div className="space-y-1">
+                                <div className="space-y-2">
                                   {match.goalslista && match.goalslista.length > 0 ? (
                                     <div>
-                                      <p className="text-xs text-blue-600 font-medium">AEK:</p>
-                                      {match.goalslista.map((goal, idx) => (
-                                        <p key={idx} className="text-sm text-text-muted">
-                                          • {typeof goal === 'string' ? goal : getPlayerName(goal.player)} {goal.minute && `(${goal.minute}')`}
-                                        </p>
-                                      ))}
+                                      <p className="text-xs text-blue-600 font-medium mb-1">AEK:</p>
+                                      {match.goalslista.map((goal, idx) => {
+                                        const isObject = typeof goal === 'object' && goal !== null;
+                                        const playerInfo = isObject 
+                                          ? getPlayerInfo(goal.player_id, goal.player)
+                                          : getPlayerInfo(null, goal);
+                                        return (
+                                          <div key={idx} className="text-sm p-2 bg-blue-50 rounded border-l-4 border-blue-400">
+                                            <div className="font-medium text-blue-800">
+                                              {playerInfo.name}
+                                              {isObject && goal.count > 1 && (
+                                                <span className="ml-1 text-xs bg-blue-200 px-1 rounded">
+                                                  {goal.count}x
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="text-xs text-blue-600">
+                                              Marktwert: {playerInfo.value}M €
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   ) : <p className="text-xs text-text-muted">AEK: Keine Tore</p>}
                                   
                                   {match.goalslistb && match.goalslistb.length > 0 ? (
                                     <div>
-                                      <p className="text-xs text-red-600 font-medium">Real:</p>
-                                      {match.goalslistb.map((goal, idx) => (
-                                        <p key={idx} className="text-sm text-text-muted">
-                                          • {typeof goal === 'string' ? goal : getPlayerName(goal.player)} {goal.minute && `(${goal.minute}')`}
-                                        </p>
-                                      ))}
+                                      <p className="text-xs text-red-600 font-medium mb-1">Real:</p>
+                                      {match.goalslistb.map((goal, idx) => {
+                                        const isObject = typeof goal === 'object' && goal !== null;
+                                        const playerInfo = isObject 
+                                          ? getPlayerInfo(goal.player_id, goal.player)
+                                          : getPlayerInfo(null, goal);
+                                        return (
+                                          <div key={idx} className="text-sm p-2 bg-red-50 rounded border-l-4 border-red-400">
+                                            <div className="font-medium text-red-800">
+                                              {playerInfo.name}
+                                              {isObject && goal.count > 1 && (
+                                                <span className="ml-1 text-xs bg-red-200 px-1 rounded">
+                                                  {goal.count}x
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="text-xs text-red-600">
+                                              Marktwert: {playerInfo.value}M €
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   ) : <p className="text-xs text-text-muted">Real: Keine Tore</p>}
+                                </div>
+                              </div>
+                              
+                              {/* Player of the Match (SdS) */}
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-text-primary flex items-center">
+                                  ⭐ Spieler des Spiels
+                                </h4>
+                                <div className="space-y-1">
+                                  {match.manofthematch ? (
+                                    <div className="p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
+                                      <div className="font-medium text-yellow-800">
+                                        {match.manofthematch}
+                                      </div>
+                                      {(() => {
+                                        const playerInfo = getPlayerInfo(match.manofthematch_player_id, match.manofthematch);
+                                        return (
+                                          <div className="text-xs text-yellow-600">
+                                            Team: {playerInfo.team} | Marktwert: {playerInfo.value}M €
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-text-muted">Kein Spieler des Spiels ausgewählt</p>
+                                  )}
                                 </div>
                               </div>
                               

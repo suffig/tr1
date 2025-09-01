@@ -19,13 +19,14 @@ const fallbackData = {
       teamb: 'Real', 
       goalsa: 2, 
       goalsb: 1, 
-      goalslista: ['Max Müller', 'Leon Wagner'],
-      goalslistb: ['Jan Becker'],
+      goalslista: [{ player: 'Max Müller', player_id: 1, count: 1 }, { player: 'Leon Wagner', player_id: 3, count: 1 }],
+      goalslistb: [{ player: 'Jan Becker', player_id: 4, count: 1 }],
       yellowa: 1,
       reda: 0,
       yellowb: 2,
       redb: 0,
       manofthematch: 'Max Müller',
+      manofthematch_player_id: 1,
       prizeaek: 5000,
       prizereal: 3000
     },
@@ -36,13 +37,14 @@ const fallbackData = {
       teamb: 'Real', 
       goalsa: 1, 
       goalsb: 3, 
-      goalslista: ['Max Müller'],
-      goalslistb: ['Jan Becker', 'Paul Klein', 'Ben Richter'],
+      goalslista: [{ player: 'Max Müller', player_id: 1, count: 1 }],
+      goalslistb: [{ player: 'Jan Becker', player_id: 4, count: 2 }, { player: 'Ben Richter', player_id: 6, count: 1 }],
       yellowa: 2,
       reda: 1,
       yellowb: 0,
       redb: 0,
       manofthematch: 'Jan Becker',
+      manofthematch_player_id: 4,
       prizeaek: 2000,
       prizereal: 5000
     },
@@ -60,17 +62,18 @@ const fallbackData = {
       yellowb: 1,
       redb: 0,
       manofthematch: null,
+      manofthematch_player_id: null,
       prizeaek: 2500,
       prizereal: 2500
     }
   ],
   players: [
-    { id: 1, name: 'Max Müller', team: 'AEK', position: 'ST', goals: 5, created_at: '2024-01-01T10:00:00Z' },
-    { id: 2, name: 'Tom Schmidt', team: 'AEK', position: 'TH', goals: 0, created_at: '2024-01-01T10:00:00Z' },
-    { id: 3, name: 'Leon Wagner', team: 'AEK', position: 'IV', goals: 1, created_at: '2024-01-01T10:00:00Z' },
-    { id: 4, name: 'Jan Becker', team: 'Real', position: 'ST', goals: 7, created_at: '2024-01-01T10:00:00Z' },
-    { id: 5, name: 'Paul Klein', team: 'Real', position: 'TH', goals: 0, created_at: '2024-01-01T10:00:00Z' },
-    { id: 6, name: 'Ben Richter', team: 'Real', position: 'ZM', goals: 2, created_at: '2024-01-01T10:00:00Z' }
+    { id: 1, name: 'Max Müller', team: 'AEK', position: 'ST', goals: 5, value: 15.5, created_at: '2024-01-01T10:00:00Z' },
+    { id: 2, name: 'Tom Schmidt', team: 'AEK', position: 'TH', goals: 0, value: 8.2, created_at: '2024-01-01T10:00:00Z' },
+    { id: 3, name: 'Leon Wagner', team: 'AEK', position: 'IV', goals: 1, value: 12.0, created_at: '2024-01-01T10:00:00Z' },
+    { id: 4, name: 'Jan Becker', team: 'Real', position: 'ST', goals: 7, value: 18.3, created_at: '2024-01-01T10:00:00Z' },
+    { id: 5, name: 'Paul Klein', team: 'Real', position: 'TH', goals: 0, value: 9.1, created_at: '2024-01-01T10:00:00Z' },
+    { id: 6, name: 'Ben Richter', team: 'Real', position: 'ZM', goals: 2, value: 14.7, created_at: '2024-01-01T10:00:00Z' }
   ],
   bans: [
     { id: 1, player_id: 1, team: 'AEK', type: 'Gelb-Rote Karte', totalgames: 1, matchesserved: 0, reason: 'Gelb-Rot' },
