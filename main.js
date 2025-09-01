@@ -16,6 +16,16 @@ import { DataExportImport } from './exportImport.js';
 import { AchievementSystem, checkAchievementsAfterMatch } from './achievements.js';
 import TouchGestureHandler from './touchGestures.js';
 import { FormationVisualizer } from './formationVisualizer.js';
+import OfflineManager from './offlineManager.js';
+
+// Development and testing
+if (DEBUG_MODE) {
+    import('./featureTests.js').then(module => {
+        console.log('🧪 Feature tests loaded');
+    }).catch(error => {
+        console.warn('Feature tests not available:', error);
+    });
+}
 
 // --- NEU: Reset-Functions für alle Module importieren ---
 import { resetKaderState } from './kader.js';
@@ -32,6 +42,9 @@ let tabButtonsInitialized = false;
 let realtimeChannel = null;
 let isAppVisible = true;
 let inactivityCleanupTimer = null;
+
+// Debug mode for development
+const DEBUG_MODE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 console.log("main.js gestartet");
 
