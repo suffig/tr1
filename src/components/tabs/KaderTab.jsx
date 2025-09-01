@@ -44,9 +44,8 @@ export default function KaderTab() {
   };
 
   const formatCurrencyInMillions = (amount) => {
-    // Convert to millions and format with 1 decimal place  
-    const amountInMillions = (amount || 0) / 1000000;
-    return `${amountInMillions.toFixed(1)}M €`;
+    // Value is already in millions, just format it
+    return `${(amount || 0).toFixed(1)}M €`;
   };
 
   const getTeamCardClass = (teamName) => {

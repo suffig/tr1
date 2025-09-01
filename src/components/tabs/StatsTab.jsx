@@ -10,13 +10,88 @@ export default function StatsTab() {
   // Basic statistics calculations
   const totalMatches = matches?.length || 0;
   const totalPlayers = players?.length || 0;
-  const aekPlayers = players?.filter(p => p.team === 'AEK').length || 0;
-  const realPlayers = players?.filter(p => p.team === 'Real').length || 0;
+  const aekPlayers = players?.filter(p => p.team === 'AEK') || [];
+  const realPlayers = players?.filter(p => p.team === 'Real') || [];
 
   // Calculate total goals
   const totalGoals = matches?.reduce((total, match) => {
     return total + (match.goalsa || 0) + (match.goalsb || 0);
   }, 0) || 0;
+
+  // Calculate market values
+  const aekMarketValue = aekPlayers.reduce((total, player) => total + (player.value || 0), 0);
+  const realMarketValue = realPlayers.reduce((total, player) => total + (player.value || 0), 0);
+  const totalMarketValue = aekMarketValue + realMarketValue;
+
+  // Calculate goal scorers from matches
+  const calculateTopScorers = () => {
+    const scorers = {};
+    
+    matches?.forEach(match => {
+      // Process AEK goals
+      match.goalslista?.forEach(goal => {
+        const isObject = typeof goal === 'object' && goal !== null;
+        const playerName = isObject ? goal.player : goal;
+        const goalCount = isObject ? (goal.count || 1) : 1;
+        
+        if (!scorers[playerName]) {
+          const player = players?.find(p => p.name === playerName);
+          scorers[playerName] = {
+            name: playerName,
+            goals: 0,
+            team: player?.team || 'AEK',
+            value: player?.value || 0
+          };
+        }
+        scorers[playerName].goals += goalCount;
+      });
+      
+      // Process Real goals
+      match.goalslistb?.forEach(goal => {
+        const isObject = typeof goal === 'object' && goal !== null;
+        const playerName = isObject ? goal.player : goal;
+        const goalCount = isObject ? (goal.count || 1) : 1;
+        
+        if (!scorers[playerName]) {
+          const player = players?.find(p => p.name === playerName);
+          scorers[playerName] = {
+            name: playerName,
+            goals: 0,
+            team: player?.team || 'Real',
+            value: player?.value || 0
+          };
+        }
+        scorers[playerName].goals += goalCount;
+      });
+    });
+    
+    return Object.values(scorers).sort((a, b) => b.goals - a.goals).slice(0, 5);
+  };
+
+  // Calculate Player of the Match (SdS) counts
+  const calculateSdsStats = () => {
+    const sdsCount = {};
+    
+    matches?.forEach(match => {
+      if (match.manofthematch) {
+        if (!sdsCount[match.manofthematch]) {
+          const player = players?.find(p => p.name === match.manofthematch);
+          sdsCount[match.manofthematch] = {
+            name: match.manofthematch,
+            count: 0,
+            team: player?.team || 'Unbekannt',
+            value: player?.value || 0
+          };
+        }
+        sdsCount[match.manofthematch].count++;
+      }
+    });
+    
+    return Object.values(sdsCount).sort((a, b) => b.count - a.count).slice(0, 5);
+  };
+
+  const topScorers = calculateTopScorers();
+  const sdsStats = calculateSdsStats();
 
   // Calculate wins per team
   const aekWins = matches?.filter(match => 
@@ -75,6 +150,36 @@ export default function StatsTab() {
         </div>
       </div>
 
+      {/* Market Value Statistics */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-text-primary mb-4">
+          Marktwert-Statistiken
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="modern-card text-center border-l-4 border-blue-400">
+            <div className="text-2xl font-bold text-blue-600 mb-2">
+              {aekMarketValue.toFixed(1)}M €
+            </div>
+            <div className="text-sm text-text-muted">AEK Kaderwert</div>
+          </div>
+          
+          <div className="modern-card text-center border-l-4 border-red-400">
+            <div className="text-2xl font-bold text-red-600 mb-2">
+              {realMarketValue.toFixed(1)}M €
+            </div>
+            <div className="text-sm text-text-muted">Real Kaderwert</div>
+          </div>
+          
+          <div className="modern-card text-center border-l-4 border-green-400">
+            <div className="text-2xl font-bold text-green-600 mb-2">
+              {totalMarketValue.toFixed(1)}M €
+            </div>
+            <div className="text-sm text-text-muted">Gesamt Kaderwert</div>
+          </div>
+        </div>
+      </div>
+
       {/* Team Statistics */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-text-primary mb-4">
@@ -91,7 +196,7 @@ export default function StatsTab() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-text-muted">Spieler:</span>
-                <span className="font-medium">{aekPlayers}</span>
+                <span className="font-medium">{aekPlayers.length}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-text-muted">Siege:</span>
@@ -115,7 +220,7 @@ export default function StatsTab() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-text-muted">Spieler:</span>
-                <span className="font-medium">{realPlayers}</span>
+                <span className="font-medium">{realPlayers.length}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-text-muted">Siege:</span>
@@ -130,6 +235,82 @@ export default function StatsTab() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Top Scorers */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-text-primary mb-4">
+          ⚽ Top Torschützen
+        </h3>
+        
+        {topScorers.length > 0 ? (
+          <div className="space-y-3">
+            {topScorers.map((scorer, index) => (
+              <div key={scorer.name} className="modern-card">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`text-2xl font-bold ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-400' : index === 2 ? 'text-orange-600' : 'text-text-muted'}`}>
+                      #{index + 1}
+                    </div>
+                    <div>
+                      <div className="font-medium text-text-primary">{scorer.name}</div>
+                      <div className="text-sm text-text-muted">
+                        {scorer.team} • Marktwert: {scorer.value.toFixed(1)}M €
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-primary-green">{scorer.goals}</div>
+                    <div className="text-xs text-text-muted">Tore</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4">⚽</div>
+            <p className="text-text-muted">Noch keine Torschützen verfügbar</p>
+          </div>
+        )}
+      </div>
+
+      {/* Player of the Match (SdS) Statistics */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-text-primary mb-4">
+          ⭐ Spieler des Spiels (SdS)
+        </h3>
+        
+        {sdsStats.length > 0 ? (
+          <div className="space-y-3">
+            {sdsStats.map((sds, index) => (
+              <div key={sds.name} className="modern-card">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`text-2xl font-bold ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-400' : index === 2 ? 'text-orange-600' : 'text-text-muted'}`}>
+                      #{index + 1}
+                    </div>
+                    <div>
+                      <div className="font-medium text-text-primary">{sds.name}</div>
+                      <div className="text-sm text-text-muted">
+                        {sds.team} • Marktwert: {sds.value.toFixed(1)}M €
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-yellow-600">{sds.count}</div>
+                    <div className="text-xs text-text-muted">SdS</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4">⭐</div>
+            <p className="text-text-muted">Noch keine Spieler des Spiels vergeben</p>
+          </div>
+        )}
       </div>
 
       {/* Recent Activity */}
