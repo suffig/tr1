@@ -94,25 +94,7 @@ export default function KaderTab() {
     }
   };
 
-  const handleAddPlayer = async (teamName) => {
-    const name = prompt('Spielername:');
-    if (!name) return;
-    
-    const position = prompt('Position (ST, TH, IV, etc.):', 'ST');
-    if (!position) return;
-    
-    try {
-      await insert({
-        name: name.trim(),
-        team: teamName,
-        position: position.toUpperCase(),
-        goals: 0
-      });
-      refetch();
-    } catch (error) {
-      alert('Fehler beim Hinzufügen des Spielers: ' + error.message);
-    }
-  };
+
 
   if (loading) {
     return <LoadingSpinner message="Lade Kader..." />;
@@ -278,16 +260,7 @@ export default function KaderTab() {
                   </div>
                 )}
 
-                {/* Add Player Button */}
-                <div className="mt-4 pt-4 border-t border-border-light">
-                  <button 
-                    onClick={() => handleAddPlayer(team.name)}
-                    className="w-full btn-secondary text-sm py-2"
-                  >
-                    <i className="fas fa-plus mr-2"></i>
-                    Spieler zu {team.displayName} hinzufügen
-                  </button>
-                </div>
+
               </div>
             )}
           </div>

@@ -324,10 +324,6 @@ function accordionPanelHtml(team, key, gradientClass, teamKey) {
             
             ${isOpen ? `
                 <div id="panel-content-${key}" class="border-t border-gray-100 p-4 slide-up">
-                    <button id="add-player-${key}" class="btn btn-primary w-full mb-4">
-                        <i class="fas fa-plus"></i>
-                        <span>Neuen Spieler hinzufügen</span>
-                    </button>
                     <div id="team-${key}-players" class="grid gap-4 ${key === 'ehemalige' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : ''}"></div>
                 </div>
             ` : ''}
@@ -353,10 +349,6 @@ function renderPlayerLists() {
     if (openPanel === 'ehemalige' && document.getElementById('team-ehemalige-players')) {
         renderEhemaligeList('team-ehemalige-players');
     }
-    // Add Player-Button Handler nur im offenen Panel
-    if (openPanel === 'aek' && document.getElementById('add-player-aek')) document.getElementById('add-player-aek').onclick = () => openPlayerForm('AEK');
-    if (openPanel === 'real' && document.getElementById('add-player-real')) document.getElementById('add-player-real').onclick = () => openPlayerForm('Real');
-    if (openPanel === 'ehemalige' && document.getElementById('add-player-ehemalige')) document.getElementById('add-player-ehemalige').onclick = () => openPlayerForm('Ehemalige');
 }
 
 function renderPlayerList(containerId, arr, team) {

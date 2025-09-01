@@ -277,9 +277,7 @@ export async function renderMatchesTab(containerId = "app") {
                 <button id="show-analytics-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 active:scale-95 transition">
                     <i class="fas fa-chart-line"></i> Analytics
                 </button>
-                <button id="add-match-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 active:scale-95 transition">
-                    <i class="fas fa-plus"></i> Match hinzufügen
-                </button>
+                <!-- Add match button removed - use Admin tab for adding matches -->
             </div>
         </div>
         
@@ -314,12 +312,7 @@ export async function renderMatchesTab(containerId = "app") {
         </div>
     `;
 
-    // Attach event listeners safely
-    const addMatchBtn = DOM.getElementById("add-match-btn");
-    if (addMatchBtn) {
-        addMatchBtn.onclick = () => openMatchForm();
-    }
-
+    // Event listeners for analytics
     const analyticsBtn = DOM.getElementById("show-analytics-btn");
     const analyticsSection = DOM.getElementById("analytics-section");
     if (analyticsBtn && analyticsSection) {
@@ -749,18 +742,6 @@ function getSdsCount(playerName, team) {
 // Optimized match form with better error handling and validation
 function openMatchForm(id) {
     try {
-        // Disable the add match button to prevent double-clicking
-        const addMatchBtn = document.getElementById("add-match-btn");
-        if (addMatchBtn) {
-            addMatchBtn.disabled = true;
-            addMatchBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            setTimeout(() => {
-                if (addMatchBtn) {
-                    addMatchBtn.disabled = false;
-                    addMatchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                }
-            }, 2000); // Re-enable after 2 seconds
-        }
         
         let match = null, edit = false;
         
