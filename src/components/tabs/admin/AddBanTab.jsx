@@ -12,6 +12,7 @@ const BAN_TYPES = [
 export default function AddBanTab() {
   const { data: players } = useSupabaseQuery('players', '*');
   const [showModal, setShowModal] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState('');
   const [formData, setFormData] = useState({
     player_id: '',
     type: '',
@@ -22,6 +23,16 @@ export default function AddBanTab() {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    // Reset player selection when team changes
+    if (field === 'team') {
+      setFormData(prev => ({ ...prev, player_id: '' }));
+    }
+  };
+
+  // Get filtered players based on selected team
+  const getFilteredPlayers = () => {
+    if (!players || !selectedTeam) return [];
+    return players.filter(p => p.team === selectedTeam);
   };
 
   const handleSubmit = async (e) => {
@@ -76,6 +87,7 @@ export default function AddBanTab() {
         reason: '',
         customDuration: 1
       });
+      setSelectedTeam('');
       setShowModal(false);
       
       // Show success message
@@ -88,7 +100,7 @@ export default function AddBanTab() {
     }
   };
 
-  const isFormValid = formData.player_id && formData.type;
+  const isFormValid = selectedTeam && formData.player_id && formData.type;
   const selectedBanType = BAN_TYPES.find(type => type.value === formData.type);
 
   return (
@@ -139,6 +151,27 @@ export default function AddBanTab() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Team Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Team *
+                  </label>
+                  <select
+                    value={selectedTeam}
+                    onChange={(e) => {
+                      setSelectedTeam(e.target.value);
+                      setFormData(prev => ({ ...prev, player_id: '' }));
+                    }}
+                    className="form-input"
+                    required
+                    disabled={loading}
+                  >
+                    <option value="">Team wählen</option>
+                    <option value="AEK">🔵 AEK Athen</option>
+                    <option value="Real">🔴 Real Madrid</option>
+                  </select>
+                </div>
+
                 {/* Player Selection */}
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-2">
@@ -149,18 +182,20 @@ export default function AddBanTab() {
                     onChange={(e) => handleInputChange('player_id', e.target.value)}
                     className="form-input"
                     required
-                    disabled={loading}
+                    disabled={loading || !selectedTeam}
                   >
-                    <option value="">Spieler wählen</option>
-                    {players && players.map((player) => (
+                    <option value="">
+                      {!selectedTeam ? 'Bitte zuerst Team wählen' : 'Spieler wählen'}
+                    </option>
+                    {getFilteredPlayers().map((player) => (
                       <option key={player.id} value={player.id}>
-                        {player.name} ({player.team} - {player.position})
+                        {player.name} ({player.position})
                       </option>
                     ))}
                   </select>
-                  {!players || players.length === 0 && (
+                  {selectedTeam && getFilteredPlayers().length === 0 && (
                     <p className="text-xs text-text-muted mt-1">
-                      Keine Spieler verfügbar. Bitte fügen Sie erst Spieler hinzu.
+                      Keine Spieler im gewählten Team verfügbar.
                     </p>
                   )}
                 </div>
