@@ -1,4 +1,5 @@
 import { useState, Suspense, lazy, useEffect } from 'react';
+import * as React from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './hooks/useAuth';
 import Login from './components/Login';
@@ -113,20 +114,25 @@ function App() {
     <div className="flex flex-col min-h-screen bg-bg-primary">
       {/* Connection Status Indicator */}
       {isDemoMode && (
-        <div className="bg-yellow-500 text-yellow-900 px-4 py-2 text-center text-sm font-medium">
-          <span className="inline-flex items-center">
-            ⚠️ Demo-Modus aktiv - Supabase CDN blockiert
+        <div className="bg-warning border-yellow-400 text-yellow-900 px-4 py-2 text-center text-sm font-medium" role="alert">
+          <span className="inline-flex items-center gap-2">
+            <span aria-hidden="true">⚠️</span>
+            Demo-Modus aktiv - Supabase CDN blockiert
           </span>
         </div>
       )}
       
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto scroll-smooth" role="main">
         <Suspense fallback={<LoadingSpinner message="Lade Tab..." />}>
           {tabLoading ? (
-            <LoadingSpinner message="Wechsle Tab..." />
+            <div className="flex items-center justify-center min-h-[50vh]">
+              <LoadingSpinner message="Wechsle Tab..." />
+            </div>
           ) : (
-            renderTabContent()
+            <ErrorBoundary>
+              {renderTabContent()}
+            </ErrorBoundary>
           )}
         </Suspense>
       </main>
@@ -149,6 +155,7 @@ function App() {
             borderRadius: '12px',
             padding: '16px',
             fontSize: '14px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
           },
           success: {
             iconTheme: {
@@ -162,10 +169,58 @@ function App() {
               secondary: '#FFFFFF',
             },
           },
+          loading: {
+            iconTheme: {
+              primary: '#6B7280',
+              secondary: '#FFFFFF',
+            },
+          },
+        }}
+        containerStyle={{
+          zIndex: 9999,
         }}
       />
     </div>
   );
+}
+
+// Error Boundary Component
+function ErrorBoundary({ children }) {
+  const [hasError, setHasError] = React.useState(false);
+  const [error, setError] = React.useState(null);
+
+  React.useEffect(() => {
+    const handleError = (event) => {
+      setHasError(true);
+      setError(event.error);
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  if (hasError) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] p-4">
+        <div className="alert alert-error max-w-md text-center">
+          <div className="text-4xl mb-4" aria-hidden="true">⚠️</div>
+          <h3 className="text-lg font-semibold mb-2">Etwas ist schiefgelaufen</h3>
+          <p className="text-sm mb-4">
+            Ein unerwarteter Fehler ist aufgetreten. Bitte laden Sie die Seite neu.
+          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="btn-primary"
+            aria-label="Seite neu laden"
+          >
+            Seite neu laden
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return children;
 }
 
 export default App;
