@@ -151,7 +151,7 @@ body {
 
 .header-content {
   display: flex;
-  justify-content: between;
+  justify-content: space-between;
   align-items: center;
   max-width: 1200px;
   margin: 0 auto;
@@ -236,7 +236,6 @@ body {
   /* Flex properties for equal spacing */
   flex: 1 1 auto;
   max-width: 80px;
-}
 }
 
 .nav-item:hover {

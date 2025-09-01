@@ -229,7 +229,14 @@ export default function StatsTab() {
   };
 
   const formatCurrencyInMillions = (amount) => {
-    return `${(amount / 1000000).toFixed(1)}M €`;
+    // Values are already stored in millions in the database
+    return `${(amount || 0).toFixed(1)}M €`;
+  };
+
+  const formatPlayerValue = (value) => {
+    // Helper function for consistent player value formatting
+    // Values are stored as millions in database  
+    return `${(value || 0).toFixed(1)}M €`;
   };
 
   const views = [
@@ -280,7 +287,7 @@ export default function StatsTab() {
             </div>
             <div className="flex justify-between">
               <span>Marktwert:</span>
-              <span className="font-semibold">{formatCurrencyInMillions(aekMarketValue)}</span>
+              <span className="font-semibold">{formatPlayerValue(aekMarketValue)}</span>
             </div>
             <div className="flex justify-between">
               <span>Zu Null:</span>
@@ -306,7 +313,7 @@ export default function StatsTab() {
             </div>
             <div className="flex justify-between">
               <span>Marktwert:</span>
-              <span className="font-semibold">{formatCurrencyInMillions(realMarketValue)}</span>
+              <span className="font-semibold">{formatPlayerValue(realMarketValue)}</span>
             </div>
             <div className="flex justify-between">
               <span>Zu Null:</span>
@@ -422,7 +429,7 @@ export default function StatsTab() {
                 <td className="py-2 text-center">{player.goalsPerGame}</td>
                 <td className="py-2 text-center">{player.sdsCount}</td>
                 <td className="py-2 text-center">{player.totalBans}</td>
-                <td className="py-2 text-right">{formatCurrencyInMillions(player.value)}</td>
+                <td className="py-2 text-right">{formatPlayerValue(player.value)}</td>
               </tr>
             ))}
           </tbody>
@@ -495,7 +502,7 @@ export default function StatsTab() {
             <div className="text-sm text-text-muted">Tore in einem Spiel</div>
           </div>
           <div className="text-center p-4 bg-bg-secondary rounded-lg">
-            <div className="text-2xl font-bold text-primary">{formatCurrencyInMillions(totalMarketValue)}</div>
+            <div className="text-2xl font-bold text-primary">{formatPlayerValue(totalMarketValue)}</div>
             <div className="text-sm text-text-muted">Gesamtmarktwert</div>
           </div>
           <div className="text-center p-4 bg-bg-secondary rounded-lg">

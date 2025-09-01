@@ -87,6 +87,7 @@ export class MatchBusinessLogic {
       const now = new Date().toISOString().slice(0, 10);
 
       // 4. Update player goals (excluding own goals which start with "Eigentore_")
+      // Own goals are tracked in the goal lists but don't count for individual player statistics
       if (processedGoalsListA.length > 0) {
         // Filter out own goals for new object format or old string format
         const filteredGoalsA = processedGoalsListA.filter(goal => {
@@ -164,7 +165,7 @@ export class MatchBusinessLogic {
   }
 
   /**
-   * Update player goal statistics
+   * Update player goal statistics - optimized with single query per player
    */
   static async updatePlayersGoals(goalsList, team) {
     // Handle both new object format and old string array format
@@ -185,11 +186,11 @@ export class MatchBusinessLogic {
       }
     }
     
-    // Update each player's goal count
+    // Update each player's goal count with optimized single query
     for (const [playerName, count] of Object.entries(goalCounts)) {      
       try {
-        // Get current player data
-        const playerResult = await supabaseDb.select('players', 'goals', { 
+        // Single query to get player data (id and current goals)
+        const playerResult = await supabaseDb.select('players', 'id, goals', { 
           eq: { name: playerName, team: team } 
         });
         
@@ -197,14 +198,8 @@ export class MatchBusinessLogic {
           const player = playerResult.data[0];
           const newGoals = (player.goals || 0) + count;
           
-          // Find all players with this name and team, then update the first one
-          const updateResult = await supabaseDb.select('players', 'id', { 
-            eq: { name: playerName, team: team } 
-          });
-          
-          if (updateResult.data && updateResult.data.length > 0) {
-            await supabaseDb.update('players', { goals: newGoals }, updateResult.data[0].id);
-          }
+          // Direct update using the player ID from the first query
+          await supabaseDb.update('players', { goals: newGoals }, player.id);
         }
       } catch (error) {
         console.warn(`Failed to update goals for player ${playerName}:`, error);
@@ -273,7 +268,7 @@ export class MatchBusinessLogic {
       aekBalance += sdsBonusAek;
       await this.insertTransaction({
         date,
-        type: "Bonus SdS",
+        type: "SdS Bonus",
         team: "AEK",
         amount: sdsBonusAek,
         match_id: matchId,
@@ -286,7 +281,7 @@ export class MatchBusinessLogic {
       realBalance += sdsBonusReal;
       await this.insertTransaction({
         date,
-        type: "Bonus SdS",
+        type: "SdS Bonus",
         team: "Real",
         amount: sdsBonusReal,
         match_id: matchId,

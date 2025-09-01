@@ -10,18 +10,45 @@ export default function SpielerTab() {
 
   const loading = matchesLoading || playersLoading;
 
-  // Calculate top scorers
+  // Calculate top scorers from goalslista and goalslistb
   const calculateTopScorers = () => {
     if (!matches || !players) return [];
     
     const scorerStats = {};
     
     matches.forEach(match => {
-      if (match.torschuetzen) {
-        const scorers = match.torschuetzen.split(',').map(s => s.trim());
-        scorers.forEach(scorerName => {
-          if (scorerName) {
-            scorerStats[scorerName] = (scorerStats[scorerName] || 0) + 1;
+      // Process goalslista (AEK goals)
+      if (match.goalslista) {
+        const goalsListA = Array.isArray(match.goalslista) 
+          ? match.goalslista 
+          : (typeof match.goalslista === 'string' ? JSON.parse(match.goalslista) : []);
+        
+        goalsListA.forEach(goal => {
+          // Handle both object format {player, count} and string format
+          const playerName = typeof goal === 'object' ? goal.player : goal;
+          const goalCount = typeof goal === 'object' ? (goal.count || 1) : 1;
+          
+          // Ignore own goals (Eigentore_*)
+          if (playerName && !playerName.startsWith('Eigentore_')) {
+            scorerStats[playerName] = (scorerStats[playerName] || 0) + goalCount;
+          }
+        });
+      }
+      
+      // Process goalslistb (Real goals)  
+      if (match.goalslistb) {
+        const goalsListB = Array.isArray(match.goalslistb)
+          ? match.goalslistb
+          : (typeof match.goalslistb === 'string' ? JSON.parse(match.goalslistb) : []);
+        
+        goalsListB.forEach(goal => {
+          // Handle both object format {player, count} and string format
+          const playerName = typeof goal === 'object' ? goal.player : goal;
+          const goalCount = typeof goal === 'object' ? (goal.count || 1) : 1;
+          
+          // Ignore own goals (Eigentore_*)
+          if (playerName && !playerName.startsWith('Eigentore_')) {
+            scorerStats[playerName] = (scorerStats[playerName] || 0) + goalCount;
           }
         });
       }
@@ -41,15 +68,15 @@ export default function SpielerTab() {
     return topScorers;
   };
 
-  // Calculate players of the match
+  // Calculate players of the match from manofthematch field
   const calculatePlayersOfMatch = () => {
     if (!matches || !players) return [];
     
     const playerStats = {};
     
     matches.forEach(match => {
-      if (match.spieler_des_spiels) {
-        const playerName = match.spieler_des_spiels.trim();
+      if (match.manofthematch) {
+        const playerName = match.manofthematch.trim();
         if (playerName) {
           playerStats[playerName] = (playerStats[playerName] || 0) + 1;
         }
