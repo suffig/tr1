@@ -1,272 +1,444 @@
+import { useState } from 'react';
 import { useSupabaseQuery } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
 
+// Enhanced Statistics Calculator Class (ported from vanilla JS)
+class StatsCalculator {
+  constructor(matches, players, bans, spielerDesSpiels) {
+    this.matches = matches || [];
+    this.players = players || [];
+    this.bans = bans || [];
+    this.spielerDesSpiels = spielerDesSpiels || [];
+    this.aekPlayers = (players || []).filter(p => p.team === "AEK");
+    this.realPlayers = (players || []).filter(p => p.team === "Real");
+  }
+
+  calculateTeamRecords() {
+    const aekRecord = { wins: 0, losses: 0 };
+    const realRecord = { wins: 0, losses: 0 };
+
+    this.matches.forEach(match => {
+      const aekGoals = match.goalsa || 0;
+      const realGoals = match.goalsb || 0;
+
+      if (aekGoals > realGoals) {
+        aekRecord.wins++;
+        realRecord.losses++;
+      } else if (realGoals > aekGoals) {
+        realRecord.wins++;
+        aekRecord.losses++;
+      }
+    });
+
+    return { aek: aekRecord, real: realRecord };
+  }
+
+  calculateRecentForm(teamCount = 5) {
+    const recentMatches = this.matches.slice(-teamCount);
+    const aekForm = [];
+    const realForm = [];
+
+    recentMatches.forEach(match => {
+      const aekGoals = match.goalsa || 0;
+      const realGoals = match.goalsb || 0;
+
+      if (aekGoals > realGoals) {
+        aekForm.push('W');
+        realForm.push('L');
+      } else if (realGoals > aekGoals) {
+        aekForm.push('L');
+        realForm.push('W');
+      } else {
+        aekForm.push('D');
+        realForm.push('D');
+      }
+    });
+
+    return { aek: aekForm, real: realForm };
+  }
+
+  calculatePlayerStats() {
+    return this.players.map(player => {
+      const matchGoals = this.countPlayerGoalsFromMatches(player.name, player.team);
+      const matchesPlayed = this.countPlayerMatches(player.name, player.team);
+      const playerBans = this.bans.filter(b => b.player_id === player.id);
+      
+      const sdsRecord = this.spielerDesSpiels.find(sds => 
+        sds.name === player.name && sds.team === player.team
+      );
+      const sdsCount = sdsRecord ? (sdsRecord.count || 0) : 0;
+      
+      return {
+        ...player,
+        goals: matchGoals,
+        matchesPlayed,
+        sdsCount,
+        goalsPerGame: matchesPlayed > 0 ? (matchGoals / matchesPlayed).toFixed(2) : '0.00',
+        totalBans: playerBans.length,
+        disciplinaryScore: this.calculateDisciplinaryScore(playerBans)
+      };
+    }).sort((a, b) => (b.goals || 0) - (a.goals || 0));
+  }
+
+  countPlayerGoalsFromMatches(playerName, playerTeam) {
+    let totalGoals = 0;
+    
+    this.matches.forEach(match => {
+      if (playerTeam === 'AEK' && match.goalslista) {
+        const goals = Array.isArray(match.goalslista) ? match.goalslista : 
+                     (typeof match.goalslista === 'string' ? JSON.parse(match.goalslista) : []);
+        
+        goals.forEach(goal => {
+          const goalPlayer = typeof goal === 'string' ? goal : goal.player;
+          const goalCount = typeof goal === 'string' ? 1 : (goal.count || 1);
+          if (goalPlayer === playerName) totalGoals += goalCount;
+        });
+      }
+      
+      if (playerTeam === 'Real' && match.goalslistb) {
+        const goals = Array.isArray(match.goalslistb) ? match.goalslistb : 
+                     (typeof match.goalslistb === 'string' ? JSON.parse(match.goalslistb) : []);
+        
+        goals.forEach(goal => {
+          const goalPlayer = typeof goal === 'string' ? goal : goal.player;
+          const goalCount = typeof goal === 'string' ? 1 : (goal.count || 1);
+          if (goalPlayer === playerName) totalGoals += goalCount;
+        });
+      }
+    });
+    
+    return totalGoals;
+  }
+
+  countPlayerMatches(playerName, playerTeam) {
+    // For now, assume all players participated in all matches
+    // In a real implementation, you'd track participation per match
+    return this.matches.length;
+  }
+
+  calculateDisciplinaryScore(bans) {
+    let score = 0;
+    bans.forEach(ban => {
+      switch (ban.type) {
+        case 'Gelb-Rote Karte': score += 3; break;
+        case 'Rote Karte': score += 5; break;
+        case 'Verletzung': score += 1; break;
+        default: score += 1;
+      }
+    });
+    return score;
+  }
+
+  calculateAdvancedStats() {
+    const totalMatches = this.matches.length;
+    const totalGoals = this.matches.reduce((sum, m) => sum + (m.goalsa || 0) + (m.goalsb || 0), 0);
+    
+    return {
+      avgGoalsPerMatch: totalMatches > 0 ? (totalGoals / totalMatches).toFixed(2) : '0.00',
+      totalMatches,
+      totalGoals,
+      aekTotalGoals: this.matches.reduce((sum, m) => sum + (m.goalsa || 0), 0),
+      realTotalGoals: this.matches.reduce((sum, m) => sum + (m.goalsb || 0), 0),
+      highestScoringMatch: totalMatches > 0 ? Math.max(...this.matches.map(m => (m.goalsa || 0) + (m.goalsb || 0))) : 0,
+      cleanSheets: {
+        aek: this.matches.filter(m => m.goalsb === 0).length,
+        real: this.matches.filter(m => m.goalsa === 0).length
+      }
+    };
+  }
+
+  calculatePerformanceTrends() {
+    const monthlyStats = {};
+    
+    this.matches.forEach(match => {
+      const date = new Date(match.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!monthlyStats[monthKey]) {
+        monthlyStats[monthKey] = {
+          month: monthKey,
+          aekWins: 0,
+          realWins: 0,
+          totalGoals: 0,
+          matchCount: 0
+        };
+      }
+      
+      const aekGoals = match.goalsa || 0;
+      const realGoals = match.goalsb || 0;
+      
+      monthlyStats[monthKey].totalGoals += aekGoals + realGoals;
+      monthlyStats[monthKey].matchCount++;
+      
+      if (aekGoals > realGoals) monthlyStats[monthKey].aekWins++;
+      else if (realGoals > aekGoals) monthlyStats[monthKey].realWins++;
+    });
+
+    return monthlyStats;
+  }
+}
+
 export default function StatsTab() {
+  const [selectedView, setSelectedView] = useState('overview');
+  
   const { data: matches, loading: matchesLoading } = useSupabaseQuery('matches', '*');
   const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
   const { data: sdsData, loading: sdsLoading } = useSupabaseQuery('spieler_des_spiels', '*');
+  const { data: bans, loading: bansLoading } = useSupabaseQuery('bans', '*');
   
-  const loading = matchesLoading || playersLoading || sdsLoading;
+  const loading = matchesLoading || playersLoading || sdsLoading || bansLoading;
 
-  // Basic statistics calculations
+  // Initialize statistics calculator
+  const stats = new StatsCalculator(matches, players, bans, sdsData);
+  
+  // Calculate all statistics
+  const teamRecords = stats.calculateTeamRecords();
+  const recentForm = stats.calculateRecentForm(5);
+  const playerStats = stats.calculatePlayerStats();
+  const advancedStats = stats.calculateAdvancedStats();
+  const performanceTrends = stats.calculatePerformanceTrends();
+
+  // Basic data calculations
   const totalMatches = matches?.length || 0;
   const totalPlayers = players?.length || 0;
   const aekPlayers = players?.filter(p => p.team === 'AEK') || [];
   const realPlayers = players?.filter(p => p.team === 'Real') || [];
-
-  // Calculate total goals
-  const totalGoals = matches?.reduce((total, match) => {
-    return total + (match.goalsa || 0) + (match.goalsb || 0);
-  }, 0) || 0;
 
   // Calculate market values
   const aekMarketValue = aekPlayers.reduce((total, player) => total + (player.value || 0), 0);
   const realMarketValue = realPlayers.reduce((total, player) => total + (player.value || 0), 0);
   const totalMarketValue = aekMarketValue + realMarketValue;
 
-  // Calculate goal scorers from matches
-  const calculateTopScorers = () => {
-    const scorers = {};
-    
-    matches?.forEach(match => {
-      // Process AEK goals - safely parse goalslista
-      let goalsListA = [];
-      try {
-        if (typeof match.goalslista === 'string') {
-          goalsListA = JSON.parse(match.goalslista);
-        } else if (Array.isArray(match.goalslista)) {
-          goalsListA = match.goalslista;
-        }
-      } catch (e) {
-        console.warn('Failed to parse goalslista in stats:', e);
-        goalsListA = [];
-      }
-      
-      goalsListA?.forEach(goal => {
-        const isObject = typeof goal === 'object' && goal !== null;
-        const playerName = isObject ? goal.player : goal;
-        const goalCount = isObject ? (goal.count || 1) : 1;
-        
-        if (!scorers[playerName]) {
-          const player = players?.find(p => p.name === playerName);
-          scorers[playerName] = {
-            name: playerName,
-            goals: 0,
-            team: player?.team || 'AEK',
-            value: player?.value || 0
-          };
-        }
-        scorers[playerName].goals += goalCount;
-      });
-      
-      // Process Real goals - safely parse goalslistb
-      let goalsListB = [];
-      try {
-        if (typeof match.goalslistb === 'string') {
-          goalsListB = JSON.parse(match.goalslistb);
-        } else if (Array.isArray(match.goalslistb)) {
-          goalsListB = match.goalslistb;
-        }
-      } catch (e) {
-        console.warn('Failed to parse goalslistb in stats:', e);
-        goalsListB = [];
-      }
-      
-      goalsListB?.forEach(goal => {
-        const isObject = typeof goal === 'object' && goal !== null;
-        const playerName = isObject ? goal.player : goal;
-        const goalCount = isObject ? (goal.count || 1) : 1;
-        
-        if (!scorers[playerName]) {
-          const player = players?.find(p => p.name === playerName);
-          scorers[playerName] = {
-            name: playerName,
-            goals: 0,
-            team: player?.team || 'Real',
-            value: player?.value || 0
-          };
-        }
-        scorers[playerName].goals += goalCount;
-      });
-    });
-    
-    return Object.values(scorers).sort((a, b) => b.goals - a.goals).slice(0, 5);
+  // Calculate wins per team 
+  const aekWins = teamRecords.aek.wins;
+  const realWins = teamRecords.real.wins;
+
+  const formatForm = (form) => {
+    return form.map((result, index) => (
+      <span
+        key={index}
+        className={`inline-block w-6 h-6 text-xs font-bold rounded-full text-center leading-6 mx-0.5 ${
+          result === 'W' ? 'bg-green-500 text-white' :
+          result === 'L' ? 'bg-red-500 text-white' :
+          'bg-gray-400 text-white'
+        }`}
+      >
+        {result}
+      </span>
+    ));
   };
 
-  // Calculate Player of the Match (SdS) counts from both sources
-  const calculateSdsStats = () => {
-    const sdsCount = {};
-    
-    // First, add data from the dedicated spieler_des_spiels table
-    sdsData?.forEach(sdsEntry => {
-      const player = players?.find(p => p.name === sdsEntry.name && p.team === sdsEntry.team);
-      sdsCount[sdsEntry.name] = {
-        name: sdsEntry.name,
-        count: sdsEntry.count || 0,
-        team: sdsEntry.team,
-        value: player?.value || 0
-      };
-    });
-    
-    // Then, add data from matches table (manofthematch field)
-    matches?.forEach(match => {
-      if (match.manofthematch) {
-        if (!sdsCount[match.manofthematch]) {
-          const player = players?.find(p => p.name === match.manofthematch);
-          sdsCount[match.manofthematch] = {
-            name: match.manofthematch,
-            count: 0,
-            team: player?.team || 'Unbekannt',
-            value: player?.value || 0
-          };
-        }
-        sdsCount[match.manofthematch].count++;
-      }
-    });
-    
-    return Object.values(sdsCount).sort((a, b) => b.count - a.count).slice(0, 10); // Show top 10 instead of 5
+  const formatCurrencyInMillions = (amount) => {
+    return `${(amount / 1000000).toFixed(1)}M €`;
   };
 
-  const topScorers = calculateTopScorers();
-  const sdsStats = calculateSdsStats();
-
-  // Calculate wins per team
-  const aekWins = matches?.filter(match => 
-    (match.teama === 'AEK' && match.goalsa > match.goalsb) ||
-    (match.teamb === 'AEK' && match.goalsb > match.goalsa)
-  ).length || 0;
-
-  const realWins = matches?.filter(match => 
-    (match.teama === 'Real' && match.goalsa > match.goalsb) ||
-    (match.teamb === 'Real' && match.goalsb > match.goalsa)
-  ).length || 0;
+  const views = [
+    { id: 'overview', label: 'Übersicht', icon: '📊' },
+    { id: 'players', label: 'Spieler', icon: '👥' },
+    { id: 'teams', label: 'Teams', icon: '🏆' },
+    { id: 'trends', label: 'Trends', icon: '📈' },
+  ];
 
   if (loading) {
     return <LoadingSpinner message="Lade Statistiken..." />;
   }
 
-  return (
-    <div className="p-4 pb-20">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-text-primary mb-2">
-          Statistiken
-        </h2>
-        <p className="text-text-muted">
-          Übersicht über alle wichtigen Zahlen
-        </p>
-      </div>
-
-      {/* Main Statistics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  const renderOverview = () => (
+    <div className="space-y-6">
+      {/* Quick Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="modern-card text-center">
-          <div className="text-3xl font-bold text-primary-green mb-2">
-            {totalMatches}
-          </div>
-          <div className="text-sm text-text-muted">Gesamt Spiele</div>
+          <div className="text-2xl font-bold text-primary">{totalMatches}</div>
+          <div className="text-sm text-text-muted">Spiele</div>
         </div>
-        
         <div className="modern-card text-center">
-          <div className="text-3xl font-bold text-accent-orange mb-2">
-            {totalGoals}
-          </div>
-          <div className="text-sm text-text-muted">Gesamt Tore</div>
+          <div className="text-2xl font-bold text-primary">{advancedStats.totalGoals}</div>
+          <div className="text-sm text-text-muted">Tore</div>
         </div>
-        
         <div className="modern-card text-center">
-          <div className="text-3xl font-bold text-accent-blue mb-2">
-            {totalPlayers}
-          </div>
-          <div className="text-sm text-text-muted">Gesamt Spieler</div>
+          <div className="text-2xl font-bold text-primary">{totalPlayers}</div>
+          <div className="text-sm text-text-muted">Spieler</div>
         </div>
-        
         <div className="modern-card text-center">
-          <div className="text-3xl font-bold text-text-primary mb-2">
-            {totalMatches > 0 ? (totalGoals / totalMatches).toFixed(1) : '0.0'}
-          </div>
+          <div className="text-2xl font-bold text-primary">{advancedStats.avgGoalsPerMatch}</div>
           <div className="text-sm text-text-muted">⌀ Tore/Spiel</div>
         </div>
       </div>
 
-      {/* Market Value Statistics */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4">
-          Marktwert-Statistiken
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="modern-card text-center border-l-4 border-blue-400">
-            <div className="text-2xl font-bold text-blue-600 mb-2">
-              {aekMarketValue.toFixed(1)}M €
+      {/* Team Performance */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="modern-card border-l-4 border-blue-400">
+          <h3 className="font-bold text-lg mb-4 text-blue-600">AEK Athen</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span>Siege:</span>
+              <span className="font-semibold text-green-600">{aekWins}</span>
             </div>
-            <div className="text-sm text-text-muted">AEK Kaderwert</div>
+            <div className="flex justify-between">
+              <span>Niederlagen:</span>
+              <span className="font-semibold text-red-600">{teamRecords.aek.losses}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Marktwert:</span>
+              <span className="font-semibold">{formatCurrencyInMillions(aekMarketValue)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Zu Null:</span>
+              <span className="font-semibold">{advancedStats.cleanSheets.aek}</span>
+            </div>
+            <div className="mt-3">
+              <div className="text-sm text-text-muted mb-1">Form (letzte 5):</div>
+              <div className="flex">{formatForm(recentForm.aek)}</div>
+            </div>
           </div>
-          
-          <div className="modern-card text-center border-l-4 border-red-400">
-            <div className="text-2xl font-bold text-red-600 mb-2">
-              {realMarketValue.toFixed(1)}M €
+        </div>
+
+        <div className="modern-card border-l-4 border-red-400">
+          <h3 className="font-bold text-lg mb-4 text-red-600">Real Madrid</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span>Siege:</span>
+              <span className="font-semibold text-green-600">{realWins}</span>
             </div>
-            <div className="text-sm text-text-muted">Real Kaderwert</div>
-          </div>
-          
-          <div className="modern-card text-center border-l-4 border-green-400">
-            <div className="text-2xl font-bold text-green-600 mb-2">
-              {totalMarketValue.toFixed(1)}M €
+            <div className="flex justify-between">
+              <span>Niederlagen:</span>
+              <span className="font-semibold text-red-600">{teamRecords.real.losses}</span>
             </div>
-            <div className="text-sm text-text-muted">Gesamt Kaderwert</div>
+            <div className="flex justify-between">
+              <span>Marktwert:</span>
+              <span className="font-semibold">{formatCurrencyInMillions(realMarketValue)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Zu Null:</span>
+              <span className="font-semibold">{advancedStats.cleanSheets.real}</span>
+            </div>
+            <div className="mt-3">
+              <div className="text-sm text-text-muted mb-1">Form (letzte 5):</div>
+              <div className="flex">{formatForm(recentForm.real)}</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Team Statistics */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4">
-          Team-Statistiken
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* AEK Stats */}
-          <div className="modern-card border-l-4 border-blue-400">
-            <div className="flex items-center mb-3">
-              <span className="text-2xl mr-3">🔵</span>
-              <h4 className="text-lg font-semibold text-blue-600">AEK Athen</h4>
+      {/* Top Performers */}
+      <div className="modern-card">
+        <h3 className="font-bold text-lg mb-4">🏆 Top-Torschützen</h3>
+        <div className="space-y-2">
+          {playerStats.slice(0, 5).map((player, index) => (
+            <div key={player.id} className="flex items-center justify-between py-2 border-b border-border-light last:border-b-0">
+              <div className="flex items-center space-x-3">
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                  index === 0 ? 'bg-yellow-500 text-white' :
+                  index === 1 ? 'bg-gray-400 text-white' :
+                  index === 2 ? 'bg-orange-600 text-white' :
+                  'bg-gray-200 text-gray-600'
+                }`}>
+                  {index + 1}
+                </span>
+                <div>
+                  <div className="font-medium">{player.name}</div>
+                  <div className="text-sm text-text-muted">{player.team}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-bold">{player.goals} Tore</div>
+                <div className="text-sm text-text-muted">{player.goalsPerGame} ⌀</div>
+              </div>
             </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPlayers = () => (
+    <div className="modern-card">
+      <h3 className="font-bold text-lg mb-4">📊 Spielerstatistiken</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border-light">
+              <th className="text-left py-2">Spieler</th>
+              <th className="text-left py-2">Team</th>
+              <th className="text-center py-2">Tore</th>
+              <th className="text-center py-2">⌀/Spiel</th>
+              <th className="text-center py-2">SdS</th>
+              <th className="text-center py-2">Sperren</th>
+              <th className="text-right py-2">Marktwert</th>
+            </tr>
+          </thead>
+          <tbody>
+            {playerStats.map((player, index) => (
+              <tr key={player.id} className="border-b border-border-light hover:bg-bg-secondary">
+                <td className="py-2 font-medium">{player.name}</td>
+                <td className="py-2">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    player.team === 'AEK' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {player.team}
+                  </span>
+                </td>
+                <td className="py-2 text-center font-bold">{player.goals}</td>
+                <td className="py-2 text-center">{player.goalsPerGame}</td>
+                <td className="py-2 text-center">{player.sdsCount}</td>
+                <td className="py-2 text-center">{player.totalBans}</td>
+                <td className="py-2 text-right">{formatCurrencyInMillions(player.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderTeams = () => (
+    <div className="space-y-6">
+      {/* Team Comparison */}
+      <div className="modern-card">
+        <h3 className="font-bold text-lg mb-4">⚖️ Team-Vergleich</h3>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <h4 className="font-semibold text-blue-600">AEK Athen</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-text-muted">Spieler:</span>
+                <span>Spieler:</span>
                 <span className="font-medium">{aekPlayers.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-text-muted">Siege:</span>
-                <span className="font-medium text-primary-green">{aekWins}</span>
+                <span>Tore gesamt:</span>
+                <span className="font-medium">{advancedStats.aekTotalGoals}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-text-muted">Siegesrate:</span>
+                <span>Siege:</span>
+                <span className="font-medium">{aekWins}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Siegquote:</span>
                 <span className="font-medium">
-                  {totalMatches > 0 ? ((aekWins / totalMatches) * 100).toFixed(1) : '0.0'}%
+                  {totalMatches > 0 ? ((aekWins / totalMatches) * 100).toFixed(1) : 0}%
                 </span>
               </div>
             </div>
           </div>
-
-          {/* Real Stats */}
-          <div className="modern-card border-l-4 border-purple-400">
-            <div className="flex items-center mb-3">
-              <span className="text-2xl mr-3">🟣</span>
-              <h4 className="text-lg font-semibold text-purple-600">Real Madrid</h4>
-            </div>
+          <div className="space-y-3">
+            <h4 className="font-semibold text-red-600">Real Madrid</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-text-muted">Spieler:</span>
+                <span>Spieler:</span>
                 <span className="font-medium">{realPlayers.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-text-muted">Siege:</span>
-                <span className="font-medium text-primary-green">{realWins}</span>
+                <span>Tore gesamt:</span>
+                <span className="font-medium">{advancedStats.realTotalGoals}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-text-muted">Siegesrate:</span>
+                <span>Siege:</span>
+                <span className="font-medium">{realWins}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Siegquote:</span>
                 <span className="font-medium">
-                  {totalMatches > 0 ? ((realWins / totalMatches) * 100).toFixed(1) : '0.0'}%
+                  {totalMatches > 0 ? ((realWins / totalMatches) * 100).toFixed(1) : 0}%
                 </span>
               </div>
             </div>
@@ -274,203 +446,90 @@ export default function StatsTab() {
         </div>
       </div>
 
-      {/* Top Scorers */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4">
-          ⚽ Top Torschützen
-        </h3>
-        
-        {topScorers.length > 0 ? (
-          <div className="space-y-3">
-            {topScorers.map((scorer, index) => (
-              <div key={scorer.name} className="modern-card">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`text-2xl font-bold ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-400' : index === 2 ? 'text-orange-600' : 'text-text-muted'}`}>
-                      #{index + 1}
-                    </div>
-                    <div>
-                      <div className="font-medium text-text-primary">{scorer.name}</div>
-                      <div className="text-sm text-text-muted">
-                        {scorer.team} • Marktwert: {scorer.value.toFixed(1)}M €
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-primary-green">{scorer.goals}</div>
-                    <div className="text-xs text-text-muted">Tore</div>
-                  </div>
-                </div>
-              </div>
-            ))}
+      {/* Advanced Team Stats */}
+      <div className="modern-card">
+        <h3 className="font-bold text-lg mb-4">📈 Erweiterte Statistiken</h3>
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="text-center p-4 bg-bg-secondary rounded-lg">
+            <div className="text-2xl font-bold text-primary">{advancedStats.highestScoringMatch}</div>
+            <div className="text-sm text-text-muted">Tore in einem Spiel</div>
           </div>
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-4">⚽</div>
-            <p className="text-text-muted">Noch keine Torschützen verfügbar</p>
+          <div className="text-center p-4 bg-bg-secondary rounded-lg">
+            <div className="text-2xl font-bold text-primary">{formatCurrencyInMillions(totalMarketValue)}</div>
+            <div className="text-sm text-text-muted">Gesamtmarktwert</div>
           </div>
-        )}
-      </div>
-
-      {/* Player of the Match (SdS) Statistics */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4">
-          ⭐ Spieler des Spiels (SdS)
-        </h3>
-        
-        {sdsStats.length > 0 ? (
-          <div className="space-y-3">
-            {sdsStats.map((sds, index) => (
-              <div key={sds.name} className="modern-card">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`text-2xl font-bold ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-400' : index === 2 ? 'text-orange-600' : 'text-text-muted'}`}>
-                      #{index + 1}
-                    </div>
-                    <div>
-                      <div className="font-medium text-text-primary">{sds.name}</div>
-                      <div className="text-sm text-text-muted">
-                        {sds.team} • Marktwert: {sds.value.toFixed(1)}M €
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-yellow-600">{sds.count}</div>
-                    <div className="text-xs text-text-muted">SdS</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-4">⭐</div>
-            <p className="text-text-muted">Noch keine Spieler des Spiels vergeben</p>
-          </div>
-        )}
-      </div>
-
-      {/* Additional Statistics */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4">
-          📊 Weitere Statistiken
-        </h3>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="modern-card text-center">
-            <div className="text-2xl font-bold text-accent-orange mb-2">
-              {matches?.filter(m => m.goalsa === m.goalsb).length || 0}
-            </div>
-            <div className="text-sm text-text-muted">Unentschieden</div>
-          </div>
-          
-          <div className="modern-card text-center">
-            <div className="text-2xl font-bold text-accent-red mb-2">
-              {matches?.reduce((sum, m) => sum + (m.reda || 0) + (m.redb || 0), 0) || 0}
-            </div>
-            <div className="text-sm text-text-muted">Rote Karten</div>
-          </div>
-          
-          <div className="modern-card text-center">
-            <div className="text-2xl font-bold text-yellow-600 mb-2">
-              {matches?.reduce((sum, m) => sum + (m.yellowa || 0) + (m.yellowb || 0), 0) || 0}
-            </div>
-            <div className="text-sm text-text-muted">Gelbe Karten</div>
-          </div>
-          
-          <div className="modern-card text-center">
-            <div className="text-2xl font-bold text-primary-green mb-2">
-              {totalMatches > 0 ? Math.max(...matches.map(m => (m.goalsa || 0) + (m.goalsb || 0))) : 0}
-            </div>
-            <div className="text-sm text-text-muted">Höchstes Ergebnis</div>
+          <div className="text-center p-4 bg-bg-secondary rounded-lg">
+            <div className="text-2xl font-bold text-primary">{Math.abs(aekWins - realWins)}</div>
+            <div className="text-sm text-text-muted">Siegesdifferenz</div>
           </div>
         </div>
       </div>
+    </div>
+  );
 
-      {/* Team Performance Comparison */}
+  const renderTrends = () => (
+    <div className="modern-card">
+      <h3 className="font-bold text-lg mb-4">📈 Performance-Trends</h3>
+      <div className="space-y-4">
+        {Object.values(performanceTrends).reverse().map((trend) => (
+          <div key={trend.month} className="flex items-center justify-between py-3 border-b border-border-light last:border-b-0">
+            <div className="font-medium">{trend.month}</div>
+            <div className="flex items-center space-x-4">
+              <div className="text-sm">
+                <span className="text-blue-600 font-medium">AEK: {trend.aekWins}</span>
+                <span className="mx-2">vs</span>
+                <span className="text-red-600 font-medium">Real: {trend.realWins}</span>
+              </div>
+              <div className="text-sm text-text-muted">
+                {trend.matchCount} Spiele, {trend.totalGoals} Tore
+              </div>
+              <div className="text-sm font-medium">
+                ⌀ {(trend.totalGoals / trend.matchCount).toFixed(1)} Tore/Spiel
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderCurrentView = () => {
+    switch (selectedView) {
+      case 'players': return renderPlayers();
+      case 'teams': return renderTeams();
+      case 'trends': return renderTrends();
+      default: return renderOverview();
+    }
+  };
+
+  return (
+    <div className="p-4 pb-20">
+      {/* Header */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4">
-          ⚖️ Team-Vergleich
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="modern-card border-l-4 border-blue-400">
-            <h4 className="text-lg font-semibold text-blue-600 mb-3">🔵 AEK Athen</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-text-muted">Durchschn. Tore pro Spiel:</span>
-                <span className="font-medium">
-                  {totalMatches > 0 ? 
-                    (matches.reduce((sum, m) => sum + (m.teama === 'AEK' ? (m.goalsa || 0) : (m.goalsb || 0)), 0) / totalMatches).toFixed(1) 
-                    : '0.0'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Durchschn. Gegentore:</span>
-                <span className="font-medium">
-                  {totalMatches > 0 ? 
-                    (matches.reduce((sum, m) => sum + (m.teama === 'AEK' ? (m.goalsb || 0) : (m.goalsa || 0)), 0) / totalMatches).toFixed(1) 
-                    : '0.0'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Beste Scorer:</span>
-                <span className="font-medium">
-                  {topScorers.filter(s => s.team === 'AEK').length > 0 
-                    ? topScorers.filter(s => s.team === 'AEK')[0].name 
-                    : 'Keine'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="modern-card border-l-4 border-red-400">
-            <h4 className="text-lg font-semibold text-red-600 mb-3">🔴 Real Madrid</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-text-muted">Durchschn. Tore pro Spiel:</span>
-                <span className="font-medium">
-                  {totalMatches > 0 ? 
-                    (matches.reduce((sum, m) => sum + (m.teamb === 'Real' ? (m.goalsb || 0) : (m.goalsa || 0)), 0) / totalMatches).toFixed(1) 
-                    : '0.0'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Durchschn. Gegentore:</span>
-                <span className="font-medium">
-                  {totalMatches > 0 ? 
-                    (matches.reduce((sum, m) => sum + (m.teamb === 'Real' ? (m.goalsa || 0) : (m.goalsb || 0)), 0) / totalMatches).toFixed(1) 
-                    : '0.0'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Beste Scorer:</span>
-                <span className="font-medium">
-                  {topScorers.filter(s => s.team === 'Real').length > 0 
-                    ? topScorers.filter(s => s.team === 'Real')[0].name 
-                    : 'Keine'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <h2 className="text-2xl font-bold text-text-primary mb-2">📊 Statistiken</h2>
+        <p className="text-text-muted">Umfassende Analyse von Spielen, Spielern und Teams</p>
       </div>
 
-      {/* Development Note */}
-      <div className="modern-card bg-blue-50 border-blue-200">
-        <div className="flex items-start">
-          <div className="text-blue-600 mr-3">
-            <i className="fas fa-info-circle"></i>
-          </div>
-          <div>
-            <h4 className="font-semibold text-blue-800 mb-1">Statistiken-Modul</h4>
-            <p className="text-blue-700 text-sm">
-              Grundlegende Statistiken sind implementiert. Erweiterte Analysen und Charts können 
-              bei Bedarf hinzugefügt werden.
-            </p>
-          </div>
-        </div>
+      {/* View Navigation */}
+      <div className="flex overflow-x-auto space-x-2 mb-6 pb-2">
+        {views.map((view) => (
+          <button
+            key={view.id}
+            onClick={() => setSelectedView(view.id)}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+              selectedView === view.id
+                ? 'bg-primary text-white'
+                : 'bg-bg-secondary text-text-muted hover:bg-bg-tertiary'
+            }`}
+          >
+            <span>{view.icon}</span>
+            <span className="font-medium">{view.label}</span>
+          </button>
+        ))}
       </div>
+
+      {/* Content */}
+      {renderCurrentView()}
     </div>
   );
 }
