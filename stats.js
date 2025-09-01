@@ -61,8 +61,9 @@ class StatsCalculator {
     // Enhanced player statistics with correct database values
     calculatePlayerStats() {
         const playerStats = this.players.map(player => {
-            const matchesPlayed = this.countPlayerMatches(player.id);
-            const goals = player.goals || 0;
+            const matchGoals = this.countPlayerGoalsFromMatches(player.name, player.team);
+            const matchesPlayed = this.countPlayerMatches(player.name, player.team);
+            const goals = matchGoals; // Use goals from matches, not from player table
             const playerBans = this.bans.filter(b => b.player_id === player.id);
             
             // Get SdS count from spieler_des_spiels table
@@ -73,6 +74,7 @@ class StatsCalculator {
             
             return {
                 ...player,
+                goals, // Updated goals from matches
                 matchesPlayed,
                 sdsCount,
                 goalsPerGame: matchesPlayed > 0 ? (goals / matchesPlayed).toFixed(2) : '0.00',
@@ -84,9 +86,50 @@ class StatsCalculator {
         return playerStats.sort((a, b) => (b.goals || 0) - (a.goals || 0));
     }
 
-    countPlayerMatches(playerId) {
-        // Count matches where player was involved (simplified)
-        return Math.floor(Math.random() * this.matches.length); // Placeholder - would need proper tracking
+    countPlayerGoalsFromMatches(playerName, playerTeam) {
+        let totalGoals = 0;
+        
+        this.matches.forEach(match => {
+            // Count goals from goalslista (AEK goals)
+            if (playerTeam === 'AEK' && match.goalslista) {
+                const goals = Array.isArray(match.goalslista) ? match.goalslista : 
+                             (typeof match.goalslista === 'string' ? JSON.parse(match.goalslista) : []);
+                
+                goals.forEach(goal => {
+                    const goalPlayer = typeof goal === 'string' ? goal : goal.player;
+                    const goalCount = typeof goal === 'string' ? 1 : (goal.count || 1);
+                    
+                    if (goalPlayer === playerName) {
+                        totalGoals += goalCount;
+                    }
+                });
+            }
+            
+            // Count goals from goalslistb (Real goals)
+            if (playerTeam === 'Real' && match.goalslistb) {
+                const goals = Array.isArray(match.goalslistb) ? match.goalslistb : 
+                             (typeof match.goalslistb === 'string' ? JSON.parse(match.goalslistb) : []);
+                
+                goals.forEach(goal => {
+                    const goalPlayer = typeof goal === 'string' ? goal : goal.player;
+                    const goalCount = typeof goal === 'string' ? 1 : (goal.count || 1);
+                    
+                    if (goalPlayer === playerName) {
+                        totalGoals += goalCount;
+                    }
+                });
+            }
+        });
+        
+        return totalGoals;
+    }
+
+    countPlayerMatches(playerName, playerTeam) {
+        // Count matches where the player's team played
+        return this.matches.filter(match => 
+            (playerTeam === 'AEK' && (match.teama === 'AEK' || match.teamb === 'AEK')) ||
+            (playerTeam === 'Real' && (match.teama === 'Real' || match.teamb === 'Real'))
+        ).length;
     }
 
     calculateDisciplinaryScore(bans) {

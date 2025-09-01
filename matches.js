@@ -562,22 +562,23 @@ function attachMatchEventListeners(uniqueDates) {
 function matchHtml(match, nr) {
     function goalsHtml(goals) {
         if (!goals || !goals.length) return `<span class="text-gray-600 text-sm italic">Keine Torschützen</span>`;
-        return goals
-            .map(g => {
-                // Handle both string array format (legacy) and object format (new)
-                if (typeof g === 'string') {
-                    return `<span class="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-green-100 rounded-lg px-3 py-1 text-sm font-medium shadow-md">
-                        ${g} 
-                        <span class="inline-block rounded-md px-2 py-1 border font-bold text-xs bg-green-700 border-green-600 text-green-100">1</span>
-                    </span>`;
-                } else {
-                    return `<span class="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-green-100 rounded-lg px-3 py-1 text-sm font-medium shadow-md">
-                        ${g.player} 
-                        <span class="inline-block rounded-md px-2 py-1 border font-bold text-xs bg-green-700 border-green-600 text-green-100">${g.count}</span>
-                    </span>`;
-                }
-            })
-            .join(' ');
+        
+        // Aggregate goal counts per player (like before)
+        const goalCounts = {};
+        goals.forEach(g => {
+            const playerName = typeof g === 'string' ? g : g.player;
+            if (playerName) {
+                goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+            }
+        });
+        
+        // Create individual badges for each player with goal count
+        const playerBadges = Object.entries(goalCounts).map(([playerName, count]) => {
+            const displayText = count > 1 ? `${playerName} ${count}x` : playerName;
+            return `<span class="inline-flex items-center gap-1 bg-gray-700 text-gray-200 px-2 py-1 rounded text-sm font-medium border border-gray-500">${displayText}</span>`;
+        }).join(' ');
+        
+        return playerBadges;
     }
     
     function prizeHtml(amount, team) {
@@ -702,9 +703,9 @@ function matchHtml(match, nr) {
             <span class="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-600 to-yellow-500 text-yellow-100 px-3 py-2 rounded-lg text-sm font-bold shadow-lg">
               ⭐ ${match.manofthematch}
               <span class="text-xs font-medium opacity-90">(${(() => {
-                // Determine team from match data
-                if (match.goalslista && match.goalslista.some(g => g.player === match.manofthematch)) return 'AEK';
-                if (match.goalslistb && match.goalslistb.some(g => g.player === match.manofthematch)) return 'Real';
+                // Determine team from match data using string array format
+                if (match.goalslista && match.goalslista.includes(match.manofthematch)) return 'AEK';
+                if (match.goalslistb && match.goalslistb.includes(match.manofthematch)) return 'Real';
                 // Fallback: check if player is in AEK or Real team
                 return matchesData.aek.find(p => p.name === match.manofthematch) ? 'AEK' : 'Real';
               })()})</span>
@@ -1272,7 +1273,22 @@ function setupGoalButtons(updateTotalGoalsCallback = null) {
 function scorerFields(name, arr, spielerOpts) {
     // No default scorer - start with empty list
     if (!arr.length) return '';
-    return arr.map((g, i) => `
+    
+    // Convert string array to aggregated format for form display
+    const aggregatedGoals = {};
+    arr.forEach(playerName => {
+        if (playerName) {
+            aggregatedGoals[playerName] = (aggregatedGoals[playerName] || 0) + 1;
+        }
+    });
+    
+    // Convert to array of objects for form display
+    const goalsForDisplay = Object.entries(aggregatedGoals).map(([player, count]) => ({
+        player,
+        count
+    }));
+    
+    return goalsForDisplay.map((g, i) => `
         <div class="flex gap-2 mb-3 scorer-row items-center bg-gray-600 border-2 border-gray-500 rounded-lg p-3">
             <select name="${name}-player" class="border-2 border-gray-400 bg-gray-500 text-white rounded-lg p-3 min-h-[44px] text-sm flex-1 font-semibold" style="min-width:150px;">
                 <option value="">Spieler wählen</option>
@@ -1291,15 +1307,22 @@ function scorerFields(name, arr, spielerOpts) {
 }
 
 async function updatePlayersGoals(goalslist, team) {
-    for (const scorer of goalslist) {
-        if (!scorer.player) continue;
+    // Count goals per player from string array
+    const goalCounts = {};
+    for (const playerName of goalslist) {
+        if (!playerName) continue;
+        goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+    }
+    
+    // Update each player's goal count
+    for (const [playerName, count] of Object.entries(goalCounts)) {
         // Spieler laden, aktueller Stand
-        const { data: player } = await supabase.from('players').select('goals').eq('name', scorer.player).eq('team', team).single();
-        let newGoals = scorer.count;
+        const { data: player } = await supabase.from('players').select('goals').eq('name', playerName).eq('team', team).single();
+        let newGoals = count;
         if (player && typeof player.goals === 'number') {
-            newGoals = player.goals + scorer.count;
+            newGoals = player.goals + count;
         }
-        await supabase.from('players').update({ goals: newGoals }).eq('name', scorer.player).eq('team', team);
+        await supabase.from('players').update({ goals: newGoals }).eq('name', playerName).eq('team', team);
     }
 }
 
@@ -1412,10 +1435,18 @@ async function submitMatchForm(event, id) {
         const manofthematch = form.manofthematch.value || "";
 
     function getScorers(group, name) {
-        return Array.from(group.querySelectorAll('.scorer-row')).map(d => ({
-            player: d.querySelector(`select[name="${name}-player"]`).value,
-            count: parseInt(d.querySelector(`input[name="${name}-count"]`).value) || 1
-        })).filter(g => g.player);
+        const scorers = [];
+        Array.from(group.querySelectorAll('.scorer-row')).forEach(d => {
+            const player = d.querySelector(`select[name="${name}-player"]`).value;
+            const count = parseInt(d.querySelector(`input[name="${name}-count"]`).value) || 1;
+            if (player) {
+                // Add each goal as a separate string entry (original format)
+                for (let i = 0; i < count; i++) {
+                    scorers.push(player);
+                }
+            }
+        });
+        return scorers;
     }
 
     let goalslista = [];
@@ -1423,7 +1454,7 @@ async function submitMatchForm(event, id) {
     if (goalsa > 0) {
         const groupA = form.querySelector("#scorersA");
         goalslista = getScorers(groupA, "goalslista");
-        const sumA = goalslista.reduce((sum, g) => sum + (g.count || 0), 0);
+        const sumA = goalslista.length; // Count strings in array
         if (sumA > goalsa) {
             alert(`Die Summe der Torschützen-Tore für ${teama} (${sumA}) darf nicht größer als die Gesamtanzahl der Tore (${goalsa}) sein!`);
             // Restore button state and remove indicator
@@ -1439,7 +1470,7 @@ async function submitMatchForm(event, id) {
     if (goalsb > 0) {
         const groupB = form.querySelector("#scorersB");
         goalslistb = getScorers(groupB, "goalslistb");
-        const sumB = goalslistb.reduce((sum, g) => sum + (g.count || 0), 0);
+        const sumB = goalslistb.length; // Count strings in array
         if (sumB > goalsb) {
             alert(`Die Summe der Torschützen-Tore für ${teamb} (${sumB}) darf nicht größer als die Gesamtanzahl der Tore (${goalsb}) sein!`);
             // Restore button state and remove indicator
@@ -1783,12 +1814,20 @@ async function deleteMatch(id) {
     // 4. Spieler-Tore abziehen
     const removeGoals = async (goalslist, team) => {
         if (!goalslist || !Array.isArray(goalslist)) return;
-        for (const scorer of goalslist) {
-            if (!scorer.player) continue;
-            const { data: player } = await supabase.from('players').select('goals').eq('name', scorer.player).eq('team', team).single();
-            let newGoals = (player?.goals || 0) - scorer.count;
+        
+        // Count goals per player from string array
+        const goalCounts = {};
+        for (const playerName of goalslist) {
+            if (!playerName) continue;
+            goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+        }
+        
+        // Remove each player's goal count
+        for (const [playerName, count] of Object.entries(goalCounts)) {
+            const { data: player } = await supabase.from('players').select('goals').eq('name', playerName).eq('team', team).single();
+            let newGoals = (player?.goals || 0) - count;
             if (newGoals < 0) newGoals = 0;
-            await supabase.from('players').update({ goals: newGoals }).eq('name', scorer.player).eq('team', team);
+            await supabase.from('players').update({ goals: newGoals }).eq('name', playerName).eq('team', team);
         }
     };
     await removeGoals(match.goalslista, "AEK");
@@ -1797,8 +1836,8 @@ async function deleteMatch(id) {
     // 5. Spieler des Spiels rückgängig machen
     if (match.manofthematch) {
         let sdsTeam = null;
-        if (match.goalslista && match.goalslista.find(g => g.player === match.manofthematch)) sdsTeam = "AEK";
-        else if (match.goalslistb && match.goalslistb.find(g => g.player === match.manofthematch)) sdsTeam = "Real";
+        if (match.goalslista && match.goalslista.includes(match.manofthematch)) sdsTeam = "AEK";
+        else if (match.goalslistb && match.goalslistb.includes(match.manofthematch)) sdsTeam = "Real";
         else {
             const { data: p } = await supabase.from('players').select('team').eq('name', match.manofthematch).single();
             sdsTeam = p?.team;
