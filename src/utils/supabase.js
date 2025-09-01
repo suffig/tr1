@@ -91,6 +91,10 @@ const fallbackData = {
   finances: [
     { id: 1, team: 'AEK', balance: 25000, debt: 0 },
     { id: 2, team: 'Real', balance: 18000, debt: 2000 }
+  ],
+  spieler_des_spiels: [
+    // This would normally be populated by matches, but adding demo data for testing
+    // In reality, this would be calculated from matches.manofthematch
   ]
 };
 let fallbackSession = null;
