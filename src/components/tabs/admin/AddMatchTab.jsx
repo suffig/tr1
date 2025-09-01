@@ -26,14 +26,16 @@ export default function AddMatchTab() {
     redb: 0,
     prizeaek: 0,
     prizereal: 0,
-    manofthematch: ''
+    manofthematch: '',
+    motmTeamFilter: 'all' // Add team filter for man of the match
   });
   const [loading, setLoading] = useState(false);
 
   // Calculate total goals from player scores and own goals
-  const calculateTotalGoals = (goalsList, ownGoals) => {
+  // Own goals count for the opponent team!
+  const calculateTotalGoals = (goalsList, ownGoals, opponentOwnGoals) => {
     const playerGoals = goalsList.reduce((sum, scorer) => sum + scorer.count, 0);
-    return playerGoals + ownGoals;
+    return playerGoals + opponentOwnGoals; // Add opponent's own goals to this team's score
   };
 
   // Update form data and recalculate totals
@@ -41,9 +43,9 @@ export default function AddMatchTab() {
     setFormData(prev => {
       const updated = { ...prev, ...updates };
       
-      // Recalculate total goals
-      updated.goalsa = calculateTotalGoals(updated.goalslista, updated.ownGoalsA);
-      updated.goalsb = calculateTotalGoals(updated.goalslistb, updated.ownGoalsB);
+      // Recalculate total goals - own goals count for opponent
+      updated.goalsa = calculateTotalGoals(updated.goalslista, updated.ownGoalsA, updated.ownGoalsB);
+      updated.goalsb = calculateTotalGoals(updated.goalslistb, updated.ownGoalsB, updated.ownGoalsA);
       
       // Auto-calculate prize money when goals or cards change
       const { prizeaek, prizereal } = MatchBusinessLogic.calculatePrizeMoney(
@@ -118,7 +120,8 @@ export default function AddMatchTab() {
         redb: 0,
         prizeaek: 0,
         prizereal: 0,
-        manofthematch: ''
+        manofthematch: '',
+        motmTeamFilter: 'all'
       });
       setShowModal(false);
       
@@ -138,6 +141,13 @@ export default function AddMatchTab() {
   const getTeamPlayers = (teamName) => {
     if (!players) return [];
     return players.filter(p => p.team === teamName);
+  };
+
+  // Get filtered players for man of the match
+  const getFilteredPlayersForMOTM = () => {
+    if (!players) return [];
+    if (formData.motmTeamFilter === 'all') return players;
+    return players.filter(p => p.team === formData.motmTeamFilter);
   };
 
   // Add goal to a specific player
@@ -325,7 +335,7 @@ export default function AddMatchTab() {
                       <div className="flex items-center justify-between bg-orange-50 rounded-lg p-2 border border-orange-200">
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-700">Eigentore</div>
-                          <div className="text-xs text-gray-500">Zählen ins Ergebnis</div>
+                          <div className="text-xs text-gray-500">Zählen für Real Madrid</div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <button
@@ -397,7 +407,7 @@ export default function AddMatchTab() {
                       <div className="flex items-center justify-between bg-orange-50 rounded-lg p-2 border border-orange-200">
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-700">Eigentore</div>
-                          <div className="text-xs text-gray-500">Zählen ins Ergebnis</div>
+                          <div className="text-xs text-gray-500">Zählen für AEK Athen</div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <button
@@ -494,6 +504,74 @@ export default function AddMatchTab() {
                   </div>
                 </div>
 
+                {/* Player of the Match */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-text-primary mb-3">⭐ Spieler des Spiels</h4>
+                  
+                  {/* Team Filter */}
+                  <div className="mb-3">
+                    <label className="block text-xs text-text-muted mb-2">Team Filter:</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange('motmTeamFilter', 'all')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          formData.motmTeamFilter === 'all'
+                            ? 'bg-gray-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                        disabled={loading}
+                      >
+                        Alle
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange('motmTeamFilter', 'AEK')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          formData.motmTeamFilter === 'AEK'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        }`}
+                        disabled={loading}
+                      >
+                        AEK
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange('motmTeamFilter', 'Real')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          formData.motmTeamFilter === 'Real'
+                            ? 'bg-red-600 text-white'
+                            : 'bg-red-100 text-red-700 hover:bg-red-200'
+                        }`}
+                        disabled={loading}
+                      >
+                        Real
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Player Selection */}
+                  <select
+                    value={formData.manofthematch}
+                    onChange={(e) => handleInputChange('manofthematch', e.target.value)}
+                    className="form-input"
+                    disabled={loading}
+                  >
+                    <option value="">Keinen Spieler auswählen</option>
+                    {getFilteredPlayersForMOTM().map((player) => (
+                      <option key={player.id} value={player.name}>
+                        {player.name} ({player.team} - {player.position})
+                      </option>
+                    ))}
+                  </select>
+                  {!players || players.length === 0 && (
+                    <p className="text-xs text-text-muted mt-1">
+                      Keine Spieler verfügbar. Bitte fügen Sie erst Spieler hinzu.
+                    </p>
+                  )}
+                </div>
+
                 {/* Prize Money */}
                 <div className="border-t pt-4">
                   <h4 className="text-sm font-medium text-text-primary mb-3">💰 Preisgelder (automatisch berechnet)</h4>
@@ -528,29 +606,6 @@ export default function AddMatchTab() {
                   <p className="text-xs text-text-muted mt-2">
                     Basierend auf Ergebnis und Karten: Gewinner 1M€ - (Verlierer-Tore × 50k€) - (Karten × 20k€/50k€)
                   </p>
-                </div>
-
-                {/* Player of the Match */}
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium text-text-primary mb-3">⭐ Spieler des Spiels</h4>
-                  <select
-                    value={formData.manofthematch}
-                    onChange={(e) => handleInputChange('manofthematch', e.target.value)}
-                    className="form-input"
-                    disabled={loading}
-                  >
-                    <option value="">Keinen Spieler auswählen</option>
-                    {players && players.map((player) => (
-                      <option key={player.id} value={player.id}>
-                        {player.name} ({player.team} - {player.position})
-                      </option>
-                    ))}
-                  </select>
-                  {!players || players.length === 0 && (
-                    <p className="text-xs text-text-muted mt-1">
-                      Keine Spieler verfügbar. Bitte fügen Sie erst Spieler hinzu.
-                    </p>
-                  )}
                 </div>
 
                 {/* Buttons */}

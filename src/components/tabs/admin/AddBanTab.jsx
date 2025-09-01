@@ -5,8 +5,8 @@ import toast from 'react-hot-toast';
 
 const BAN_TYPES = [
   { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1, fixedDuration: true, icon: "🟨🟥" },
-  { value: "Rote Karte", label: "Rote Karte", duration: 2, fixedDuration: false, icon: "🟥" },
-  { value: "Verletzung", label: "Verletzung", duration: 3, fixedDuration: false, icon: "🏥" }
+  { value: "Rote Karte", label: "Rote Karte", duration: 2, fixedDuration: false, icon: "🟥", minDuration: 1, maxDuration: 6 },
+  { value: "Verletzung", label: "Verletzung", duration: 3, fixedDuration: false, icon: "🏥", minDuration: 1, maxDuration: 6 }
 ];
 
 export default function AddBanTab() {
@@ -15,7 +15,8 @@ export default function AddBanTab() {
   const [formData, setFormData] = useState({
     player_id: '',
     type: '',
-    reason: ''
+    reason: '',
+    customDuration: 1
   });
   const [loading, setLoading] = useState(false);
 
@@ -52,11 +53,13 @@ export default function AddBanTab() {
         throw new Error(`Spieler "${selectedPlayer.name}" ist bereits gesperrt (${activeBan.totalgames - activeBan.matchesserved} Spiele verbleibend)`);
       }
 
+      const finalDuration = selectedBanType.fixedDuration ? selectedBanType.duration : formData.customDuration;
+
       const result = await supabaseDb.insert('bans', {
         player_id: selectedPlayer.id,
         team: selectedPlayer.team,
         type: selectedBanType.value,
-        totalgames: selectedBanType.duration,
+        totalgames: finalDuration,
         matchesserved: 0,
         reason: formData.reason || selectedBanType.value,
         created_at: new Date().toISOString()
@@ -70,7 +73,8 @@ export default function AddBanTab() {
       setFormData({
         player_id: '',
         type: '',
-        reason: ''
+        reason: '',
+        customDuration: 1
       });
       setShowModal(false);
       
@@ -176,16 +180,49 @@ export default function AddBanTab() {
                     <option value="">Sperrart wählen</option>
                     {BAN_TYPES.map((banType) => (
                       <option key={banType.value} value={banType.value}>
-                        {banType.icon} {banType.label} ({banType.duration} Spiel{banType.duration !== 1 ? 'e' : ''})
+                        {banType.icon} {banType.label}
+                        {banType.fixedDuration 
+                          ? ` (${banType.duration} Spiel${banType.duration !== 1 ? 'e' : ''})`
+                          : ` (1-${banType.maxDuration} Spiele)`
+                        }
                       </option>
                     ))}
                   </select>
-                  {selectedBanType && (
-                    <p className="text-xs text-text-muted mt-1">
-                      Sperre dauert {selectedBanType.duration} Spiel{selectedBanType.duration !== 1 ? 'e' : ''}
-                    </p>
-                  )}
                 </div>
+
+                {/* Custom Duration for non-fixed ban types */}
+                {selectedBanType && !selectedBanType.fixedDuration && (
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      Anzahl Spiele *
+                    </label>
+                    <select
+                      value={formData.customDuration}
+                      onChange={(e) => handleInputChange('customDuration', parseInt(e.target.value))}
+                      className="form-input"
+                      required
+                      disabled={loading}
+                    >
+                      {Array.from({ length: selectedBanType.maxDuration }, (_, i) => i + 1).map((num) => (
+                        <option key={num} value={num}>
+                          {num} Spiel{num !== 1 ? 'e' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-text-muted mt-1">
+                      Wählen Sie zwischen {selectedBanType.minDuration} und {selectedBanType.maxDuration} Spielen
+                    </p>
+                  </div>
+                )}
+
+                {selectedBanType && selectedBanType.fixedDuration && (
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-800">
+                      <i className="fas fa-info-circle mr-2"></i>
+                      Gelb-Rote Karten haben immer eine feste Sperre von 1 Spiel.
+                    </p>
+                  </div>
+                )}
 
                 {/* Reason */}
                 <div>
@@ -243,7 +280,12 @@ export default function AddBanTab() {
                 <span className="text-xl mr-2">{banType.icon}</span>
                 <span className="font-medium text-text-primary">{banType.label}</span>
               </div>
-              <span className="text-sm text-text-muted">{banType.duration} Spiel{banType.duration !== 1 ? 'e' : ''}</span>
+              <span className="text-sm text-text-muted">
+                {banType.fixedDuration 
+                  ? `${banType.duration} Spiel${banType.duration !== 1 ? 'e' : ''} (fest)`
+                  : `1-${banType.maxDuration} Spiele (variabel)`
+                }
+              </span>
             </div>
           ))}
         </div>
