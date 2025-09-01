@@ -1,15 +1,23 @@
 import { useState } from 'react';
-import { useSupabaseMutation } from '../../../hooks/useSupabase';
+import { useSupabaseMutation, useSupabaseQuery } from '../../../hooks/useSupabase';
 
 export default function AddMatchTab() {
   const { insert } = useSupabaseMutation('matches');
+  const { data: players } = useSupabaseQuery('players', '*');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     teama: '',
     teamb: '',
     date: new Date().toISOString().split('T')[0],
     goalsa: 0,
-    goalsb: 0
+    goalsb: 0,
+    yellowa: 0,
+    reda: 0,
+    yellowb: 0,
+    redb: 0,
+    prizeaek: 0,
+    prizereal: 0,
+    manofthematch: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -30,13 +38,13 @@ export default function AddMatchTab() {
         goalsb: parseInt(formData.goalsb) || 0,
         goalslista: [],
         goalslistb: [],
-        yellowa: 0,
-        reda: 0,
-        yellowb: 0,
-        redb: 0,
-        manofthematch: null,
-        prizeaek: 0,
-        prizereal: 0
+        yellowa: parseInt(formData.yellowa) || 0,
+        reda: parseInt(formData.reda) || 0,
+        yellowb: parseInt(formData.yellowb) || 0,
+        redb: parseInt(formData.redb) || 0,
+        manofthematch: formData.manofthematch ? parseInt(formData.manofthematch) : null,
+        prizeaek: parseInt(formData.prizeaek) || 0,
+        prizereal: parseInt(formData.prizereal) || 0
       });
       
       // Reset form and close modal
@@ -45,7 +53,14 @@ export default function AddMatchTab() {
         teamb: '',
         date: new Date().toISOString().split('T')[0],
         goalsa: 0,
-        goalsb: 0
+        goalsb: 0,
+        yellowa: 0,
+        reda: 0,
+        yellowb: 0,
+        redb: 0,
+        prizeaek: 0,
+        prizereal: 0,
+        manofthematch: ''
       });
       setShowModal(false);
       
@@ -183,6 +198,133 @@ export default function AddMatchTab() {
                       disabled={loading}
                     />
                   </div>
+                </div>
+
+                {/* Cards */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-text-primary mb-3">🟨🟥 Karten</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <p className="text-xs text-blue-600 font-medium">Heimteam</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs text-text-muted mb-1">
+                            🟨 Gelbe Karten
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.yellowa}
+                            onChange={(e) => handleInputChange('yellowa', e.target.value)}
+                            className="form-input"
+                            disabled={loading}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-text-muted mb-1">
+                            🟥 Rote Karten
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.reda}
+                            onChange={(e) => handleInputChange('reda', e.target.value)}
+                            className="form-input"
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <p className="text-xs text-red-600 font-medium">Gastteam</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs text-text-muted mb-1">
+                            🟨 Gelbe Karten
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.yellowb}
+                            onChange={(e) => handleInputChange('yellowb', e.target.value)}
+                            className="form-input"
+                            disabled={loading}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-text-muted mb-1">
+                            🟥 Rote Karten
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.redb}
+                            onChange={(e) => handleInputChange('redb', e.target.value)}
+                            className="form-input"
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Prize Money */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-text-primary mb-3">💰 Preisgelder</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-2">
+                        Preisgeld AEK (€)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.prizeaek}
+                        onChange={(e) => handleInputChange('prizeaek', e.target.value)}
+                        className="form-input"
+                        placeholder="0"
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-2">
+                        Preisgeld Real (€)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.prizereal}
+                        onChange={(e) => handleInputChange('prizereal', e.target.value)}
+                        className="form-input"
+                        placeholder="0"
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Player of the Match */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-text-primary mb-3">⭐ Spieler des Spiels</h4>
+                  <select
+                    value={formData.manofthematch}
+                    onChange={(e) => handleInputChange('manofthematch', e.target.value)}
+                    className="form-input"
+                    disabled={loading}
+                  >
+                    <option value="">Keinen Spieler auswählen</option>
+                    {players && players.map((player) => (
+                      <option key={player.id} value={player.id}>
+                        {player.name} ({player.team} - {player.position})
+                      </option>
+                    ))}
+                  </select>
+                  {!players || players.length === 0 && (
+                    <p className="text-xs text-text-muted mt-1">
+                      Keine Spieler verfügbar. Bitte fügen Sie erst Spieler hinzu.
+                    </p>
+                  )}
                 </div>
 
                 {/* Buttons */}

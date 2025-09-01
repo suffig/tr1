@@ -23,7 +23,8 @@ export default function AddPlayerTab() {
     name: '',
     team: '',
     position: '',
-    goals: 0
+    goals: 0,
+    value: 0
   });
   const [loading, setLoading] = useState(false);
 
@@ -41,6 +42,7 @@ export default function AddPlayerTab() {
         team: formData.team.trim(),
         position: formData.position.trim().toUpperCase(),
         goals: parseInt(formData.goals) || 0,
+        value: parseFloat(formData.value) || 0,
       });
       
       // Reset form and close modal
@@ -48,7 +50,8 @@ export default function AddPlayerTab() {
         name: '',
         team: '',
         position: '',
-        goals: 0
+        goals: 0,
+        value: 0
       });
       setShowModal(false);
       
@@ -61,7 +64,7 @@ export default function AddPlayerTab() {
     }
   };
 
-  const isFormValid = formData.name && formData.team && formData.position;
+  const isFormValid = formData.name && formData.team && formData.position && formData.value !== '';
 
   return (
     <div className="p-4">
@@ -184,6 +187,26 @@ export default function AddPlayerTab() {
                     placeholder="0"
                     disabled={loading}
                   />
+                </div>
+
+                {/* Market Value */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Marktwert (Millionen €) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={formData.value}
+                    onChange={(e) => handleInputChange('value', e.target.value)}
+                    className="form-input"
+                    placeholder="0.0"
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-text-muted mt-1">
+                    Marktwert in Millionen Euro (z.B. 1.5 für 1.5M €)
+                  </p>
                 </div>
 
                 {/* Buttons */}
