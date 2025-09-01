@@ -60,18 +60,15 @@ class MatchAnalytics {
         const totalScore = aekFormScore + realFormScore;
         const aekWinProbability = Math.max(0.1, Math.min(0.9, aekFormScore / totalScore));
         const realWinProbability = Math.max(0.1, Math.min(0.9, realFormScore / totalScore));
-        const drawProbability = 1 - aekWinProbability - realWinProbability;
+        // Note: Draw predictions removed as requested
 
         let prediction, confidence;
-        if (aekWinProbability > realWinProbability && aekWinProbability > drawProbability) {
+        if (aekWinProbability > realWinProbability) {
             prediction = "AEK Sieg";
             confidence = Math.round(aekWinProbability * 100);
-        } else if (realWinProbability > drawProbability) {
+        } else {
             prediction = "Real Sieg";
             confidence = Math.round(realWinProbability * 100);
-        } else {
-            prediction = "Unentschieden";
-            confidence = Math.round(drawProbability * 100);
         }
 
         const predictedScore = `${Math.round(aekAvgGoals)}:${Math.round(realAvgGoals)}`;
@@ -82,7 +79,6 @@ class MatchAnalytics {
             predictedScore,
             aekWinProbability: Math.round(aekWinProbability * 100),
             realWinProbability: Math.round(realWinProbability * 100),
-            drawProbability: Math.round(drawProbability * 100),
             reasoning: this.generateReasoning(aekFormScore, realFormScore, aekBans, realBans)
         };
     }
@@ -112,7 +108,7 @@ class MatchAnalytics {
 
         const aekWins = this.matches.filter(m => (m.goalsa || 0) > (m.goalsb || 0)).length;
         const realWins = this.matches.filter(m => (m.goalsb || 0) > (m.goalsa || 0)).length;
-        const draws = totalMatches - aekWins - realWins;
+        // Note: Draw statistics removed as requested
 
         const totalGoals = this.matches.reduce((sum, m) => sum + (m.goalsa || 0) + (m.goalsb || 0), 0);
         const avgGoalsPerMatch = (totalGoals / totalMatches).toFixed(2);
@@ -126,7 +122,6 @@ class MatchAnalytics {
             totalMatches,
             aekWins,
             realWins,
-            draws,
             avgGoalsPerMatch,
             lastMatchResult,
             aekWinPercentage: Math.round((aekWins / totalMatches) * 100),
@@ -365,10 +360,6 @@ async function renderAnalytics() {
                                 <span class="font-bold text-blue-400">${prediction.aekWinProbability}%</span>
                             </div>
                             <div class="flex justify-between">
-                                <span>Unentschieden:</span>
-                                <span class="font-bold text-yellow-400">${prediction.drawProbability}%</span>
-                            </div>
-                            <div class="flex justify-between">
                                 <span>Real Sieg:</span>
                                 <span class="font-bold text-red-400">${prediction.realWinProbability}%</span>
                             </div>
@@ -403,14 +394,10 @@ async function renderAnalytics() {
                         <div class="text-xs text-gray-300">Real Siege</div>
                     </div>
                 </div>
-                <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     <div class="bg-blue-100 text-blue-900 rounded p-3 text-center">
                         <div class="font-bold">${matchStats.aekWins}</div>
                         <div>AEK Siege</div>
-                    </div>
-                    <div class="bg-gray-100 text-gray-900 rounded p-3 text-center">
-                        <div class="font-bold">${matchStats.draws}</div>
-                        <div>Unentschieden</div>
                     </div>
                     <div class="bg-red-100 text-red-900 rounded p-3 text-center">
                         <div class="font-bold">${matchStats.realWins}</div>

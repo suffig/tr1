@@ -1433,7 +1433,7 @@ button:hover, .btn:hover {
   justify-content: center;
   transition: background 0.2s;
   padding: 1rem;
-  padding-bottom: 90px; /* Ensure modals don't overlap bottom navbar */
+  padding-bottom: 100px; /* Increased padding to prevent modals from overlapping bottom navbar */
 }
 .modal-content {
   background: #111827; /* Even darker background for better contrast */
@@ -1491,7 +1491,7 @@ button:hover, .btn:hover {
 @media (max-width: 700px) {
   .modal {
     padding: 0.5rem;
-    padding-bottom: 90px;
+    padding-bottom: 100px; /* Increased padding to prevent overlap with navbar */
     align-items: flex-start !important;
     padding-top: 1rem !important;
   }

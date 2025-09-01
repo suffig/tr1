@@ -28,8 +28,8 @@ async function calculateTotalCapital() {
         
         const aekBalance = finances.AEK.balance || 0;
         const realBalance = finances.Real.balance || 0;
-        const aekMarketValue = getKaderMarktwert(aekPlayers) * 1000000; // Convert to euros
-        const realMarketValue = getKaderMarktwert(realPlayers) * 1000000; // Convert to euros
+        const aekMarketValue = getKaderMarktwert(aekPlayers); // Values are already in correct currency
+        const realMarketValue = getKaderMarktwert(realPlayers); // Values are already in correct currency
         
         return aekBalance + realBalance + aekMarketValue + realMarketValue;
     } catch (error) {
