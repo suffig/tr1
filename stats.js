@@ -654,6 +654,145 @@ export async function renderStatsTab(containerId = "app") {
                 </div>
             </div>
             
+            <!-- Additional Enhanced Statistics -->
+            <div class="rounded-xl shadow border bg-gray-800 p-4 mb-4">
+                <h3 class="font-bold text-lg mb-4 text-white flex items-center gap-2">
+                    <span class="text-xl">📈</span>
+                    Erweiterte Statistiken
+                </h3>
+                
+                <!-- Match Frequency & Scoring Patterns -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="bg-gray-700 rounded-lg p-3">
+                        <h4 class="font-semibold text-gray-200 mb-2">⚽ Torstatistiken</h4>
+                        <div class="space-y-1 text-sm text-gray-300">
+                            <div class="flex justify-between">
+                                <span>Höchstes Einzelspiel-Ergebnis:</span>
+                                <span class="text-white font-medium">${Math.max(...matches.map(m => (m.goalsa || 0) + (m.goalsb || 0)))} Tore</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Torreichstes Team pro Spiel:</span>
+                                <span class="text-white font-medium">${totalToreAek > totalToreReal ? 'AEK' : totalToreReal > totalToreAek ? 'Real' : 'Ausgeglichen'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Spiele ohne Tore:</span>
+                                <span class="text-white font-medium">${matches.filter(m => (m.goalsa || 0) === 0 && (m.goalsb || 0) === 0).length}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Spiele mit 5+ Toren:</span>
+                                <span class="text-white font-medium">${matches.filter(m => (m.goalsa || 0) + (m.goalsb || 0) >= 5).length}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-700 rounded-lg p-3">
+                        <h4 class="font-semibold text-gray-200 mb-2">🃏 Disziplin</h4>
+                        <div class="space-y-1 text-sm text-gray-300">
+                            <div class="flex justify-between">
+                                <span>Fairstes Team (weniger Karten):</span>
+                                <span class="text-white font-medium">${(gelbA + rotA) < (gelbB + rotB) ? 'AEK' : (gelbB + rotB) < (gelbA + rotA) ? 'Real' : 'Ausgeglichen'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Spiele ohne Karten:</span>
+                                <span class="text-white font-medium">${matches.filter(m => (m.yellowa || 0) + (m.reda || 0) + (m.yellowb || 0) + (m.redb || 0) === 0).length}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Kartenreichste Spiele:</span>
+                                <span class="text-white font-medium">${Math.max(...matches.map(m => (m.yellowa || 0) + (m.reda || 0) + (m.yellowb || 0) + (m.redb || 0)))} Karten</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Verhältnis Gelb/Rot:</span>
+                                <span class="text-white font-medium">${totalRot > 0 ? (totalGelb / totalRot).toFixed(1) : totalGelb}:1</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Performance Trends -->
+                <div class="bg-gray-700 rounded-lg p-3 mb-4">
+                    <h4 class="font-semibold text-gray-200 mb-2 flex items-center gap-2">
+                        <span>🔥</span>
+                        Performance Trends (Letzte ${Math.min(5, matches.length)} Spiele)
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-blue-300 font-medium mb-1">AEK Form</div>
+                            <div class="flex gap-1 mb-2">
+                                ${recentForm.aek.map(result => 
+                                    `<span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                        result === 'W' ? 'bg-green-500 text-white' : 
+                                        result === 'L' ? 'bg-red-500 text-white' : 
+                                        'bg-gray-500 text-white'
+                                    }">${result}</span>`
+                                ).join('')}
+                            </div>
+                            <div class="text-xs text-gray-400">
+                                ${recentForm.aek.filter(r => r === 'W').length}W ${recentForm.aek.filter(r => r === 'D').length}D ${recentForm.aek.filter(r => r === 'L').length}L
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-red-300 font-medium mb-1">Real Form</div>
+                            <div class="flex gap-1 mb-2">
+                                ${recentForm.real.map(result => 
+                                    `<span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                        result === 'W' ? 'bg-green-500 text-white' : 
+                                        result === 'L' ? 'bg-red-500 text-white' : 
+                                        'bg-gray-500 text-white'
+                                    }">${result}</span>`
+                                ).join('')}
+                            </div>
+                            <div class="text-xs text-gray-400">
+                                ${recentForm.real.filter(r => r === 'W').length}W ${recentForm.real.filter(r => r === 'D').length}D ${recentForm.real.filter(r => r === 'L').length}L
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Squad Analysis -->
+                <div class="bg-gray-700 rounded-lg p-3">
+                    <h4 class="font-semibold text-gray-200 mb-2 flex items-center gap-2">
+                        <span>👥</span>
+                        Kader-Analyse
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <div class="text-blue-300 font-medium mb-1">AEK (${aekPlayers.length} Spieler)</div>
+                            <div class="space-y-1 text-gray-300">
+                                <div class="flex justify-between">
+                                    <span>Ø Tore pro Spieler:</span>
+                                    <span class="text-white">${aekPlayers.length ? (totalToreAek / aekPlayers.length).toFixed(1) : 0}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Torlose Spieler:</span>
+                                    <span class="text-white">${aekPlayers.filter(p => (p.goals || 0) === 0).length}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Top-Scorer Rate:</span>
+                                    <span class="text-white">${topScorerAek ? ((topScorerAek.goals / totalToreAek) * 100).toFixed(1) : 0}%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-red-300 font-medium mb-1">Real (${realPlayers.length} Spieler)</div>
+                            <div class="space-y-1 text-gray-300">
+                                <div class="flex justify-between">
+                                    <span>Ø Tore pro Spieler:</span>
+                                    <span class="text-white">${realPlayers.length ? (totalToreReal / realPlayers.length).toFixed(1) : 0}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Torlose Spieler:</span>
+                                    <span class="text-white">${realPlayers.filter(p => (p.goals || 0) === 0).length}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Top-Scorer Rate:</span>
+                                    <span class="text-white">${topScorerReal ? ((topScorerReal.goals / totalToreReal) * 100).toFixed(1) : 0}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- NEW: Team Analysis & Transfer Recommendations -->
             <div class="rounded-xl shadow border bg-gray-800 p-4 mb-4">
                 <h3 class="font-bold text-lg mb-4 text-white">🔍 Team-Analyse & Empfehlungen</h3>

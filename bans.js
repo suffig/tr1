@@ -49,11 +49,8 @@ export function renderBansTab(containerId = "app") {
     app.innerHTML = `
         <div class="mb-4">
             <h2 class="text-lg font-semibold dark:text-white">Sperren</h2>
-            <div class="flex space-x-2 mt-4 mb-6">
-                <button id="add-ban-btn" class="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white px-4 py-3 rounded-lg text-base flex items-center gap-2 font-semibold transition shadow">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    Sperre hinzufügen
-                </button>
+            <div class="mt-4 mb-6">
+                <!-- Add button removed - use Admin tab for adding bans -->
             </div>
             <div>
                 <h3 class="font-bold text-base mb-2 dark:text-white">Aktive Sperren</h3>
@@ -73,8 +70,6 @@ export function renderBansTab(containerId = "app") {
     `;
 
     loadBansAndRender(renderBansLists);
-
-    document.getElementById('add-ban-btn').onclick = () => openBanForm();
 }
 
 function renderBansLists() {
