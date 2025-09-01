@@ -4,10 +4,9 @@ import { supabaseDb } from '../../../utils/supabase';
 import toast from 'react-hot-toast';
 
 const BAN_TYPES = [
-  { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1, icon: "🟨🟥" },
-  { value: "Rote Karte", label: "Rote Karte", duration: 2, icon: "🟥" },
-  { value: "Verletzung", label: "Verletzung", duration: 3, icon: "🏥" },
-  { value: "Unsportlichkeit", label: "Unsportlichkeit", duration: 1, icon: "⚠️" }
+  { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1, fixedDuration: true, icon: "🟨🟥" },
+  { value: "Rote Karte", label: "Rote Karte", duration: 2, fixedDuration: false, icon: "🟥" },
+  { value: "Verletzung", label: "Verletzung", duration: 3, fixedDuration: false, icon: "🏥" }
 ];
 
 export default function AddBanTab() {
