@@ -106,6 +106,8 @@ export default function FinanzenTab() {
         return '⭐';
       case 'Echtgeld-Ausgleich':
         return '💳';
+      case 'Echtgeld-Ausgleich (getilgt)':
+        return '✅';
       default:
         return '💰';
     }
