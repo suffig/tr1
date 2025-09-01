@@ -20,7 +20,7 @@ const BAN_TYPES = [
     { value: "Rote Karte", label: "Rote Karte", duration: 2, fixedDuration: false },
     { value: "Verletzung", label: "Verletzung", duration: 3, fixedDuration: false }
 ];
-const ALLOWED_BAN_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const ALLOWED_BAN_COUNTS = [1, 2, 3, 4, 5, 6];
 
 export async function loadBansAndRender(renderFn = renderBansLists) {
     const [{ data: bansData, error: errorBans }, { data: playersData, error: errorPlayers }] = await Promise.all([

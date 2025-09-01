@@ -811,11 +811,9 @@ function openMatchForm(id) {
         const filterButtonHTML = `
             <div class="mb-3 flex gap-2">
                 <button type="button" id="sds-filter-aek" class="sds-filter-btn bg-gray-600 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-base font-semibold transition-all duration-200 border-2 border-transparent flex items-center gap-2 min-h-[40px] flex-1 justify-center touch-manipulation">
-                    <span class="w-4 h-4 md:w-3 md:h-3 bg-blue-400 rounded-full flex-shrink-0 indicator-circle"></span>
                     <span>AEK</span>
                 </button>
                 <button type="button" id="sds-filter-real" class="sds-filter-btn bg-gray-600 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-base font-semibold transition-all duration-200 border-2 border-transparent flex items-center gap-2 min-h-[40px] flex-1 justify-center touch-manipulation">
-                    <span class="w-4 h-4 md:w-3 md:h-3 bg-red-400 rounded-full flex-shrink-0 indicator-circle"></span>
                     <span>Real</span>
                 </button>
             </div>
@@ -979,11 +977,9 @@ function generateMatchFormHTML(edit, dateVal, match, aekSpieler, realSpieler, ae
             <!-- Team Filter mit verbesserter Optik -->
             <div class="mb-4 flex gap-2">
                 <button type="button" id="sds-filter-aek" class="sds-filter-btn flex-1 bg-gray-600 hover:bg-blue-600 text-white px-2 py-2 rounded-lg text-sm font-bold transition-all duration-200 border border-gray-500 hover:border-blue-400 flex items-center gap-2 min-h-[40px] justify-center touch-manipulation">
-                    <span class="w-4 h-4 bg-blue-400 rounded-full flex-shrink-0 indicator-circle border border-white"></span>
                     <span class="truncate">AEK Athen</span>
                 </button>
                 <button type="button" id="sds-filter-real" class="sds-filter-btn flex-1 bg-gray-600 hover:bg-red-600 text-white px-2 py-2 rounded-lg text-sm font-bold transition-all duration-200 border border-gray-500 hover:border-red-400 flex items-center gap-2 min-h-[40px] justify-center touch-manipulation">
-                    <span class="w-4 h-4 bg-red-400 rounded-full flex-shrink-0 indicator-circle border border-white"></span>
                     <span class="truncate">Real Madrid</span>
                 </button>
             </div>
@@ -1366,28 +1362,15 @@ function filterSdsDropdown(team, aekSorted, realSorted, manofthematch) {
     document.querySelectorAll('.sds-filter-btn').forEach(btn => {
         btn.classList.remove('active', 'bg-blue-600', 'bg-red-600', 'border-blue-400', 'border-red-400', 'shadow-lg');
         btn.classList.add('bg-gray-600', 'border-transparent');
-        const indicator = btn.querySelector('.indicator-circle');
-        if (indicator) {
-            indicator.classList.remove('bg-white', 'bg-blue-100', 'bg-red-100', 'border', 'border-white');
-        }
     });
     const activeBtn = document.getElementById(`sds-filter-${team.toLowerCase()}`);
     if (activeBtn) {
         activeBtn.classList.add('active', 'shadow-lg');
         activeBtn.classList.remove('bg-gray-600', 'border-transparent');
-        const indicator = activeBtn.querySelector('.indicator-circle');
         if (team === 'AEK') {
             activeBtn.classList.add('bg-blue-600', 'border-blue-400');
-            if (indicator) {
-                indicator.classList.remove('bg-blue-400');
-                indicator.classList.add('bg-white', 'border', 'border-blue-200');
-            }
         } else if (team === 'Real') {
             activeBtn.classList.add('bg-red-600', 'border-red-400');
-            if (indicator) {
-                indicator.classList.remove('bg-red-400');
-                indicator.classList.add('bg-white', 'border', 'border-red-200');
-            }
         }
     }
 }
