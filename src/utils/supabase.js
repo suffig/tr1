@@ -79,7 +79,15 @@ const fallbackData = {
   transactions: [
     { id: 1, amount: 5000, info: 'Siegprämie', team: 'AEK', date: '2024-01-15', type: 'Preisgeld', match_id: 1 },
     { id: 2, amount: -2000, info: 'Kartenstrafe', team: 'Real', date: '2024-01-10', type: 'Strafe', match_id: 2 },
-    { id: 3, amount: 3000, info: 'Sponsoring', team: 'Real', date: '2024-01-08', type: 'Sonstiges', match_id: null }
+    { id: 3, amount: 3000, info: 'Sponsoring', team: 'Real', date: '2024-01-08', type: 'Sonstiges', match_id: null },
+    { id: 4, amount: 1000, info: 'Spieler des Spiels Bonus', team: 'AEK', date: '2024-01-15', type: 'SdS Bonus', match_id: 1 },
+    { id: 5, amount: -500, info: 'Gelb-Rot Strafe', team: 'AEK', date: '2024-01-10', type: 'Strafe', match_id: 2 },
+    { id: 6, amount: 2500, info: 'Unentschieden Prämie', team: 'AEK', date: '2024-01-05', type: 'Preisgeld', match_id: 3 },
+    { id: 7, amount: 2500, info: 'Unentschieden Prämie', team: 'Real', date: '2024-01-05', type: 'Preisgeld', match_id: 3 }
+  ],
+  finances: [
+    { id: 1, team: 'AEK', balance: 25000, debt: 0 },
+    { id: 2, team: 'Real', balance: 18000, debt: 2000 }
   ]
 };
 let fallbackSession = null;
@@ -343,9 +351,9 @@ const createDatabaseOperations = (client) => {
       // Try to get session first
       try {
         const { data: { session } } = await client.auth.getSession();
-        authSession = session;
+        authSession = session || fallbackSession; // Use fallback session if no real session
         
-        if (session && !usingFallback) {
+        if (authSession && !usingFallback) {
           // If we have a session and not using fallback, try real database
           try {
             let queryBuilder = client.from(table).select(query);
@@ -376,10 +384,12 @@ const createDatabaseOperations = (client) => {
         }
       } catch (authError) {
         console.warn('Auth check failed, using fallback:', authError);
+        // Try to use fallback session
+        authSession = fallbackSession;
       }
       
       // Use fallback data when authenticated (demo mode with data)
-      if (authSession) {
+      if (authSession || fallbackSession) {
         console.log(`🔑 Authenticated fallback: returning demo data for ${table}`);
         let data = fallbackData[table] || [];
         
@@ -416,9 +426,9 @@ const createDatabaseOperations = (client) => {
     async insert(table, data) {
       try {
         const { data: { session } } = await client.auth.getSession();
-        authSession = session;
+        authSession = session || fallbackSession;
         
-        if (session && !usingFallback) {
+        if (authSession && !usingFallback) {
           try {
             const result = await client.from(table).insert(data).select().single();
             console.log(`✅ Real database insert successful for ${table}`);
@@ -430,10 +440,11 @@ const createDatabaseOperations = (client) => {
         }
       } catch (authError) {
         console.warn('Auth check failed for insert:', authError);
+        authSession = fallbackSession;
       }
       
       // Simulate insert when authenticated
-      if (authSession) {
+      if (authSession || fallbackSession) {
         console.log(`🔑 Authenticated fallback: simulating insert for ${table}`);
         const newItem = { ...data, id: Date.now() + Math.floor(Math.random() * 1000), created_at: new Date().toISOString() };
         

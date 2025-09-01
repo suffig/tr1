@@ -1,49 +1,68 @@
+import { useState } from 'react';
 import { useSupabaseQuery, useSupabaseMutation } from '../../../hooks/useSupabase';
 
 const BAN_TYPES = [
-  { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1 },
-  { value: "Rote Karte", label: "Rote Karte", duration: 2 },
-  { value: "Verletzung", label: "Verletzung", duration: 3 }
+  { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1, icon: "🟨🟥" },
+  { value: "Rote Karte", label: "Rote Karte", duration: 2, icon: "🟥" },
+  { value: "Verletzung", label: "Verletzung", duration: 3, icon: "🏥" },
+  { value: "Unsportlichkeit", label: "Unsportlichkeit", duration: 1, icon: "⚠️" }
 ];
 
 export default function AddBanTab() {
   const { data: players } = useSupabaseQuery('players', '*');
   const { insert } = useSupabaseMutation('bans');
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({
+    player_id: '',
+    type: '',
+    reason: ''
+  });
+  const [loading, setLoading] = useState(false);
 
-  const handleAddBan = async () => {
-    if (!players || players.length === 0) {
-      alert('Keine Spieler gefunden. Bitte fügen Sie erst Spieler hinzu.');
-      return;
-    }
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
-    const playerName = prompt('Spielername:');
-    if (!playerName) return;
-    
-    const player = players.find(p => p.name.toLowerCase().includes(playerName.toLowerCase()));
-    if (!player) {
-      alert('Spieler nicht gefunden. Verfügbare Spieler: ' + players.map(p => p.name).join(', '));
-      return;
-    }
-    
-    const banType = prompt('Grund (Gelb-Rote Karte, Rote Karte, Verletzung):', 'Gelb-Rote Karte');
-    if (!banType) return;
-    
-    const selectedBanType = BAN_TYPES.find(type => type.value === banType) || BAN_TYPES[0];
-    
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
     try {
+      const selectedPlayer = players.find(p => p.id === parseInt(formData.player_id));
+      const selectedBanType = BAN_TYPES.find(type => type.value === formData.type);
+      
+      if (!selectedPlayer || !selectedBanType) {
+        throw new Error('Spieler oder Sperrart nicht gefunden');
+      }
+
       await insert({
-        player_id: player.id,
-        team: player.team,
+        player_id: selectedPlayer.id,
+        team: selectedPlayer.team,
         type: selectedBanType.value,
         totalgames: selectedBanType.duration,
         matchesserved: 0,
-        reason: selectedBanType.value
+        reason: formData.reason || selectedBanType.value
       });
+      
+      // Reset form and close modal
+      setFormData({
+        player_id: '',
+        type: '',
+        reason: ''
+      });
+      setShowModal(false);
+      
+      // Show success message
       alert('Sperre erfolgreich hinzugefügt!');
     } catch (error) {
       alert('Fehler beim Hinzufügen der Sperre: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const isFormValid = formData.player_id && formData.type;
+  const selectedBanType = BAN_TYPES.find(type => type.value === formData.type);
 
   return (
     <div className="p-4">
@@ -67,7 +86,7 @@ export default function AddBanTab() {
           </p>
           
           <button 
-            onClick={handleAddBan}
+            onClick={() => setShowModal(true)}
             className="btn-primary"
           >
             <i className="fas fa-plus mr-2"></i>
@@ -76,13 +95,131 @@ export default function AddBanTab() {
         </div>
       </div>
 
+      {/* Ban Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-secondary rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-text-primary">Neue Sperre</h3>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-text-muted hover:text-text-primary text-2xl"
+                  disabled={loading}
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Player Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Spieler *
+                  </label>
+                  <select
+                    value={formData.player_id}
+                    onChange={(e) => handleInputChange('player_id', e.target.value)}
+                    className="form-input"
+                    required
+                    disabled={loading}
+                  >
+                    <option value="">Spieler wählen</option>
+                    {players && players.map((player) => (
+                      <option key={player.id} value={player.id}>
+                        {player.name} ({player.team} - {player.position})
+                      </option>
+                    ))}
+                  </select>
+                  {!players || players.length === 0 && (
+                    <p className="text-xs text-text-muted mt-1">
+                      Keine Spieler verfügbar. Bitte fügen Sie erst Spieler hinzu.
+                    </p>
+                  )}
+                </div>
+
+                {/* Ban Type */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Sperrart *
+                  </label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => handleInputChange('type', e.target.value)}
+                    className="form-input"
+                    required
+                    disabled={loading}
+                  >
+                    <option value="">Sperrart wählen</option>
+                    {BAN_TYPES.map((banType) => (
+                      <option key={banType.value} value={banType.value}>
+                        {banType.icon} {banType.label} ({banType.duration} Spiel{banType.duration !== 1 ? 'e' : ''})
+                      </option>
+                    ))}
+                  </select>
+                  {selectedBanType && (
+                    <p className="text-xs text-text-muted mt-1">
+                      Sperre dauert {selectedBanType.duration} Spiel{selectedBanType.duration !== 1 ? 'e' : ''}
+                    </p>
+                  )}
+                </div>
+
+                {/* Reason */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Zusätzlicher Grund (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.reason}
+                    onChange={(e) => handleInputChange('reason', e.target.value)}
+                    className="form-input"
+                    placeholder="Weitere Details zur Sperre..."
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2 border border-border-light rounded-lg text-text-secondary hover:bg-bg-tertiary transition-colors"
+                    disabled={loading}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!isFormValid || loading || !players || players.length === 0}
+                    className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="spinner w-4 h-4 mr-2"></div>
+                        Speichern...
+                      </div>
+                    ) : (
+                      'Speichern'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Available Ban Types */}
       <div className="mt-6 modern-card">
         <h4 className="font-semibold text-text-primary mb-3">Verfügbare Sperrarten</h4>
         <div className="space-y-2">
           {BAN_TYPES.map((banType) => (
             <div key={banType.value} className="flex justify-between items-center p-3 bg-bg-secondary rounded-lg">
-              <span className="font-medium text-text-primary">{banType.label}</span>
+              <div className="flex items-center">
+                <span className="text-xl mr-2">{banType.icon}</span>
+                <span className="font-medium text-text-primary">{banType.label}</span>
+              </div>
               <span className="text-sm text-text-muted">{banType.duration} Spiel{banType.duration !== 1 ? 'e' : ''}</span>
             </div>
           ))}
