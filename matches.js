@@ -1056,7 +1056,7 @@ function attachMatchFormEventHandlers(edit, id, aekSpieler, realSpieler, aekSort
                 ${spielerOpts}
             </select>
             <div class="flex items-center gap-1 bg-gray-700 rounded p-1 flex-shrink-0">
-                <button type="button" class="goal-btn goal-btn-down bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded text-xs font-bold w-7 h-7 flex items-center justify-center touch-manipulation" data-target="${uniqueId}" data-min="1">−</button>
+                <button type="button" class="goal-btn goal-btn-down bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded text-xs font-bold w-7 h-7 flex items-center justify-center touch-manipulation" data-target="${uniqueId}" data-min="0">−</button>
                 <input type="number" min="1" name="${name}-count" placeholder="Tore" class="goal-input border border-gray-400 bg-gray-500 text-white rounded p-1 w-8 h-7 text-xs text-center font-bold flex-shrink-0" value="1" readonly id="${uniqueId}">
                 <button type="button" class="goal-btn goal-btn-up bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded text-xs font-bold w-7 h-7 flex items-center justify-center touch-manipulation" data-target="${uniqueId}" data-max="20">+</button>
             </div>
@@ -1282,13 +1282,20 @@ function setupGoalButtons(updateTotalGoalsCallback = null) {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             const target = e.currentTarget.getAttribute('data-target');
-            const min = parseInt(e.currentTarget.getAttribute('data-min')) || 1;
+            const min = parseInt(e.currentTarget.getAttribute('data-min')) || 0;
             const input = document.getElementById(target);
             if (input) {
                 const current = parseInt(input.value) || 1;
-                if (current > min) {
+                if (current > 1) {
                     input.value = current - 1;
                     if (updateTotalGoalsCallback) updateTotalGoalsCallback(); // Update total goals when changing scorer count
+                } else if (current === 1) {
+                    // When reaching 0, remove the scorer row
+                    const scorerRow = input.closest('.scorer-row');
+                    if (scorerRow) {
+                        scorerRow.remove();
+                        if (updateTotalGoalsCallback) updateTotalGoalsCallback(); // Update total goals when removing scorer
+                    }
                 }
             }
         });
@@ -1308,7 +1315,7 @@ function scorerFields(name, arr, spielerOpts) {
                 ${spielerOpts.replace(`value="${g.player}"`, `value="${g.player}" selected`)}
             </select>
             <div class="flex items-center gap-1 bg-gray-700 rounded-lg p-2 border-2 border-gray-400">
-                <button type="button" class="goal-btn goal-btn-down bg-red-600 hover:bg-red-500 text-white px-2 py-2 rounded-lg text-sm font-bold w-8 h-8 flex items-center justify-center touch-manipulation border border-red-400" data-target="${name}-count-${i}" data-min="1">−</button>
+                <button type="button" class="goal-btn goal-btn-down bg-red-600 hover:bg-red-500 text-white px-2 py-2 rounded-lg text-sm font-bold w-8 h-8 flex items-center justify-center touch-manipulation border border-red-400" data-target="${name}-count-${i}" data-min="0">−</button>
                 <input type="number" min="1" name="${name}-count" placeholder="Tore" class="goal-input border border-gray-400 bg-gray-500 text-white rounded-lg p-1 w-12 min-h-[32px] text-sm text-center font-bold flex-shrink-0" value="${g.count||1}" readonly id="${name}-count-${i}">
                 <button type="button" class="goal-btn goal-btn-up bg-green-600 hover:bg-green-500 text-white px-2 py-2 rounded-lg text-sm font-bold w-8 h-8 flex items-center justify-center touch-manipulation border border-green-400" data-target="${name}-count-${i}" data-max="20">+</button>
             </div>
