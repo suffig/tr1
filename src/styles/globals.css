@@ -11,6 +11,17 @@
   body {
     @apply flex flex-col min-h-screen;
   }
+  
+  /* Focus styles for better accessibility */
+  *:focus {
+    @apply outline-none ring-2 ring-primary-green ring-opacity-50 ring-offset-2;
+  }
+  
+  /* Improve text rendering */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
 @layer components {
@@ -39,15 +50,85 @@
     @apply text-text-muted;
   }
   
+  .form-input.error {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
+  }
+  
   .btn-primary {
-    @apply bg-primary-green hover:bg-primary-green-dark text-white font-medium py-3 px-6 rounded-lg transition-all duration-fast focus:outline-none focus:ring-2 focus:ring-primary-green/50;
+    @apply bg-primary-green hover:bg-primary-green-dark text-white font-medium py-3 px-6 rounded-lg transition-all duration-fast focus:outline-none focus:ring-2 focus:ring-primary-green/50 active:scale-95;
   }
   
   .btn-secondary {
-    @apply bg-bg-secondary hover:bg-bg-tertiary text-text-primary border border-border-medium font-medium py-3 px-6 rounded-lg transition-all duration-fast focus:outline-none focus:ring-2 focus:ring-border-medium;
+    @apply bg-bg-secondary hover:bg-bg-tertiary text-text-primary border border-border-medium font-medium py-3 px-6 rounded-lg transition-all duration-fast focus:outline-none focus:ring-2 focus:ring-border-medium active:scale-95;
+  }
+  
+  .btn-danger {
+    @apply bg-accent-red hover:bg-red-600 text-white font-medium py-3 px-6 rounded-lg transition-all duration-fast focus:outline-none focus:ring-2 focus:ring-accent-red/50 active:scale-95;
   }
   
   .spinner {
     @apply animate-spin rounded-full h-8 w-8 border-b-2 border-primary-green;
+  }
+  
+  /* Alert/notification styles */
+  .alert {
+    @apply p-4 rounded-lg border;
+  }
+  
+  .alert-success {
+    @apply bg-green-50 border-green-200 text-green-800;
+  }
+  
+  .alert-error {
+    @apply bg-red-50 border-red-200 text-red-800;
+  }
+  
+  .alert-warning {
+    @apply bg-yellow-50 border-yellow-200 text-yellow-800;
+  }
+  
+  .alert-info {
+    @apply bg-blue-50 border-blue-200 text-blue-800;
+  }
+  
+  /* Team color classes */
+  .team-aek {
+    @apply bg-blue-600 text-white;
+  }
+  
+  .team-real {
+    @apply bg-red-600 text-white;
+  }
+  
+  .team-neutral {
+    @apply bg-gray-500 text-white;
+  }
+  
+  /* Enhanced loading states */
+  .skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+  
+  /* Better mobile scrolling */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Responsive typography */
+  .text-responsive-sm {
+    @apply text-sm md:text-base;
+  }
+  
+  .text-responsive-base {
+    @apply text-base md:text-lg;
+  }
+  
+  .text-responsive-lg {
+    @apply text-lg md:text-xl;
+  }
+  
+  .text-responsive-xl {
+    @apply text-xl md:text-2xl;
   }
 }

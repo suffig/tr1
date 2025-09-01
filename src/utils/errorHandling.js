@@ -13,7 +13,10 @@ export class ErrorHandler {
         style: {
           background: '#FEF3C7',
           color: '#92400E',
-          border: '1px solid #FBBF24'
+          border: '1px solid #FBBF24',
+          borderRadius: '12px',
+          padding: '16px',
+          fontSize: '14px',
         }
       });
     } else {
@@ -24,21 +27,40 @@ export class ErrorHandler {
   static handleDatabaseError(error, operation = 'Operation') {
     console.error(`${operation} error:`, error);
     
-    if (error?.message?.includes('Failed to fetch')) {
-      this.showUserError('Verbindungsfehler. Bitte prüfe deine Internetverbindung.');
-    } else if (error?.message?.includes('JWT expired')) {
-      this.showUserError('Sitzung abgelaufen. Bitte melde dich erneut an.');
-    } else if (error?.status === 401) {
-      this.showUserError('Nicht autorisiert. Bitte melde dich an.');
-    } else if (error?.status === 403) {
-      this.showUserError('Keine Berechtigung für diese Aktion.');
-    } else if (error?.message?.includes('duplicate key')) {
-      this.showUserError('Eintrag existiert bereits.');
-    } else {
-      this.showUserError(
-        error?.message || `Fehler bei ${operation}. Bitte versuche es erneut.`
-      );
+    let userMessage = 'Ein unerwarteter Fehler ist aufgetreten.';
+    let errorType = 'error';
+    
+    if (error?.message) {
+      const message = error.message.toLowerCase();
+      
+      if (message.includes('failed to fetch') || message.includes('network')) {
+        userMessage = 'Verbindungsfehler. Bitte prüfen Sie Ihre Internetverbindung.';
+        errorType = 'warning';
+      } else if (message.includes('jwt expired') || message.includes('token')) {
+        userMessage = 'Sitzung abgelaufen. Bitte melden Sie sich erneut an.';
+      } else if (error?.status === 401) {
+        userMessage = 'Nicht autorisiert. Bitte melden Sie sich an.';
+      } else if (error?.status === 403) {
+        userMessage = 'Keine Berechtigung für diese Aktion.';
+      } else if (message.includes('duplicate key') || message.includes('unique constraint')) {
+        userMessage = 'Eintrag existiert bereits.';
+        errorType = 'warning';
+      } else if (message.includes('not found') || error?.status === 404) {
+        userMessage = 'Die angeforderten Daten wurden nicht gefunden.';
+        errorType = 'warning';
+      } else if (message.includes('timeout')) {
+        userMessage = 'Anfrage-Timeout. Bitte versuchen Sie es erneut.';
+        errorType = 'warning';
+      } else if (message.includes('server') || error?.status >= 500) {
+        userMessage = 'Server temporär nicht verfügbar. Bitte versuchen Sie es später erneut.';
+        errorType = 'warning';
+      } else if (message.includes('validation') || message.includes('validierung')) {
+        userMessage = error.message; // Use the actual validation message
+        errorType = 'warning';
+      }
     }
+
+    this.showUserError(userMessage, errorType);
   }
 
   static handleAuthError(error, operation = 'Authentication') {
