@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useSupabaseMutation } from '../../../hooks/useSupabase';
+import { useSupabaseQuery } from '../../../hooks/useSupabase';
+import { supabaseDb } from '../../../utils/supabase';
+import toast from 'react-hot-toast';
 
 const TRANSACTION_TYPES = [
   { value: 'Preisgeld', label: 'Preisgeld', icon: '🏆' },
@@ -17,7 +19,7 @@ const TEAMS = [
 ];
 
 export default function AddTransactionTab() {
-  const { insert } = useSupabaseMutation('transactions');
+  const { data: finances } = useSupabaseQuery('finances', '*');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     team: '',
@@ -37,14 +39,24 @@ export default function AddTransactionTab() {
     setLoading(true);
 
     try {
-      await insert({
+      const amount = parseFloat(formData.amount);
+      
+      // Insert the transaction
+      const transactionResult = await supabaseDb.insert('transactions', {
         date: formData.date,
         type: formData.type.trim(),
         team: formData.team.trim(),
-        amount: parseFloat(formData.amount),
+        amount: amount,
         info: formData.info.trim(),
         match_id: null
       });
+
+      if (transactionResult.error) {
+        throw new Error(`Transaction insert failed: ${transactionResult.error.message}`);
+      }
+
+      // Update finances based on transaction type
+      await updateFinances(formData.team.trim(), formData.type.trim(), amount);
       
       // Reset form and close modal
       setFormData({
@@ -56,12 +68,51 @@ export default function AddTransactionTab() {
       });
       setShowModal(false);
       
-      // Show success message (you could use a toast here)
-      alert('Transaktion erfolgreich hinzugefügt!');
+      // Show success message
+      toast.success('Transaktion erfolgreich hinzugefügt!');
     } catch (error) {
-      alert('Fehler beim Hinzufügen der Transaktion: ' + error.message);
+      console.error('Transaction submission error:', error);
+      toast.error(error.message || 'Fehler beim Hinzufügen der Transaktion');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Function to update finances based on transaction
+  const updateFinances = async (team, type, amount) => {
+    try {
+      // Get current finances for the team
+      const financeResult = await supabaseDb.select('finances', '*', { eq: { team } });
+      let currentFinance = financeResult.data && financeResult.data.length > 0 
+        ? financeResult.data[0] 
+        : { team, balance: 0, debt: 0 };
+
+      // Update balance or debt based on transaction type
+      let updateData = {};
+      
+      if (type === "Echtgeld-Ausgleich") {
+        // Echtgeld-Ausgleich affects debt
+        updateData.debt = (currentFinance.debt || 0) + amount;
+      } else {
+        // Other transactions affect balance
+        let newBalance = (currentFinance.balance || 0) + amount;
+        if (newBalance < 0) newBalance = 0; // Balance cannot go below 0
+        updateData.balance = newBalance;
+      }
+
+      // Update or create finance record
+      if (currentFinance.id) {
+        await supabaseDb.update('finances', updateData, currentFinance.id);
+      } else {
+        await supabaseDb.insert('finances', { 
+          team, 
+          balance: updateData.balance || 0, 
+          debt: updateData.debt || 0 
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to update finances:', error);
+      // Don't throw here as the transaction was already saved
     }
   };
 

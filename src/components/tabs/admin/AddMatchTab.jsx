@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useSupabaseMutation, useSupabaseQuery } from '../../../hooks/useSupabase';
+import { useSupabaseQuery } from '../../../hooks/useSupabase';
+import { MatchBusinessLogic } from '../../../utils/matchBusinessLogic';
+import toast from 'react-hot-toast';
 
 export default function AddMatchTab() {
-  const { insert } = useSupabaseMutation('matches');
   const { data: players } = useSupabaseQuery('players', '*');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -36,26 +37,10 @@ export default function AddMatchTab() {
         const yellowb = parseInt(updated.yellowb) || 0;
         const redb = parseInt(updated.redb) || 0;
         
-        let prizeaek = 0, prizereal = 0;
-        let winner = null, loser = null;
-        
-        if (goalsa > goalsb) { 
-          winner = "AEK"; 
-          loser = "Real"; 
-        } else if (goalsa < goalsb) { 
-          winner = "Real"; 
-          loser = "AEK"; 
-        }
-        
-        if (winner && loser) {
-          if (winner === "AEK") {
-            prizeaek = 1000000 - (goalsb * 50000) - (yellowa * 20000) - (reda * 50000);
-            prizereal = -(500000 + goalsa * 50000 + yellowb * 20000 + redb * 50000);
-          } else {
-            prizereal = 1000000 - (goalsa * 50000) - (yellowb * 20000) - (redb * 50000);
-            prizeaek = -(500000 + goalsb * 50000 + yellowa * 20000 + reda * 50000);
-          }
-        }
+        // Use the same calculation logic as MatchBusinessLogic
+        const { prizeaek, prizereal } = MatchBusinessLogic.calculatePrizeMoney(
+          goalsa, goalsb, yellowa, reda, yellowb, redb
+        );
         
         updated.prizeaek = prizeaek;
         updated.prizereal = prizereal;
@@ -70,21 +55,32 @@ export default function AddMatchTab() {
     setLoading(true);
 
     try {
-      await insert({
+      // Validate goal scorers don't exceed total goals
+      const goalsaScorerCount = formData.goalslista.filter(s => s.trim()).length;
+      const goalsbScorerCount = formData.goalslistb.filter(s => s.trim()).length;
+      
+      if (goalsaScorerCount > parseInt(formData.goalsa)) {
+        throw new Error(`Die Anzahl der Torschützen für ${formData.teama} (${goalsaScorerCount}) darf nicht größer als die Gesamtanzahl der Tore (${formData.goalsa}) sein!`);
+      }
+      
+      if (goalsbScorerCount > parseInt(formData.goalsb)) {
+        throw new Error(`Die Anzahl der Torschützen für ${formData.teamb} (${goalsbScorerCount}) darf nicht größer als die Gesamtanzahl der Tore (${formData.goalsb}) sein!`);
+      }
+
+      // Use the comprehensive business logic
+      const result = await MatchBusinessLogic.submitMatch({
         date: formData.date,
         teama: formData.teama.trim(),
         teamb: formData.teamb.trim(),
         goalsa: parseInt(formData.goalsa) || 0,
         goalsb: parseInt(formData.goalsb) || 0,
-        goalslista: formData.goalslista || [],
-        goalslistb: formData.goalslistb || [],
+        goalslista: formData.goalslista.filter(s => s.trim()),
+        goalslistb: formData.goalslistb.filter(s => s.trim()),
         yellowa: parseInt(formData.yellowa) || 0,
         reda: parseInt(formData.reda) || 0,
         yellowb: parseInt(formData.yellowb) || 0,
         redb: parseInt(formData.redb) || 0,
-        manofthematch: formData.manofthematch ? parseInt(formData.manofthematch) : null,
-        prizeaek: parseInt(formData.prizeaek) || 0,
-        prizereal: parseInt(formData.prizereal) || 0
+        manofthematch: formData.manofthematch || null
       });
       
       // Reset form and close modal
@@ -106,10 +102,11 @@ export default function AddMatchTab() {
       });
       setShowModal(false);
       
-      // Show success message
-      alert('Spiel erfolgreich hinzugefügt!');
+      // Show success message with comprehensive feedback
+      toast.success(result.message);
     } catch (error) {
-      alert('Fehler beim Hinzufügen des Spiels: ' + error.message);
+      console.error('Match submission error:', error);
+      toast.error(error.message || 'Fehler beim Hinzufügen des Spiels');
     } finally {
       setLoading(false);
     }

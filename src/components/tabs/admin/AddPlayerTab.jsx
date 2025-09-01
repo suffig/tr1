@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useSupabaseMutation } from '../../../hooks/useSupabase';
+import { supabaseDb } from '../../../utils/supabase';
+import toast from 'react-hot-toast';
 
 const POSITIONS = [
   { value: 'TH', label: 'Torwart (TH)' },
@@ -17,14 +18,14 @@ const TEAMS = [
 ];
 
 export default function AddPlayerTab() {
-  const { insert } = useSupabaseMutation('players');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     team: '',
     position: '',
     goals: 0,
-    value: 0
+    value: 0,
+    status: 'active'
   });
   const [loading, setLoading] = useState(false);
 
@@ -37,13 +38,28 @@ export default function AddPlayerTab() {
     setLoading(true);
 
     try {
-      await insert({
+      // Check if player already exists
+      const existingPlayer = await supabaseDb.select('players', '*', { 
+        eq: { name: formData.name.trim(), team: formData.team.trim() } 
+      });
+
+      if (existingPlayer.data && existingPlayer.data.length > 0) {
+        throw new Error(`Spieler "${formData.name}" existiert bereits im Team "${formData.team}"`);
+      }
+
+      const result = await supabaseDb.insert('players', {
         name: formData.name.trim(),
         team: formData.team.trim(),
         position: formData.position.trim().toUpperCase(),
         goals: parseInt(formData.goals) || 0,
         value: parseFloat(formData.value) || 0,
+        status: formData.status || 'active',
+        created_at: new Date().toISOString()
       });
+
+      if (result.error) {
+        throw new Error(`Player insert failed: ${result.error.message}`);
+      }
       
       // Reset form and close modal
       setFormData({
@@ -51,14 +67,16 @@ export default function AddPlayerTab() {
         team: '',
         position: '',
         goals: 0,
-        value: 0
+        value: 0,
+        status: 'active'
       });
       setShowModal(false);
       
       // Show success message
-      alert('Spieler erfolgreich hinzugefügt!');
+      toast.success(`Spieler "${formData.name}" erfolgreich hinzugefügt!`);
     } catch (error) {
-      alert('Fehler beim Hinzufügen des Spielers: ' + error.message);
+      console.error('Player submission error:', error);
+      toast.error(error.message || 'Fehler beim Hinzufügen des Spielers');
     } finally {
       setLoading(false);
     }
