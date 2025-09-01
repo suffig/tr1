@@ -350,43 +350,110 @@ export default function StatsTab() {
         )}
       </div>
 
-      {/* Recent Activity */}
+      {/* Additional Statistics */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-text-primary mb-4">
-          Letzte Aktivität
+          📊 Weitere Statistiken
         </h3>
         
-        {matches && matches.length > 0 ? (
-          <div className="space-y-3">
-            {matches
-              .sort((a, b) => new Date(b.date) - new Date(a.date))
-              .slice(0, 5)
-              .map((match) => (
-                <div key={match.id} className="modern-card">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-text-primary">
-                        {match.teama} vs {match.teamb}
-                      </div>
-                      <div className="text-sm text-text-muted">
-                        {new Date(match.date).toLocaleDateString('de-DE')}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-text-primary">
-                        {match.goalsa} : {match.goalsb}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="modern-card text-center">
+            <div className="text-2xl font-bold text-accent-orange mb-2">
+              {matches?.filter(m => m.goalsa === m.goalsb).length || 0}
+            </div>
+            <div className="text-sm text-text-muted">Unentschieden</div>
           </div>
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-4">📊</div>
-            <p className="text-text-muted">Noch keine Spiele für Statistiken verfügbar</p>
+          
+          <div className="modern-card text-center">
+            <div className="text-2xl font-bold text-accent-red mb-2">
+              {matches?.reduce((sum, m) => sum + (m.reda || 0) + (m.redb || 0), 0) || 0}
+            </div>
+            <div className="text-sm text-text-muted">Rote Karten</div>
           </div>
-        )}
+          
+          <div className="modern-card text-center">
+            <div className="text-2xl font-bold text-yellow-600 mb-2">
+              {matches?.reduce((sum, m) => sum + (m.yellowa || 0) + (m.yellowb || 0), 0) || 0}
+            </div>
+            <div className="text-sm text-text-muted">Gelbe Karten</div>
+          </div>
+          
+          <div className="modern-card text-center">
+            <div className="text-2xl font-bold text-primary-green mb-2">
+              {totalMatches > 0 ? Math.max(...matches.map(m => (m.goalsa || 0) + (m.goalsb || 0))) : 0}
+            </div>
+            <div className="text-sm text-text-muted">Höchstes Ergebnis</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Team Performance Comparison */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-text-primary mb-4">
+          ⚖️ Team-Vergleich
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="modern-card border-l-4 border-blue-400">
+            <h4 className="text-lg font-semibold text-blue-600 mb-3">🔵 AEK Athen</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-text-muted">Durchschn. Tore pro Spiel:</span>
+                <span className="font-medium">
+                  {totalMatches > 0 ? 
+                    (matches.reduce((sum, m) => sum + (m.teama === 'AEK' ? (m.goalsa || 0) : (m.goalsb || 0)), 0) / totalMatches).toFixed(1) 
+                    : '0.0'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Durchschn. Gegentore:</span>
+                <span className="font-medium">
+                  {totalMatches > 0 ? 
+                    (matches.reduce((sum, m) => sum + (m.teama === 'AEK' ? (m.goalsb || 0) : (m.goalsa || 0)), 0) / totalMatches).toFixed(1) 
+                    : '0.0'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Beste Scorer:</span>
+                <span className="font-medium">
+                  {topScorers.filter(s => s.team === 'AEK').length > 0 
+                    ? topScorers.filter(s => s.team === 'AEK')[0].name 
+                    : 'Keine'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="modern-card border-l-4 border-red-400">
+            <h4 className="text-lg font-semibold text-red-600 mb-3">🔴 Real Madrid</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-text-muted">Durchschn. Tore pro Spiel:</span>
+                <span className="font-medium">
+                  {totalMatches > 0 ? 
+                    (matches.reduce((sum, m) => sum + (m.teamb === 'Real' ? (m.goalsb || 0) : (m.goalsa || 0)), 0) / totalMatches).toFixed(1) 
+                    : '0.0'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Durchschn. Gegentore:</span>
+                <span className="font-medium">
+                  {totalMatches > 0 ? 
+                    (matches.reduce((sum, m) => sum + (m.teamb === 'Real' ? (m.goalsa || 0) : (m.goalsb || 0)), 0) / totalMatches).toFixed(1) 
+                    : '0.0'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Beste Scorer:</span>
+                <span className="font-medium">
+                  {topScorers.filter(s => s.team === 'Real').length > 0 
+                    ? topScorers.filter(s => s.team === 'Real')[0].name 
+                    : 'Keine'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Development Note */}
