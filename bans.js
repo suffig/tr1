@@ -16,11 +16,11 @@ let bans = [];
 let playersCache = [];
 
 const BAN_TYPES = [
-    { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1 },
-    { value: "Rote Karte", label: "Rote Karte", duration: 2 },
-    { value: "Verletzung", label: "Verletzung", duration: 3 }
+    { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1, fixedDuration: true },
+    { value: "Rote Karte", label: "Rote Karte", duration: 2, fixedDuration: false },
+    { value: "Verletzung", label: "Verletzung", duration: 3, fixedDuration: false }
 ];
-const ALLOWED_BAN_COUNTS = [1, 2, 3, 4, 5, 6];
+const ALLOWED_BAN_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export async function loadBansAndRender(renderFn = renderBansLists) {
     const [{ data: bansData, error: errorBans }, { data: playersData, error: errorPlayers }] = await Promise.all([
@@ -190,10 +190,11 @@ async function openBanForm(ban = null) {
         `<option value="${t.value}"${ban && ban.type === t.value ? " selected" : ""}>${t.label}</option>`
     ).join('');
 
-    // Gesamtsperrenzahl (dropdown 1-6, außer Gelb-Rote Karte)
+    // Gesamtsperrenzahl (dropdown 1-10, außer Gelb-Rote Karte)
     function numberOptions(selectedType, selected, fieldName = "totalgames") {
-        if (selectedType === "Gelb-Rote Karte")
-            return `<option value="1" selected>1</option>`;
+        const banType = BAN_TYPES.find(t => t.value === selectedType);
+        if (banType && banType.fixedDuration)
+            return `<option value="${banType.duration}" selected>${banType.duration}</option>`;
         return ALLOWED_BAN_COUNTS.map(v =>
             `<option value="${v}"${Number(selected) === v ? " selected" : ""}>${v}</option>`
         ).join('');
@@ -229,7 +230,7 @@ async function openBanForm(ban = null) {
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-200 mb-2">Gesamtsperrenzahl:</label>
-                    <select name="totalgames" id="ban-totalgames" class="border border-slate-600 bg-slate-700 text-slate-100 rounded-lg p-3 w-full text-base focus:ring-2 focus:ring-sky-500 focus:border-transparent" ${initialType === "Gelb-Rote Karte" ? "disabled" : ""}>
+                    <select name="totalgames" id="ban-totalgames" class="border border-slate-600 bg-slate-700 text-slate-100 rounded-lg p-3 w-full text-base focus:ring-2 focus:ring-sky-500 focus:border-transparent" ${BAN_TYPES.find(t => t.value === initialType)?.fixedDuration ? "disabled" : ""}>
                         ${numberOptions(initialType, initialTotalGames, "totalgames")}
                     </select>
                 </div>
@@ -258,14 +259,16 @@ async function openBanForm(ban = null) {
 
     document.getElementById('ban-type').onchange = function() {
         const type = this.value;
-        let duration = BAN_TYPES.find(t => t.value === type)?.duration || 1;
+        const banType = BAN_TYPES.find(t => t.value === type);
+        let duration = banType?.duration || 1;
         updateTotalGames(type, duration);
     };
 
     function updateTotalGames(type, val) {
         const totalGamesSel = document.getElementById('ban-totalgames');
-        if (type === "Gelb-Rote Karte") {
-            totalGamesSel.innerHTML = `<option value="1" selected>1</option>`;
+        const banType = BAN_TYPES.find(t => t.value === type);
+        if (banType && banType.fixedDuration) {
+            totalGamesSel.innerHTML = `<option value="${banType.duration}" selected>${banType.duration}</option>`;
             totalGamesSel.setAttribute("disabled", "disabled");
         } else {
             totalGamesSel.removeAttribute("disabled");
@@ -282,7 +285,8 @@ async function openBanForm(ban = null) {
         const player_id = parseInt(form.player_id.value, 10);
         const type = form.type.value;
         let totalgames = parseInt(form.totalgames.value, 10);
-        if (type === "Gelb-Rote Karte") totalgames = 1;
+        const banType = BAN_TYPES.find(t => t.value === type);
+        if (banType && banType.fixedDuration) totalgames = banType.duration;
         const reason = form.reason.value.trim();
 
         if (ban) {
