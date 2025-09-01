@@ -1095,9 +1095,6 @@ export async function renderStatsTab(containerId = "app") {
             }
         }, 0);
     }
-} catch (error) {
-    console.error('Error rendering stats:', error);
-    document.getElementById(containerId).innerHTML = `<div class="text-red-500 p-4 text-center">Fehler beim Laden der Statistiken: ${error.message}</div>`;
 }
 
 // NEW: Generate team analysis and transfer recommendations
@@ -1261,6 +1258,4 @@ function generateTransferRecommendations(players, balance, recentForm) {
     
     return recommendations;
 }
-
-// Removed export function for now to avoid syntax issues
-function resetStatsState() {}
+export function resetStatsState() {}
