@@ -1577,23 +1577,6 @@ async function submitMatchForm(event, id) {
     // Nach Insert: ALLE Daten laden (damit matches aktuell ist)
     await matchesData.loadAllData(() => {});
 
-    // Check for new achievements after match is saved
-    try {
-        const { achievementSystem } = await import('./achievements.js');
-        const [
-            { data: allMatches = [] },
-            { data: allPlayers = [] },
-            { data: allBans = [] }
-        ] = await Promise.all([
-            supabase.from('matches').select('*'),
-            supabase.from('players').select('*'),
-            supabase.from('bans').select('*')
-        ]);
-        await achievementSystem.checkAchievements(allMatches, allPlayers, allBans);
-    } catch (error) {
-        console.log('Achievement check skipped:', error.message);
-    }
-
     // Hole App-Matchnummer (laufende Nummer)
     const appMatchNr = getAppMatchNumber(matchId);
 
@@ -1892,3 +1875,34 @@ export function resetMatchesState() {
 }
 
 export {matchesData as matches};
+
+// Enhanced match statistics
+window.showMatchStatistics = function() {
+    if (matches.length === 0) {
+        alert('📊 Keine Spiele vorhanden für Statistiken');
+        return;
+    }
+    
+    const stats = {
+        totalMatches: matches.length,
+        aekWins: matches.filter(m => (m.goalsa || 0) > (m.goalsb || 0)).length,
+        realWins: matches.filter(m => (m.goalsb || 0) > (m.goalsa || 0)).length,
+        draws: matches.filter(m => (m.goalsa || 0) === (m.goalsb || 0)).length,
+        totalGoals: matches.reduce((sum, m) => sum + (m.goalsa || 0) + (m.goalsb || 0), 0),
+        highestScore: Math.max(...matches.map(m => Math.max(m.goalsa || 0, m.goalsb || 0))),
+        averageGoals: 0
+    };
+    
+    stats.averageGoals = (stats.totalGoals / stats.totalMatches).toFixed(1);
+    
+    const report = `🏆 Match-Statistiken:\n\n` +
+                  `Gesamt: ${stats.totalMatches} Spiele\n` +
+                  `AEK Siege: ${stats.aekWins}\n` +
+                  `Real Siege: ${stats.realWins}\n` +
+                  `Unentschieden: ${stats.draws}\n\n` +
+                  `Tore gesamt: ${stats.totalGoals}\n` +
+                  `Ø Tore/Spiel: ${stats.averageGoals}\n` +
+                  `Höchstes Ergebnis: ${stats.highestScore} Tore`;
+    
+    alert(report);
+};

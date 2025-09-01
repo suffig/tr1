@@ -2,6 +2,8 @@ import { useState, Suspense, lazy, useEffect } from 'react';
 import * as React from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './hooks/useAuth';
+import useTouchGestures from './hooks/useTouchGestures';
+import { OfflineIndicator } from './hooks/useOfflineManager.jsx';
 import Login from './components/Login';
 import BottomNavigation from './components/BottomNavigation';
 import LoadingSpinner, { FullScreenLoader } from './components/LoadingSpinner';
@@ -45,6 +47,9 @@ function App() {
     setActiveTab(newTab);
     setTabLoading(false);
   };
+
+  // Enable touch gestures for mobile navigation
+  useTouchGestures(handleTabChange, activeTab);
 
   const handleLogout = async () => {
     try {
@@ -112,6 +117,9 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-bg-primary">
+      {/* Offline Status Indicator */}
+      <OfflineIndicator />
+      
       {/* Connection Status Indicator */}
       {isDemoMode && (
         <div className="bg-warning border-yellow-400 text-yellow-900 px-4 py-2 text-center text-sm font-medium" role="alert">

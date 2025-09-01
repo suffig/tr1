@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
+import ExportImportManager from '../ExportImportManager';
+import FormationVisualizerModal from '../FormationVisualizerModal';
 import { POSITIONS, TEAMS } from '../../utils/errorHandling';
+import toast from 'react-hot-toast';
 
 export default function KaderTab() {
   const [openPanel, setOpenPanel] = useState(null);
+  const [showExportImport, setShowExportImport] = useState(false);
+  const [showFormationVisualizer, setShowFormationVisualizer] = useState(false);
   
   const { data: players, loading, error, refetch } = useSupabaseQuery('players', '*');
   const { insert, update, remove } = useSupabaseMutation('players');
@@ -202,30 +207,67 @@ export default function KaderTab() {
         </p>
       </div>
 
-      {/* Quick Actions Panel */}
+      {/* Enhanced Quick Actions Panel */}
       <div className="modern-card mb-6">
-        <h3 className="font-bold text-lg mb-4">⚡ Schnell-Aktionen</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <h3 className="font-bold text-lg mb-4 flex items-center">
+          <span className="mr-2">⚡</span>
+          Kader-Management
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {/* Existing Actions */}
           <button
             onClick={generatePlayerReport}
-            className="flex items-center justify-center space-x-2 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center justify-center space-x-2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm"
           >
             <span>📊</span>
             <span>Spieler-Report</span>
           </button>
           <button
             onClick={balanceTeams}
-            className="flex items-center justify-center space-x-2 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center justify-center space-x-2 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors text-sm"
           >
             <span>⚖️</span>
             <span>Teams ausgleichen</span>
           </button>
           <button
             onClick={suggestTransfers}
-            className="flex items-center justify-center space-x-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+            className="flex items-center justify-center space-x-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors text-sm"
           >
             <span>🔄</span>
             <span>Transfer-Tipps</span>
+          </button>
+          
+          {/* New Enhanced Features */}
+          <button
+            onClick={() => setShowFormationVisualizer(true)}
+            className="flex items-center justify-center space-x-2 bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 transition-colors text-sm"
+          >
+            <span>⚽</span>
+            <span>Formation Planner</span>
+          </button>
+          <button
+            onClick={() => setShowExportImport(true)}
+            className="flex items-center justify-center space-x-2 bg-orange-600 text-white py-3 px-4 rounded-lg hover:bg-orange-700 transition-colors text-sm"
+          >
+            <span>📦</span>
+            <span>Export/Import</span>
+          </button>
+          <button
+            onClick={() => {
+              const totalValue = (getTeamSquadValue('AEK') + getTeamSquadValue('Real') + getTeamSquadValue('Ehemalige'));
+              const avgValue = players?.length ? totalValue / players.length : 0;
+              toast.success(
+                `📈 Kader-Analyse:\n\n` +
+                `Gesamtwert: ${formatCurrencyInMillions(totalValue)}\n` +
+                `Durchschnitt: ${formatCurrencyInMillions(avgValue)}\n` +
+                `Spieler gesamt: ${players?.length || 0}`,
+                { duration: 5000 }
+              );
+            }}
+            className="flex items-center justify-center space-x-2 bg-teal-600 text-white py-3 px-4 rounded-lg hover:bg-teal-700 transition-colors text-sm"
+          >
+            <span>📈</span>
+            <span>Kader-Analyse</span>
           </button>
         </div>
       </div>
@@ -348,6 +390,18 @@ export default function KaderTab() {
           <div className="text-sm text-text-muted">Positionen</div>
         </div>
       </div>
+
+      {/* New Feature Modals */}
+      {showExportImport && (
+        <ExportImportManager onClose={() => setShowExportImport(false)} />
+      )}
+      
+      {showFormationVisualizer && (
+        <FormationVisualizerModal
+          players={players || []}
+          onClose={() => setShowFormationVisualizer(false)}
+        />
+      )}
     </div>
   );
 }

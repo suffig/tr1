@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useSupabaseQuery } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
+import ExportImportManager from '../ExportImportManager';
+import toast from 'react-hot-toast';
 
 export default function FinanzenTab() {
   const [selectedTeam, setSelectedTeam] = useState('AEK');
   const [expandedMatches, setExpandedMatches] = useState(new Set());
+  const [showExportImport, setShowExportImport] = useState(false);
   
   const { data: finances, loading: financesLoading, refetch: refetchFinances } = useSupabaseQuery('finances', '*');
   const { data: transactions, loading: transactionsLoading } = useSupabaseQuery(
@@ -243,6 +246,64 @@ export default function FinanzenTab() {
             {formatCurrency(totalCapital)}
           </div>
           <div className="text-sm text-text-muted">Gesamtkapital (Bargeld + Kaderwerte)</div>
+        </div>
+      </div>
+
+      {/* Financial Management Actions */}
+      <div className="modern-card mb-6">
+        <h3 className="font-bold text-lg mb-4 flex items-center">
+          <span className="mr-2">💼</span>
+          Finanz-Management
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button
+            onClick={() => setShowExportImport(true)}
+            className="flex items-center justify-center space-x-2 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors text-sm"
+          >
+            <span>📥</span>
+            <span>Export/Import</span>
+          </button>
+          <button
+            onClick={() => {
+              const totalBalance = aekFinances.balance + realFinances.balance;
+              const totalSquadValue = (getTeamSquadValue('AEK') + getTeamSquadValue('Real')) * 1000000;
+              const liquidity = totalBalance > 0 ? (totalBalance / totalCapital) * 100 : 0;
+              
+              toast.success(
+                `💰 Finanz-Analyse:\n\n` +
+                `Bargeld: ${formatCurrency(totalBalance)}\n` +
+                `Kaderwerte: ${formatCurrency(totalSquadValue)}\n` +
+                `Liquidität: ${liquidity.toFixed(1)}%`,
+                { duration: 5000 }
+              );
+            }}
+            className="flex items-center justify-center space-x-2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+          >
+            <span>📊</span>
+            <span>Finanz-Analyse</span>
+          </button>
+          <button
+            onClick={() => {
+              const recentTransactions = transactions?.slice(0, 5) || [];
+              if (recentTransactions.length === 0) {
+                toast.error('Keine Transaktionen vorhanden');
+                return;
+              }
+              
+              const summary = recentTransactions.map(t => 
+                `${t.type}: ${formatCurrency(t.amount)} (${t.team || 'Unbekannt'})`
+              ).join('\n');
+              
+              toast.success(
+                `📋 Letzte Transaktionen:\n\n${summary}`,
+                { duration: 6000 }
+              );
+            }}
+            className="flex items-center justify-center space-x-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors text-sm"
+          >
+            <span>📋</span>
+            <span>Letzte Aktivitäten</span>
+          </button>
         </div>
       </div>
 
@@ -515,6 +576,11 @@ export default function FinanzenTab() {
           </div>
         </div>
       </div>
+
+      {/* Export/Import Modal */}
+      {showExportImport && (
+        <ExportImportManager onClose={() => setShowExportImport(false)} />
+      )}
     </div>
   );
 }
