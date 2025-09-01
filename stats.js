@@ -308,16 +308,24 @@ class StatsCalculator {
             }
         });
 
-        // Find top scorers based on database values
+        // Find top scorers based on match goals (not database values)
         if (this.aekPlayers.length > 0) {
-            goalStats.topScorers.AEK = this.aekPlayers.reduce((max, player) => 
-                (player.goals || 0) > (max.goals || 0) ? player : max
+            const aekPlayersWithMatchGoals = this.aekPlayers.map(player => ({
+                ...player,
+                matchGoals: this.countPlayerGoalsFromMatches(player.name, player.team)
+            }));
+            goalStats.topScorers.AEK = aekPlayersWithMatchGoals.reduce((max, player) => 
+                (player.matchGoals || 0) > (max.matchGoals || 0) ? player : max
             );
         }
         
         if (this.realPlayers.length > 0) {
-            goalStats.topScorers.Real = this.realPlayers.reduce((max, player) => 
-                (player.goals || 0) > (max.goals || 0) ? player : max
+            const realPlayersWithMatchGoals = this.realPlayers.map(player => ({
+                ...player,
+                matchGoals: this.countPlayerGoalsFromMatches(player.name, player.team)
+            }));
+            goalStats.topScorers.Real = realPlayersWithMatchGoals.reduce((max, player) => 
+                (player.matchGoals || 0) > (max.matchGoals || 0) ? player : max
             );
         }
 
@@ -455,16 +463,21 @@ export async function renderStatsTab(containerId = "app") {
         `
         : '';
 
-    // Tore Stats
-    const totalToreAek = aekPlayers.reduce((sum, p) => sum + (p.goals || 0), 0);
-    const totalToreReal = realPlayers.reduce((sum, p) => sum + (p.goals || 0), 0);
-    function getTopScorer(playersArr) {
-        if (!playersArr.length) return null;
-        const top = playersArr.slice().sort((a, b) => (b.goals || 0) - (a.goals || 0))[0];
-        return (top && top.goals > 0) ? { name: top.name, goals: top.goals } : null;
-    }
-    const topScorerAek = getTopScorer(aekPlayers);
-    const topScorerReal = getTopScorer(realPlayers);
+    // Tore Stats - use enhanced goal statistics from matches instead of raw player table data
+    const playersWithMatchGoals = stats.calculatePlayerStats(); // This already calculates goals from matches
+    const aekPlayersWithMatchGoals = playersWithMatchGoals.filter(p => p.team === "AEK");
+    const realPlayersWithMatchGoals = playersWithMatchGoals.filter(p => p.team === "Real");
+    
+    const totalToreAek = aekPlayersWithMatchGoals.reduce((sum, p) => sum + (p.goals || 0), 0);
+    const totalToreReal = realPlayersWithMatchGoals.reduce((sum, p) => sum + (p.goals || 0), 0);
+    
+    // Use enhanced goal statistics for top scorers
+    const topScorerAek = goalStatistics.topScorers.AEK && goalStatistics.topScorers.AEK.matchGoals > 0 
+        ? { name: goalStatistics.topScorers.AEK.name, goals: goalStatistics.topScorers.AEK.matchGoals }
+        : null;
+    const topScorerReal = goalStatistics.topScorers.Real && goalStatistics.topScorers.Real.matchGoals > 0 
+        ? { name: goalStatistics.topScorers.Real.name, goals: goalStatistics.topScorers.Real.matchGoals }
+        : null;
 
     // Karten pro Spiel
     const avgGelbA = totalMatches ? (gelbA / totalMatches).toFixed(2) : "0.00";
