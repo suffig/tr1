@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useSupabaseQuery, useSupabaseMutation } from '../../../hooks/useSupabase';
+import { useSupabaseQuery } from '../../../hooks/useSupabase';
+import { supabaseDb } from '../../../utils/supabase';
+import toast from 'react-hot-toast';
 
 const BAN_TYPES = [
   { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1, icon: "🟨🟥" },
@@ -10,7 +12,6 @@ const BAN_TYPES = [
 
 export default function AddBanTab() {
   const { data: players } = useSupabaseQuery('players', '*');
-  const { insert } = useSupabaseMutation('bans');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     player_id: '',
@@ -28,21 +29,43 @@ export default function AddBanTab() {
     setLoading(true);
 
     try {
-      const selectedPlayer = players.find(p => p.id === parseInt(formData.player_id));
+      const selectedPlayer = players?.find(p => p.id === parseInt(formData.player_id));
       const selectedBanType = BAN_TYPES.find(type => type.value === formData.type);
       
-      if (!selectedPlayer || !selectedBanType) {
-        throw new Error('Spieler oder Sperrart nicht gefunden');
+      if (!selectedPlayer) {
+        throw new Error('Spieler nicht gefunden');
+      }
+      
+      if (!selectedBanType) {
+        throw new Error('Sperrart nicht gefunden');
       }
 
-      await insert({
+      // Check if player already has an active ban
+      const existingBans = await supabaseDb.select('bans', '*', { 
+        eq: { player_id: selectedPlayer.id } 
+      });
+
+      const activeBan = existingBans.data?.find(ban => 
+        (ban.matchesserved || 0) < (ban.totalgames || 0)
+      );
+
+      if (activeBan) {
+        throw new Error(`Spieler "${selectedPlayer.name}" ist bereits gesperrt (${activeBan.totalgames - activeBan.matchesserved} Spiele verbleibend)`);
+      }
+
+      const result = await supabaseDb.insert('bans', {
         player_id: selectedPlayer.id,
         team: selectedPlayer.team,
         type: selectedBanType.value,
         totalgames: selectedBanType.duration,
         matchesserved: 0,
-        reason: formData.reason || selectedBanType.value
+        reason: formData.reason || selectedBanType.value,
+        created_at: new Date().toISOString()
       });
+
+      if (result.error) {
+        throw new Error(`Ban insert failed: ${result.error.message}`);
+      }
       
       // Reset form and close modal
       setFormData({
@@ -53,9 +76,10 @@ export default function AddBanTab() {
       setShowModal(false);
       
       // Show success message
-      alert('Sperre erfolgreich hinzugefügt!');
+      toast.success(`Sperre für "${selectedPlayer.name}" erfolgreich hinzugefügt!`);
     } catch (error) {
-      alert('Fehler beim Hinzufügen der Sperre: ' + error.message);
+      console.error('Ban submission error:', error);
+      toast.error(error.message || 'Fehler beim Hinzufügen der Sperre');
     } finally {
       setLoading(false);
     }
