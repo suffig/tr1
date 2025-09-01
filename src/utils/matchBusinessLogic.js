@@ -19,6 +19,8 @@ export class MatchBusinessLogic {
       goalsb,
       goalslista = [],
       goalslistb = [],
+      ownGoalsA = 0,
+      ownGoalsB = 0,
       yellowa = 0,
       reda = 0,
       yellowb = 0,
@@ -38,7 +40,7 @@ export class MatchBusinessLogic {
         await this.deleteMatchTransactions(editId);
       }
 
-      // 3. Insert the match
+      // 3. Insert the match (including own goals info in JSON)
       const insertObj = {
         date,
         teama,
@@ -53,7 +55,11 @@ export class MatchBusinessLogic {
         redb: parseInt(redb) || 0,
         manofthematch: manofthematch || null,
         prizeaek,
-        prizereal
+        prizereal,
+        // Store own goals in additional info if needed
+        ...(ownGoalsA > 0 || ownGoalsB > 0 ? {
+          owngoals: JSON.stringify({ aek: ownGoalsA, real: ownGoalsB })
+        } : {})
       };
 
       const matchResult = await supabaseDb.insert('matches', insertObj);
