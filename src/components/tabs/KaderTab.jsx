@@ -7,7 +7,6 @@ export default function KaderTab() {
   const [openPanel, setOpenPanel] = useState(null);
   
   const { data: players, loading, error, refetch } = useSupabaseQuery('players', '*');
-  const { data: finances } = useSupabaseQuery('finances', '*');
   const { insert, update, remove } = useSupabaseMutation('players');
   
   const POSITION_ORDER = {
@@ -28,12 +27,6 @@ export default function KaderTab() {
     return players
       .filter(p => p.team === teamName)
       .sort((a, b) => (POSITION_ORDER[a.position] || 99) - (POSITION_ORDER[b.position] || 99));
-  };
-
-  const getTeamBalance = (teamName) => {
-    if (!finances) return 0;
-    const teamFinance = finances.find(f => f.team === teamName);
-    return teamFinance?.balance || 0;
   };
 
   const getTeamSquadValue = (teamName) => {
@@ -124,7 +117,6 @@ export default function KaderTab() {
       name: 'AEK', 
       displayName: 'AEK Athen', 
       players: aekPlayers,
-      balance: getTeamBalance('AEK'),
       squadValue: getTeamSquadValue('AEK'),
       icon: '🔵'
     },
@@ -133,7 +125,6 @@ export default function KaderTab() {
       name: 'Real', 
       displayName: 'Real Madrid', 
       players: realPlayers,
-      balance: getTeamBalance('Real'),
       squadValue: getTeamSquadValue('Real'),
       icon: '🔴'
     },
@@ -142,7 +133,6 @@ export default function KaderTab() {
       name: 'Ehemalige', 
       displayName: 'Ehemalige', 
       players: ehemaligePlayers,
-      balance: 0, // Ehemalige have no finances
       squadValue: getTeamSquadValue('Ehemalige'),
       icon: '⚪'
     }
@@ -180,11 +170,6 @@ export default function KaderTab() {
                       {team.squadValue > 0 && (
                         <span className="ml-2">
                           • Kaderwert: {formatCurrencyInMillions(team.squadValue)}
-                        </span>
-                      )}
-                      {team.balance !== 0 && (
-                        <span className="ml-2">
-                          • Balance: €{team.balance.toLocaleString()}
                         </span>
                       )}
                     </p>

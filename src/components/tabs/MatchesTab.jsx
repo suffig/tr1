@@ -4,14 +4,40 @@ import LoadingSpinner from '../LoadingSpinner';
 
 export default function MatchesTab() {
   const [expandedMatches, setExpandedMatches] = useState(new Set());
+  const [showAll, setShowAll] = useState(false);
+  const [dateFilter, setDateFilter] = useState('');
   
-  const { data: matches, loading, error, refetch } = useSupabaseQuery(
+  // Calculate date 4 weeks ago
+  const fourWeeksAgo = new Date();
+  fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+  const fourWeeksAgoString = fourWeeksAgo.toISOString().split('T')[0];
+  
+  const { data: allMatches, loading, error, refetch } = useSupabaseQuery(
     'matches',
     '*',
-    { order: { column: 'date', ascending: false }, limit: 50 }
+    { order: { column: 'date', ascending: false } }
   );
   const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
 
+  // Filter matches based on current settings
+  const getFilteredMatches = () => {
+    if (!allMatches) return [];
+    
+    let filtered = allMatches;
+    
+    // Apply date filter if set
+    if (dateFilter) {
+      filtered = filtered.filter(match => match.date === dateFilter);
+    } else if (!showAll) {
+      // Show only last 4 weeks if not showing all and no specific date filter
+      filtered = filtered.filter(match => match.date >= fourWeeksAgoString);
+    }
+    
+    return filtered;
+  };
+  
+  const matches = getFilteredMatches();
+  
   const isLoading = loading || playersLoading;
 
   // Helper function to get player name and value
@@ -124,6 +150,47 @@ export default function MatchesTab() {
         <p className="text-text-muted">
           {matches?.length || 0} Spiele gefunden, gruppiert nach Datum
         </p>
+      </div>
+
+      {/* Filter Controls */}
+      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          <div className="flex-1">
+            <label htmlFor="dateFilter" className="block text-sm font-medium text-text-primary mb-1">
+              Filter nach Datum:
+            </label>
+            <input
+              id="dateFilter"
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setDateFilter('')}
+              className="px-3 py-2 text-sm bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+            >
+              Filter zurücksetzen
+            </button>
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className={`px-3 py-2 text-sm rounded-md transition-colors ${
+                showAll 
+                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {showAll ? 'Nur letzte 4 Wochen' : 'Alle Spiele anzeigen'}
+            </button>
+          </div>
+        </div>
+        <div className="mt-2 text-xs text-text-muted">
+          {!dateFilter && !showAll && `Zeige Spiele der letzten 4 Wochen (seit ${new Date(fourWeeksAgoString).toLocaleDateString('de-DE')})`}
+          {!dateFilter && showAll && 'Zeige alle Spiele'}
+          {dateFilter && `Zeige Spiele vom ${new Date(dateFilter).toLocaleDateString('de-DE')}`}
+        </div>
       </div>
 
       {dateGroups && dateGroups.length > 0 ? (
