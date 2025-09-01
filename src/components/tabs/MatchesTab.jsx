@@ -269,59 +269,89 @@ export default function MatchesTab() {
                                   ⚽ Torschützen
                                 </h4>
                                 <div className="space-y-2">
-                                  {match.goalslista && match.goalslista.length > 0 ? (
-                                    <div>
-                                      <p className="text-xs text-blue-600 font-medium mb-1">AEK:</p>
-                                      {match.goalslista.map((goal, idx) => {
-                                        const isObject = typeof goal === 'object' && goal !== null;
-                                        const playerInfo = isObject 
-                                          ? getPlayerInfo(goal.player_id, goal.player)
-                                          : getPlayerInfo(null, goal);
-                                        return (
-                                          <div key={idx} className="text-sm p-2 bg-blue-50 rounded border-l-4 border-blue-400">
-                                            <div className="font-medium text-blue-800">
-                                              {playerInfo.name}
-                                              {isObject && goal.count > 1 && (
-                                                <span className="ml-1 text-xs bg-blue-200 px-1 rounded">
-                                                  {goal.count}x
-                                                </span>
-                                              )}
+                                  {(() => {
+                                    // Safely parse goalslista - it might be a JSON string or already an array
+                                    let goalsList = [];
+                                    try {
+                                      if (typeof match.goalslista === 'string') {
+                                        goalsList = JSON.parse(match.goalslista);
+                                      } else if (Array.isArray(match.goalslista)) {
+                                        goalsList = match.goalslista;
+                                      }
+                                    } catch (e) {
+                                      console.warn('Failed to parse goalslista:', e);
+                                      goalsList = [];
+                                    }
+                                    
+                                    return goalsList && goalsList.length > 0 ? (
+                                      <div>
+                                        <p className="text-xs text-blue-600 font-medium mb-1">AEK:</p>
+                                        {goalsList.map((goal, idx) => {
+                                          const isObject = typeof goal === 'object' && goal !== null;
+                                          const playerInfo = isObject 
+                                            ? getPlayerInfo(goal.player_id, goal.player)
+                                            : getPlayerInfo(null, goal);
+                                          return (
+                                            <div key={idx} className="text-sm p-2 bg-blue-50 rounded border-l-4 border-blue-400">
+                                              <div className="font-medium text-blue-800">
+                                                {playerInfo.name}
+                                                {isObject && goal.count > 1 && (
+                                                  <span className="ml-1 text-xs bg-blue-200 px-1 rounded">
+                                                    {goal.count}x
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <div className="text-xs text-blue-600">
+                                                Marktwert: {playerInfo.value}M €
+                                              </div>
                                             </div>
-                                            <div className="text-xs text-blue-600">
-                                              Marktwert: {playerInfo.value}M €
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  ) : <p className="text-xs text-text-muted">AEK: Keine Tore</p>}
+                                          );
+                                        })}
+                                      </div>
+                                    ) : <p className="text-xs text-text-muted">AEK: Keine Tore</p>;
+                                  })()}
                                   
-                                  {match.goalslistb && match.goalslistb.length > 0 ? (
-                                    <div>
-                                      <p className="text-xs text-red-600 font-medium mb-1">Real:</p>
-                                      {match.goalslistb.map((goal, idx) => {
-                                        const isObject = typeof goal === 'object' && goal !== null;
-                                        const playerInfo = isObject 
-                                          ? getPlayerInfo(goal.player_id, goal.player)
-                                          : getPlayerInfo(null, goal);
-                                        return (
-                                          <div key={idx} className="text-sm p-2 bg-red-50 rounded border-l-4 border-red-400">
-                                            <div className="font-medium text-red-800">
-                                              {playerInfo.name}
-                                              {isObject && goal.count > 1 && (
-                                                <span className="ml-1 text-xs bg-red-200 px-1 rounded">
-                                                  {goal.count}x
-                                                </span>
-                                              )}
+                                  {(() => {
+                                    // Safely parse goalslistb - it might be a JSON string or already an array
+                                    let goalsList = [];
+                                    try {
+                                      if (typeof match.goalslistb === 'string') {
+                                        goalsList = JSON.parse(match.goalslistb);
+                                      } else if (Array.isArray(match.goalslistb)) {
+                                        goalsList = match.goalslistb;
+                                      }
+                                    } catch (e) {
+                                      console.warn('Failed to parse goalslistb:', e);
+                                      goalsList = [];
+                                    }
+                                    
+                                    return goalsList && goalsList.length > 0 ? (
+                                      <div>
+                                        <p className="text-xs text-red-600 font-medium mb-1">Real:</p>
+                                        {goalsList.map((goal, idx) => {
+                                          const isObject = typeof goal === 'object' && goal !== null;
+                                          const playerInfo = isObject 
+                                            ? getPlayerInfo(goal.player_id, goal.player)
+                                            : getPlayerInfo(null, goal);
+                                          return (
+                                            <div key={idx} className="text-sm p-2 bg-red-50 rounded border-l-4 border-red-400">
+                                              <div className="font-medium text-red-800">
+                                                {playerInfo.name}
+                                                {isObject && goal.count > 1 && (
+                                                  <span className="ml-1 text-xs bg-red-200 px-1 rounded">
+                                                    {goal.count}x
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <div className="text-xs text-red-600">
+                                                Marktwert: {playerInfo.value}M €
+                                              </div>
                                             </div>
-                                            <div className="text-xs text-red-600">
-                                              Marktwert: {playerInfo.value}M €
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  ) : <p className="text-xs text-text-muted">Real: Keine Tore</p>}
+                                          );
+                                        })}
+                                      </div>
+                                    ) : <p className="text-xs text-text-muted">Real: Keine Tore</p>;
+                                  })()}
                                 </div>
                               </div>
                               

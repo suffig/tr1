@@ -29,8 +29,20 @@ export default function StatsTab() {
     const scorers = {};
     
     matches?.forEach(match => {
-      // Process AEK goals
-      match.goalslista?.forEach(goal => {
+      // Process AEK goals - safely parse goalslista
+      let goalsListA = [];
+      try {
+        if (typeof match.goalslista === 'string') {
+          goalsListA = JSON.parse(match.goalslista);
+        } else if (Array.isArray(match.goalslista)) {
+          goalsListA = match.goalslista;
+        }
+      } catch (e) {
+        console.warn('Failed to parse goalslista in stats:', e);
+        goalsListA = [];
+      }
+      
+      goalsListA?.forEach(goal => {
         const isObject = typeof goal === 'object' && goal !== null;
         const playerName = isObject ? goal.player : goal;
         const goalCount = isObject ? (goal.count || 1) : 1;
@@ -47,8 +59,20 @@ export default function StatsTab() {
         scorers[playerName].goals += goalCount;
       });
       
-      // Process Real goals
-      match.goalslistb?.forEach(goal => {
+      // Process Real goals - safely parse goalslistb
+      let goalsListB = [];
+      try {
+        if (typeof match.goalslistb === 'string') {
+          goalsListB = JSON.parse(match.goalslistb);
+        } else if (Array.isArray(match.goalslistb)) {
+          goalsListB = match.goalslistb;
+        }
+      } catch (e) {
+        console.warn('Failed to parse goalslistb in stats:', e);
+        goalsListB = [];
+      }
+      
+      goalsListB?.forEach(goal => {
         const isObject = typeof goal === 'object' && goal !== null;
         const playerName = isObject ? goal.player : goal;
         const goalCount = isObject ? (goal.count || 1) : 1;
