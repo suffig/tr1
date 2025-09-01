@@ -562,20 +562,33 @@ function attachMatchEventListeners(uniqueDates) {
 function matchHtml(match, nr) {
     function goalsHtml(goals) {
         if (!goals || !goals.length) return `<span class="text-gray-600 text-sm italic">Keine Torschützen</span>`;
-        return goals
+        
+        // Aggregate goals from string array format into counts
+        const aggregatedGoals = [];
+        const goalCounts = {};
+        
+        goals.forEach(g => {
+            const playerName = typeof g === 'string' ? g : g.player;
+            const count = typeof g === 'string' ? 1 : (g.count || 1);
+            
+            if (goalCounts[playerName]) {
+                goalCounts[playerName] += count;
+            } else {
+                goalCounts[playerName] = count;
+            }
+        });
+        
+        // Convert to array of objects
+        Object.entries(goalCounts).forEach(([player, count]) => {
+            aggregatedGoals.push({ player, count });
+        });
+        
+        return aggregatedGoals
             .map(g => {
-                // Handle both string array format (legacy) and object format (new)
-                if (typeof g === 'string') {
-                    return `<span class="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-green-100 rounded-lg px-3 py-1 text-sm font-medium shadow-md">
-                        ${g} 
-                        <span class="inline-block rounded-md px-2 py-1 border font-bold text-xs bg-green-700 border-green-600 text-green-100">1</span>
-                    </span>`;
-                } else {
-                    return `<span class="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-green-100 rounded-lg px-3 py-1 text-sm font-medium shadow-md">
-                        ${g.player} 
-                        <span class="inline-block rounded-md px-2 py-1 border font-bold text-xs bg-green-700 border-green-600 text-green-100">${g.count}</span>
-                    </span>`;
-                }
+                return `<span class="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-green-100 rounded-lg px-3 py-1 text-sm font-medium shadow-md">
+                    ${g.player} 
+                    <span class="inline-block rounded-md px-2 py-1 border font-bold text-xs bg-green-700 border-green-600 text-green-100">${g.count}${g.count > 1 ? 'x' : ''}</span>
+                </span>`;
             })
             .join(' ');
     }
