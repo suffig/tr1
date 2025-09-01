@@ -18,8 +18,6 @@
             <button id="test-kader" class="bg-blue-600 text-white px-4 py-2 rounded">Test Kader</button>
             <button id="test-finanzen" class="bg-green-600 text-white px-4 py-2 rounded">Test Finanzen</button>
             <button id="test-matches" class="bg-red-600 text-white px-4 py-2 rounded">Test Matches</button>
-            <button id="test-stats" class="bg-purple-600 text-white px-4 py-2 rounded">Test Stats</button>
-            <button id="test-spieler" class="bg-yellow-600 text-white px-4 py-2 rounded">Test Spieler</button>
         </div>
         
         <div id="app" class="mt-4">
@@ -31,8 +29,6 @@
         import { renderKaderTab } from './kader.js';
         import { renderFinanzenTab } from './finanzen.js';
         import { renderMatchesTab } from './matches.js';
-        import { renderStatsTab } from './stats.js';
-        import { renderSpielerTab } from './spieler.js';
         
         document.getElementById('test-kader').onclick = () => {
             renderKaderTab('app');
@@ -44,14 +40,6 @@
         
         document.getElementById('test-matches').onclick = () => {
             renderMatchesTab('app');
-        };
-        
-        document.getElementById('test-stats').onclick = () => {
-            renderStatsTab('app');
-        };
-        
-        document.getElementById('test-spieler').onclick = () => {
-            renderSpielerTab('app');
         };
     </script>
 </body>

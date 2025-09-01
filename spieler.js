@@ -1,5 +1,4 @@
 import { dataManager } from './dataManager.js';
-import { GoalUtils } from './utils.js';
 
 export async function renderSpielerTab(containerId = "app") {
 	console.log("renderSpielerTab aufgerufen!", { containerId });
@@ -102,7 +101,6 @@ export async function renderSpielerTab(containerId = "app") {
             // Use dataManager for consistent database access
             const data = await dataManager.loadAllAppData();
             const players = data.players || [];
-            const matches = data.matches || [];
 
             if (!players.length) {
                 document.getElementById('spieler-content').innerHTML =
@@ -110,19 +108,13 @@ export async function renderSpielerTab(containerId = "app") {
                 return;
             }
 
-            // Calculate goals from matches instead of using player table goals
             let scorerArr = players
-                .map(p => {
-                    // Calculate goals from actual match data
-                    const matchGoals = GoalUtils.countPlayerGoalsFromMatches(p.name, p.team, matches);
-                    return {
-                        team: p.team,
-                        name: p.name,
-                        goals: matchGoals
-                    };
-                })
-                .filter(p => p.goals && p.goals > 0);  // Only include players with goals
-            
+                .filter(p => p.goals && p.goals > 0)
+                .map(p => ({
+                    team: p.team,
+                    name: p.name,
+                    goals: p.goals || 0
+                }));
             scorerArr.sort((a, b) => b.goals - a.goals);
 
         // Top 3 mit Abzeichen

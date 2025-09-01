@@ -1,7 +1,7 @@
 import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { decrementBansAfterMatch } from './bans.js';
 import { dataManager } from './dataManager.js';
-import { loadingManager, ErrorHandler, Performance, DOM, GoalUtils } from './utils.js';
+import { loadingManager, ErrorHandler, Performance, DOM } from './utils.js';
 import { supabase } from './supabaseClient.js';
 
 // Match Analytics and Prediction System
@@ -744,36 +744,32 @@ function openMatchForm(id) {
             return;
         }
 
-        // Spieler-Optionen SORTIERT nach SdS-Anzahl (absteigend), dann nach Toren aus Matches (absteigend)
+        // Spieler-Optionen SORTIERT nach SdS-Anzahl (absteigend), dann nach Toren (absteigend) - safely
         const aekSorted = [...matchesData.aek].sort((a, b) => {
             const aSdsCount = getSdsCount(a.name, "AEK");
             const bSdsCount = getSdsCount(b.name, "AEK");
             if (aSdsCount !== bSdsCount) return bSdsCount - aSdsCount; // Sort by SdS count first
-            // Calculate goals from matches instead of using database values
-            const aGoals = GoalUtils.countPlayerGoalsFromMatches(a.name, a.team, matchesData.matches);
-            const bGoals = GoalUtils.countPlayerGoalsFromMatches(b.name, b.team, matchesData.matches);
-            return bGoals - aGoals; // Then by goals from matches
+            const aGoals = a.goals || 0;
+            const bGoals = b.goals || 0;
+            return bGoals - aGoals; // Then by goals
         });
         const realSorted = [...matchesData.real].sort((a, b) => {
             const aSdsCount = getSdsCount(a.name, "Real");
             const bSdsCount = getSdsCount(b.name, "Real");
             if (aSdsCount !== bSdsCount) return bSdsCount - aSdsCount; // Sort by SdS count first
-            // Calculate goals from matches instead of using database values
-            const aGoals = GoalUtils.countPlayerGoalsFromMatches(a.name, a.team, matchesData.matches);
-            const bGoals = GoalUtils.countPlayerGoalsFromMatches(b.name, b.team, matchesData.matches);
-            return bGoals - aGoals; // Then by goals from matches
+            const aGoals = a.goals || 0;
+            const bGoals = b.goals || 0;
+            return bGoals - aGoals; // Then by goals
         });
         
         const aekSpieler = aekSorted.map(p => {
-            // Display goals from matches instead of database values
-            const matchGoals = GoalUtils.countPlayerGoalsFromMatches(p.name, p.team, matchesData.matches);
-            return `<option value="${DOM.sanitizeForAttribute(p.name)}">${DOM.sanitizeForHTML(p.name)} (${matchGoals} Tore)</option>`;
+            const goals = p.goals || 0;
+            return `<option value="${DOM.sanitizeForAttribute(p.name)}">${DOM.sanitizeForHTML(p.name)} (${goals} Tore)</option>`;
         }).join('');
         
         const realSpieler = realSorted.map(p => {
-            // Display goals from matches instead of database values
-            const matchGoals = GoalUtils.countPlayerGoalsFromMatches(p.name, p.team, matchesData.matches);
-            return `<option value="${DOM.sanitizeForAttribute(p.name)}">${DOM.sanitizeForHTML(p.name)} (${matchGoals} Tore)</option>`;
+            const goals = p.goals || 0;
+            return `<option value="${DOM.sanitizeForAttribute(p.name)}">${DOM.sanitizeForHTML(p.name)} (${goals} Tore)</option>`;
         }).join('');
 
         const goalsListA = match?.goalslista || [];
