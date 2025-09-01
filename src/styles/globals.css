@@ -131,4 +131,32 @@
   .text-responsive-xl {
     @apply text-xl md:text-2xl;
   }
+
+  /* Mobile form spacing to prevent navigation overlap */
+  .mobile-safe-bottom {
+    @apply pb-24 md:pb-6;
+  }
+
+  /* Modal improvements for mobile */
+  .modal-content {
+    @apply max-h-[85vh] overflow-y-auto;
+  }
+
+  /* Ensure forms don't overlap with bottom navigation */
+  .form-container {
+    @apply mb-20 md:mb-6;
+  }
+
+  /* Better mobile modal positioning */
+  @media (max-height: 700px) {
+    .modal-content {
+      @apply max-h-[80vh] text-sm;
+    }
+  }
+  
+  @media (max-height: 600px) {
+    .modal-content {
+      @apply max-h-[75vh] text-xs p-4;
+    }
+  }
 }
