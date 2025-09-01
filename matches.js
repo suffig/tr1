@@ -1274,19 +1274,32 @@ function scorerFields(name, arr, spielerOpts) {
     // No default scorer - start with empty list
     if (!arr.length) return '';
     
-    // Convert string array to aggregated format for form display
-    const aggregatedGoals = {};
-    arr.forEach(playerName => {
-        if (playerName) {
-            aggregatedGoals[playerName] = (aggregatedGoals[playerName] || 0) + 1;
-        }
-    });
+    // Handle both old string array format and new object format
+    let goalsForDisplay = [];
     
-    // Convert to array of objects for form display
-    const goalsForDisplay = Object.entries(aggregatedGoals).map(([player, count]) => ({
-        player,
-        count
-    }));
+    // Check if we have the new object format or old string array format
+    if (arr.length > 0 && typeof arr[0] === 'object' && arr[0].player !== undefined) {
+        // New object format: [{"count": 4, "player": "Walker"}]
+        goalsForDisplay = arr.map(goal => ({
+            player: goal.player,
+            count: goal.count || 1
+        }));
+    } else {
+        // Old string array format: ["Walker", "Walker", "Walker", "Walker", "Messi", "Messi"]
+        // Convert string array to aggregated format for form display
+        const aggregatedGoals = {};
+        arr.forEach(playerName => {
+            if (playerName) {
+                aggregatedGoals[playerName] = (aggregatedGoals[playerName] || 0) + 1;
+            }
+        });
+        
+        // Convert to array of objects for form display
+        goalsForDisplay = Object.entries(aggregatedGoals).map(([player, count]) => ({
+            player,
+            count
+        }));
+    }
     
     return goalsForDisplay.map((g, i) => `
         <div class="flex gap-2 mb-3 scorer-row items-center bg-gray-600 border-2 border-gray-500 rounded-lg p-3">
@@ -1307,11 +1320,22 @@ function scorerFields(name, arr, spielerOpts) {
 }
 
 async function updatePlayersGoals(goalslist, team) {
-    // Count goals per player from string array
+    // Handle both new object format and old string array format
     const goalCounts = {};
-    for (const playerName of goalslist) {
-        if (!playerName) continue;
-        goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+    
+    if (goalslist.length > 0 && typeof goalslist[0] === 'object' && goalslist[0].player !== undefined) {
+        // New object format: [{"count": 4, "player": "Walker"}]
+        goalslist.forEach(goal => {
+            if (goal.player) {
+                goalCounts[goal.player] = (goalCounts[goal.player] || 0) + (goal.count || 1);
+            }
+        });
+    } else {
+        // Old string array format: ["Walker", "Walker", "Messi"]
+        for (const playerName of goalslist) {
+            if (!playerName) continue;
+            goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+        }
     }
     
     // Update each player's goal count
@@ -1440,10 +1464,11 @@ async function submitMatchForm(event, id) {
             const player = d.querySelector(`select[name="${name}-player"]`).value;
             const count = parseInt(d.querySelector(`input[name="${name}-count"]`).value) || 1;
             if (player) {
-                // Add each goal as a separate string entry (original format)
-                for (let i = 0; i < count; i++) {
-                    scorers.push(player);
-                }
+                // Use new object format with count and player properties
+                scorers.push({
+                    count: count,
+                    player: player
+                });
             }
         });
         return scorers;
@@ -1454,7 +1479,7 @@ async function submitMatchForm(event, id) {
     if (goalsa > 0) {
         const groupA = form.querySelector("#scorersA");
         goalslista = getScorers(groupA, "goalslista");
-        const sumA = goalslista.length; // Count strings in array
+        const sumA = goalslista.reduce((sum, goal) => sum + goal.count, 0); // Sum goal counts from objects
         if (sumA > goalsa) {
             alert(`Die Summe der Torschützen-Tore für ${teama} (${sumA}) darf nicht größer als die Gesamtanzahl der Tore (${goalsa}) sein!`);
             // Restore button state and remove indicator
@@ -1470,7 +1495,7 @@ async function submitMatchForm(event, id) {
     if (goalsb > 0) {
         const groupB = form.querySelector("#scorersB");
         goalslistb = getScorers(groupB, "goalslistb");
-        const sumB = goalslistb.length; // Count strings in array
+        const sumB = goalslistb.reduce((sum, goal) => sum + goal.count, 0); // Sum goal counts from objects
         if (sumB > goalsb) {
             alert(`Die Summe der Torschützen-Tore für ${teamb} (${sumB}) darf nicht größer als die Gesamtanzahl der Tore (${goalsb}) sein!`);
             // Restore button state and remove indicator

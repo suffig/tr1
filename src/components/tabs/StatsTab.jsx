@@ -348,6 +348,46 @@ export default function StatsTab() {
           ))}
         </div>
       </div>
+
+      {/* Top Spieler des Spiels */}
+      <div className="modern-card">
+        <h3 className="font-bold text-lg mb-4">⭐ Top-Spieler des Spiels</h3>
+        <div className="space-y-2">
+          {playerStats
+            .filter(player => player.sdsCount > 0)
+            .sort((a, b) => b.sdsCount - a.sdsCount)
+            .slice(0, 5)
+            .map((player, index) => (
+            <div key={player.id} className="flex items-center justify-between py-2 border-b border-border-light last:border-b-0">
+              <div className="flex items-center space-x-3">
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                  index === 0 ? 'bg-yellow-500 text-white' :
+                  index === 1 ? 'bg-gray-400 text-white' :
+                  index === 2 ? 'bg-orange-600 text-white' :
+                  'bg-gray-200 text-gray-600'
+                }`}>
+                  {index + 1}
+                </span>
+                <div>
+                  <div className="font-medium">{player.name}</div>
+                  <div className="text-sm text-text-muted">{player.team}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-bold">{player.sdsCount}x SdS</div>
+                <div className="text-sm text-text-muted">
+                  {player.matchesPlayed > 0 ? ((player.sdsCount / player.matchesPlayed) * 100).toFixed(1) : '0.0'}% Quote
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {playerStats.filter(player => player.sdsCount > 0).length === 0 && (
+          <div className="text-center text-text-muted py-4">
+            Noch keine Spieler des Spiels Auszeichnungen vergeben
+          </div>
+        )}
+      </div>
     </div>
   );
 
