@@ -753,28 +753,7 @@ body {
     }
   }
 
-/* --- ACHIEVEMENT NOTIFICATIONS --- */
-.achievement-notification {
-  animation: slideInRight 0.5s ease-out;
-  max-width: 300px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-}
 
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.achievement-notification:hover {
-  transform: scale(1.02);
-  transition: transform 0.2s ease;
-}
 
 /* --- ENHANCED LOADING STATES --- */
 .loading-enhanced {

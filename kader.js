@@ -228,10 +228,7 @@ async function renderPlayerAnalytics() {
                             <i class="fas fa-download mr-1"></i>
                             Export
                         </button>
-                        <button onclick="showAchievements()" class="bg-yellow-600 text-white py-1 px-2 rounded text-xs hover:bg-yellow-700 flex items-center justify-center">
-                            <i class="fas fa-trophy mr-1"></i>
-                            Erfolge
-                        </button>
+
                     </div>
                     
                     <!-- Formation View Container -->
@@ -678,28 +675,7 @@ window.exportSquadData = async function() {
     }
 };
 
-// Show achievements
-window.showAchievements = async function() {
-    try {
-        const { AchievementSystem } = await import('./achievements.js');
-        const achievements = await AchievementSystem.getAllAchievements();
-        
-        if (achievements.length === 0) {
-            alert('🏆 Noch keine Erfolge freigeschaltet!\n\nSpiele mehr Matches um Erfolge zu sammeln.');
-            return;
-        }
-        
-        const totalPoints = achievements.reduce((sum, a) => sum + (a.points || 0), 0);
-        const achievementNames = achievements.map(a => {
-            const baseAchievement = AchievementSystem.achievements[a.base_achievement];
-            return `• ${baseAchievement?.name || 'Unbekannt'} (+${a.points}P)`;
-        }).join('\n');
-        
-        alert(`🏆 Deine Erfolge (${totalPoints} Punkte):\n\n${achievementNames}`);
-    } catch (error) {
-        alert('❌ Erfolge können nicht geladen werden: ' + error.message);
-    }
-};
+
 
 // Enhanced player report with more stats
 window.generatePlayerReport = async function() {

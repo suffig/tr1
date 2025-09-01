@@ -13,7 +13,6 @@ import { renderSpielerTab } from './spieler.js';
 
 // --- NEU: Enhanced features ---
 import { DataExportImport } from './exportImport.js';
-import { AchievementSystem, checkAchievementsAfterMatch } from './achievements.js';
 import TouchGestureHandler from './touchGestures.js';
 import { FormationVisualizer } from './formationVisualizer.js';
 import OfflineManager from './offlineManager.js';

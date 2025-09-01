@@ -1,9 +1,8 @@
 /**
  * Test Suite for FIFA Tracker Enhanced Features
- * Tests all new functionality including achievements, export/import, offline mode, etc.
+ * Tests export/import, offline mode, formation visualizer, etc.
  */
 
-import { AchievementSystem } from './achievements.js';
 import { DataExportImport } from './exportImport.js';
 import { FormationVisualizer } from './formationVisualizer.js';
 import { OfflineManager } from './offlineManager.js';
@@ -19,9 +18,6 @@ class FeatureTestSuite {
 
     async runAllTests() {
         console.log('🚀 Starting FIFA Tracker Enhanced Features Test Suite');
-        
-        // Test Achievement System
-        await this.testAchievementSystem();
         
         // Test Export/Import
         await this.testExportImport();
@@ -40,48 +36,6 @@ class FeatureTestSuite {
         
         // Generate report
         this.generateTestReport();
-    }
-
-    async testAchievementSystem() {
-        console.log('🏆 Testing Achievement System...');
-        
-        try {
-            // Test achievement definitions
-            this.assert(
-                Object.keys(AchievementSystem.achievements).length > 0,
-                'Achievement definitions loaded'
-            );
-            
-            // Test first goal achievement
-            const firstGoalAchievement = AchievementSystem.achievements.first_goal;
-            this.assert(
-                firstGoalAchievement && firstGoalAchievement.name === 'Erstes Tor',
-                'First goal achievement exists and has correct name'
-            );
-            
-            // Test achievement calculation helpers
-            const mockMatches = [
-                { aek_goals: [{ player_id: 'player1' }], real_goals: [], aek_score: 1, real_score: 0 },
-                { aek_goals: [{ player_id: 'player1' }], real_goals: [], aek_score: 1, real_score: 0 }
-            ];
-            
-            const goalCount = AchievementSystem.calculatePlayerGoals('player1', mockMatches, 'AEK');
-            this.assert(goalCount === 2, 'Player goal calculation works correctly');
-            
-            // Test achievement storage
-            await AchievementSystem.awardAchievement({
-                playerId: 'test_player',
-                achievementId: 'test_achievement',
-                unlockedAt: new Date().toISOString(),
-                progress: 1
-            });
-            
-            const achievements = await AchievementSystem.getPlayerAchievements('test_player');
-            this.assert(achievements.length > 0, 'Achievement storage and retrieval works');
-            
-        } catch (error) {
-            this.fail('Achievement System test failed: ' + error.message);
-        }
     }
 
     async testExportImport() {

@@ -1577,23 +1577,6 @@ async function submitMatchForm(event, id) {
     // Nach Insert: ALLE Daten laden (damit matches aktuell ist)
     await matchesData.loadAllData(() => {});
 
-    // Check for new achievements after match is saved
-    try {
-        const { achievementSystem } = await import('./achievements.js');
-        const [
-            { data: allMatches = [] },
-            { data: allPlayers = [] },
-            { data: allBans = [] }
-        ] = await Promise.all([
-            supabase.from('matches').select('*'),
-            supabase.from('players').select('*'),
-            supabase.from('bans').select('*')
-        ]);
-        await achievementSystem.checkAchievements(allMatches, allPlayers, allBans);
-    } catch (error) {
-        console.log('Achievement check skipped:', error.message);
-    }
-
     // Hole App-Matchnummer (laufende Nummer)
     const appMatchNr = getAppMatchNumber(matchId);
 
@@ -1892,40 +1875,6 @@ export function resetMatchesState() {
 }
 
 export {matchesData as matches};
-
-// --- Enhanced functionality for achievements ---
-
-// Hook into match saving to check achievements
-const achievementCheckedMatches = new Set();
-
-// Listen for match save success messages to trigger achievement checks
-const originalAlert = window.alert;
-if (!window.alertEnhanced) {
-    window.alertEnhanced = true;
-    window.alert = function(message) {
-        originalAlert.call(this, message);
-        
-        // Check for match save success
-        if (message && message.includes('Spiel erfolgreich')) {
-            // Trigger achievement check for the last match
-            setTimeout(async () => {
-                try {
-                    const { checkAchievementsAfterMatch } = await import('./achievements.js');
-                    const { dataManager } = await import('./dataManager.js');
-                    const data = await dataManager.loadAllAppData();
-                    const latestMatch = data.matches?.[data.matches.length - 1];
-                    
-                    if (latestMatch && !achievementCheckedMatches.has(latestMatch.id)) {
-                        achievementCheckedMatches.add(latestMatch.id);
-                        await checkAchievementsAfterMatch(latestMatch);
-                    }
-                } catch (error) {
-                    console.error('Achievement check failed:', error);
-                }
-            }, 1000);
-        }
-    };
-}
 
 // Enhanced match statistics
 window.showMatchStatistics = function() {
