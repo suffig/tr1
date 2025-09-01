@@ -1,24 +1,42 @@
 import { useState } from 'react';
 import { supabase, switchToFallbackMode } from '../utils/supabase';
 import { ErrorHandler, FormValidator } from '../utils/errorHandling';
+import { InlineSpinner } from './LoadingSpinner';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrors({});
 
     try {
-      FormValidator.validateRequired(email, 'E-Mail');
-      FormValidator.validateRequired(password, 'Passwort');
-      FormValidator.validateEmail(email);
+      // Client-side validation
+      const newErrors = {};
+      if (!email.trim()) {
+        newErrors.email = 'E-Mail ist erforderlich';
+      } else {
+        try {
+          FormValidator.validateEmail(email);
+        } catch (err) {
+          newErrors.email = 'Ungültige E-Mail-Adresse';
+        }
+      }
+      
+      if (!password.trim()) {
+        newErrors.password = 'Passwort ist erforderlich';
+      } else if (!isLogin && password.length < 6) {
+        newErrors.password = 'Passwort muss mindestens 6 Zeichen haben';
+      }
 
-      if (!isLogin && password.length < 6) {
-        throw new Error('Passwort muss mindestens 6 Zeichen haben');
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        return;
       }
 
       // Use current supabase client for auth
@@ -127,43 +145,65 @@ export default function Login() {
           {/* Form */}
           <form onSubmit={handleAuth} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-2">
                 E-Mail
               </label>
               <input
+                id="email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="form-input"
+                className={`form-input ${errors.email ? 'border-red-500 focus:border-red-500' : ''}`}
                 placeholder="deine@email.de"
+                autoComplete="email"
                 required
                 disabled={loading}
+                aria-describedby="email-error"
+                aria-invalid={!!errors.email}
               />
+              {errors.email && (
+                <p id="email-error" className="mt-1 text-sm text-red-600" role="alert">
+                  {errors.email}
+                </p>
+              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-2">
                 Passwort
               </label>
               <input
+                id="password"
+                name="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="form-input"
+                className={`form-input ${errors.password ? 'border-red-500 focus:border-red-500' : ''}`}
                 placeholder="Dein Passwort"
+                autoComplete={isLogin ? "current-password" : "new-password"}
                 required
                 disabled={loading}
+                aria-describedby="password-error"
+                aria-invalid={!!errors.password}
+                minLength={6}
               />
+              {errors.password && (
+                <p id="password-error" className="mt-1 text-sm text-red-600" role="alert">
+                  {errors.password}
+                </p>
+              )}
             </div>
 
             <button
               type="submit"
               disabled={loading}
               className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-describedby={loading ? "loading-status" : undefined}
             >
               {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="spinner w-5 h-5 mr-2"></div>
+                <div className="flex items-center justify-center" id="loading-status">
+                  <InlineSpinner size="sm" className="mr-2" />
                   {isLogin ? 'Anmelden...' : 'Registrieren...'}
                 </div>
               ) : (
