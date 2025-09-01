@@ -7,13 +7,19 @@ export default function AddMatchTab() {
   const { data: players } = useSupabaseQuery('players', '*');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
+    // Teams are now fixed - no longer selectable
     teama: 'AEK',
     teamb: 'Real',
     date: new Date().toISOString().split('T')[0],
+    // Goals are now calculated from player scores
     goalsa: 0,
     goalsb: 0,
+    // New structure: array of {player: name, count: number}
     goalslista: [],
     goalslistb: [],
+    // Own goals tracking
+    ownGoalsA: 0,
+    ownGoalsB: 0,
     yellowa: 0,
     reda: 0,
     yellowb: 0,
@@ -24,30 +30,35 @@ export default function AddMatchTab() {
   });
   const [loading, setLoading] = useState(false);
 
-  const handleInputChange = (field, value) => {
+  // Calculate total goals from player scores and own goals
+  const calculateTotalGoals = (goalsList, ownGoals) => {
+    const playerGoals = goalsList.reduce((sum, scorer) => sum + scorer.count, 0);
+    return playerGoals + ownGoals;
+  };
+
+  // Update form data and recalculate totals
+  const updateFormData = (updates) => {
     setFormData(prev => {
-      const updated = { ...prev, [field]: value };
+      const updated = { ...prev, ...updates };
+      
+      // Recalculate total goals
+      updated.goalsa = calculateTotalGoals(updated.goalslista, updated.ownGoalsA);
+      updated.goalsb = calculateTotalGoals(updated.goalslistb, updated.ownGoalsB);
       
       // Auto-calculate prize money when goals or cards change
-      if (['goalsa', 'goalsb', 'yellowa', 'reda', 'yellowb', 'redb'].includes(field)) {
-        const goalsa = parseInt(updated.goalsa) || 0;
-        const goalsb = parseInt(updated.goalsb) || 0;
-        const yellowa = parseInt(updated.yellowa) || 0;
-        const reda = parseInt(updated.reda) || 0;
-        const yellowb = parseInt(updated.yellowb) || 0;
-        const redb = parseInt(updated.redb) || 0;
-        
-        // Use the same calculation logic as MatchBusinessLogic
-        const { prizeaek, prizereal } = MatchBusinessLogic.calculatePrizeMoney(
-          goalsa, goalsb, yellowa, reda, yellowb, redb
-        );
-        
-        updated.prizeaek = prizeaek;
-        updated.prizereal = prizereal;
-      }
+      const { prizeaek, prizereal } = MatchBusinessLogic.calculatePrizeMoney(
+        updated.goalsa, updated.goalsb, updated.yellowa, updated.reda, updated.yellowb, updated.redb
+      );
+      
+      updated.prizeaek = prizeaek;
+      updated.prizereal = prizereal;
       
       return updated;
     });
+  };
+
+  const handleInputChange = (field, value) => {
+    updateFormData({ [field]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -55,27 +66,34 @@ export default function AddMatchTab() {
     setLoading(true);
 
     try {
-      // Validate goal scorers don't exceed total goals
-      const goalsaScorerCount = formData.goalslista.filter(s => s.trim()).length;
-      const goalsbScorerCount = formData.goalslistb.filter(s => s.trim()).length;
+      // Convert new goal structure to format expected by business logic
+      const convertedGoalsA = [];
+      const convertedGoalsB = [];
       
-      if (goalsaScorerCount > parseInt(formData.goalsa)) {
-        throw new Error(`Die Anzahl der Torschützen für ${formData.teama} (${goalsaScorerCount}) darf nicht größer als die Gesamtanzahl der Tore (${formData.goalsa}) sein!`);
-      }
+      // Convert player goals to array format for business logic
+      formData.goalslista.forEach(scorer => {
+        for (let i = 0; i < scorer.count; i++) {
+          convertedGoalsA.push(scorer.player);
+        }
+      });
       
-      if (goalsbScorerCount > parseInt(formData.goalsb)) {
-        throw new Error(`Die Anzahl der Torschützen für ${formData.teamb} (${goalsbScorerCount}) darf nicht größer als die Gesamtanzahl der Tore (${formData.goalsb}) sein!`);
-      }
+      formData.goalslistb.forEach(scorer => {
+        for (let i = 0; i < scorer.count; i++) {
+          convertedGoalsB.push(scorer.player);
+        }
+      });
 
       // Use the comprehensive business logic
       const result = await MatchBusinessLogic.submitMatch({
         date: formData.date,
         teama: formData.teama.trim(),
         teamb: formData.teamb.trim(),
-        goalsa: parseInt(formData.goalsa) || 0,
-        goalsb: parseInt(formData.goalsb) || 0,
-        goalslista: formData.goalslista.filter(s => s.trim()),
-        goalslistb: formData.goalslistb.filter(s => s.trim()),
+        goalsa: formData.goalsa,
+        goalsb: formData.goalsb,
+        goalslista: convertedGoalsA,
+        goalslistb: convertedGoalsB,
+        ownGoalsA: formData.ownGoalsA,
+        ownGoalsB: formData.ownGoalsB,
         yellowa: parseInt(formData.yellowa) || 0,
         reda: parseInt(formData.reda) || 0,
         yellowb: parseInt(formData.yellowb) || 0,
@@ -92,6 +110,8 @@ export default function AddMatchTab() {
         goalsb: 0,
         goalslista: [],
         goalslistb: [],
+        ownGoalsA: 0,
+        ownGoalsB: 0,
         yellowa: 0,
         reda: 0,
         yellowb: 0,
@@ -112,36 +132,57 @@ export default function AddMatchTab() {
     }
   };
 
-  const isFormValid = formData.teama && formData.teamb && formData.date;
+  const isFormValid = formData.date; // Only date is required now
 
-  // Helper functions for goal scorers
+  // Helper functions for live goal scoring
   const getTeamPlayers = (teamName) => {
     if (!players) return [];
     return players.filter(p => p.team === teamName);
   };
 
-  const addGoalScorer = (team) => {
+  // Add goal to a specific player
+  const addPlayerGoal = (team, playerName) => {
     const fieldName = team === 'AEK' ? 'goalslista' : 'goalslistb';
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: [...prev[fieldName], '']
-    }));
+    
+    updateFormData({
+      [fieldName]: formData[fieldName].map(scorer => 
+        scorer.player === playerName 
+          ? { ...scorer, count: scorer.count + 1 }
+          : scorer
+      ).concat(
+        formData[fieldName].find(s => s.player === playerName) 
+          ? [] 
+          : [{ player: playerName, count: 1 }]
+      )
+    });
   };
 
-  const removeGoalScorer = (team, index) => {
+  // Remove goal from a specific player
+  const removePlayerGoal = (team, playerName) => {
     const fieldName = team === 'AEK' ? 'goalslista' : 'goalslistb';
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: prev[fieldName].filter((_, i) => i !== index)
-    }));
+    
+    updateFormData({
+      [fieldName]: formData[fieldName]
+        .map(scorer => scorer.player === playerName 
+          ? { ...scorer, count: Math.max(0, scorer.count - 1) }
+          : scorer
+        )
+        .filter(scorer => scorer.count > 0)
+    });
   };
 
-  const updateGoalScorer = (team, index, playerName) => {
+  // Get goal count for a specific player
+  const getPlayerGoalCount = (team, playerName) => {
     const fieldName = team === 'AEK' ? 'goalslista' : 'goalslistb';
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: prev[fieldName].map((scorer, i) => i === index ? playerName : scorer)
-    }));
+    const scorer = formData[fieldName].find(s => s.player === playerName);
+    return scorer ? scorer.count : 0;
+  };
+
+  // Add/remove own goals
+  const adjustOwnGoals = (team, delta) => {
+    const fieldName = team === 'AEK' ? 'ownGoalsA' : 'ownGoalsB';
+    const newValue = Math.max(0, formData[fieldName] + delta);
+    updateFormData({ [fieldName]: newValue });
   };
 
   return (
@@ -192,38 +233,20 @@ export default function AddMatchTab() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Home Team */}
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-2">
-                    Heimteam *
-                  </label>
-                  <select
-                    value={formData.teama}
-                    onChange={(e) => handleInputChange('teama', e.target.value)}
-                    className="form-input"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="AEK">AEK Athen</option>
-                    <option value="Real">Real Madrid</option>
-                  </select>
-                </div>
-
-                {/* Away Team */}
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-2">
-                    Gastteam *
-                  </label>
-                  <select
-                    value={formData.teamb}
-                    onChange={(e) => handleInputChange('teamb', e.target.value)}
-                    className="form-input"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="Real">Real Madrid</option>
-                    <option value="AEK">AEK Athen</option>
-                  </select>
+                {/* Fixed Teams Display */}
+                <div className="bg-gray-50 rounded-lg p-4 border">
+                  <div className="text-center">
+                    <h4 className="text-lg font-semibold text-gray-700 mb-2">⚽ Spielpaarung</h4>
+                    <div className="flex items-center justify-center space-x-4">
+                      <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-medium">
+                        AEK Athen
+                      </div>
+                      <div className="text-gray-500 font-bold text-xl">vs</div>
+                      <div className="bg-red-100 text-red-800 px-4 py-2 rounded-lg font-medium">
+                        Real Madrid
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Date */}
@@ -241,124 +264,163 @@ export default function AddMatchTab() {
                   />
                 </div>
 
-                {/* Goals */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Tore Heimteam
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.goalsa}
-                      onChange={(e) => handleInputChange('goalsa', e.target.value)}
-                      className="form-input"
-                      disabled={loading}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Tore Gastteam
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.goalsb}
-                      onChange={(e) => handleInputChange('goalsb', e.target.value)}
-                      className="form-input"
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                {/* Goal Scorers */}
+                {/* Live Goal Scoring */}
                 <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium text-text-primary mb-3">⚽ Torschützen</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* AEK Scorers */}
+                  <h4 className="text-sm font-medium text-text-primary mb-3">⚽ Live Torwertung</h4>
+                  
+                  {/* Score Display */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4 text-center">
+                    <div className="text-2xl font-bold text-gray-700">
+                      {formData.goalsa} : {formData.goalsb}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      AEK Athen {formData.goalsa} - {formData.goalsb} Real Madrid
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* AEK Scoring */}
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <p className="text-xs text-blue-600 font-medium">AEK Athen</p>
-                        <button
-                          type="button"
-                          onClick={() => addGoalScorer('AEK')}
-                          className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded"
-                          disabled={loading}
-                        >
-                          + Torschütze
-                        </button>
+                      <div className="text-center">
+                        <h5 className="text-sm font-medium text-blue-600 mb-3">AEK Athen</h5>
                       </div>
-                      {formData.goalslista.map((scorer, index) => (
-                        <div key={index} className="flex gap-2">
-                          <select
-                            value={scorer}
-                            onChange={(e) => updateGoalScorer('AEK', index, e.target.value)}
-                            className="form-input text-sm flex-1"
-                            disabled={loading}
-                          >
-                            <option value="">Spieler wählen</option>
-                            {getTeamPlayers('AEK').map((player) => (
-                              <option key={player.id} value={player.name}>
-                                {player.name}
-                              </option>
-                            ))}
-                          </select>
+                      
+                      {/* AEK Players */}
+                      <div className="space-y-2">
+                        {getTeamPlayers('AEK').map((player) => {
+                          const goalCount = getPlayerGoalCount('AEK', player.name);
+                          return (
+                            <div key={player.id} className="flex items-center justify-between bg-blue-50 rounded-lg p-2">
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-gray-700">{player.name}</div>
+                                <div className="text-xs text-gray-500">{player.position}</div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  type="button"
+                                  onClick={() => removePlayerGoal('AEK', player.name)}
+                                  className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                                  disabled={loading || goalCount === 0}
+                                >
+                                  −
+                                </button>
+                                <span className="w-8 text-center font-bold text-lg text-gray-700">
+                                  {goalCount}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => addPlayerGoal('AEK', player.name)}
+                                  className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                                  disabled={loading}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* AEK Own Goals */}
+                      <div className="flex items-center justify-between bg-orange-50 rounded-lg p-2 border border-orange-200">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-700">Eigentore</div>
+                          <div className="text-xs text-gray-500">Zählen ins Ergebnis</div>
+                        </div>
+                        <div className="flex items-center space-x-2">
                           <button
                             type="button"
-                            onClick={() => removeGoalScorer('AEK', index)}
-                            className="text-red-600 hover:text-red-800 p-1"
+                            onClick={() => adjustOwnGoals('AEK', -1)}
+                            className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                            disabled={loading || formData.ownGoalsA === 0}
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center font-bold text-lg text-gray-700">
+                            {formData.ownGoalsA}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => adjustOwnGoals('AEK', 1)}
+                            className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
                             disabled={loading}
                           >
-                            ×
+                            +
                           </button>
                         </div>
-                      ))}
-                      {formData.goalslista.length === 0 && (
-                        <p className="text-xs text-text-muted">Keine Torschützen hinzugefügt</p>
-                      )}
+                      </div>
                     </div>
 
-                    {/* Real Scorers */}
+                    {/* Real Scoring */}
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <p className="text-xs text-red-600 font-medium">Real Madrid</p>
-                        <button
-                          type="button"
-                          onClick={() => addGoalScorer('Real')}
-                          className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded"
-                          disabled={loading}
-                        >
-                          + Torschütze
-                        </button>
+                      <div className="text-center">
+                        <h5 className="text-sm font-medium text-red-600 mb-3">Real Madrid</h5>
                       </div>
-                      {formData.goalslistb.map((scorer, index) => (
-                        <div key={index} className="flex gap-2">
-                          <select
-                            value={scorer}
-                            onChange={(e) => updateGoalScorer('Real', index, e.target.value)}
-                            className="form-input text-sm flex-1"
-                            disabled={loading}
-                          >
-                            <option value="">Spieler wählen</option>
-                            {getTeamPlayers('Real').map((player) => (
-                              <option key={player.id} value={player.name}>
-                                {player.name}
-                              </option>
-                            ))}
-                          </select>
+                      
+                      {/* Real Players */}
+                      <div className="space-y-2">
+                        {getTeamPlayers('Real').map((player) => {
+                          const goalCount = getPlayerGoalCount('Real', player.name);
+                          return (
+                            <div key={player.id} className="flex items-center justify-between bg-red-50 rounded-lg p-2">
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-gray-700">{player.name}</div>
+                                <div className="text-xs text-gray-500">{player.position}</div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  type="button"
+                                  onClick={() => removePlayerGoal('Real', player.name)}
+                                  className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                                  disabled={loading || goalCount === 0}
+                                >
+                                  −
+                                </button>
+                                <span className="w-8 text-center font-bold text-lg text-gray-700">
+                                  {goalCount}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => addPlayerGoal('Real', player.name)}
+                                  className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                                  disabled={loading}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Real Own Goals */}
+                      <div className="flex items-center justify-between bg-orange-50 rounded-lg p-2 border border-orange-200">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-700">Eigentore</div>
+                          <div className="text-xs text-gray-500">Zählen ins Ergebnis</div>
+                        </div>
+                        <div className="flex items-center space-x-2">
                           <button
                             type="button"
-                            onClick={() => removeGoalScorer('Real', index)}
-                            className="text-red-600 hover:text-red-800 p-1"
+                            onClick={() => adjustOwnGoals('Real', -1)}
+                            className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                            disabled={loading || formData.ownGoalsB === 0}
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center font-bold text-lg text-gray-700">
+                            {formData.ownGoalsB}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => adjustOwnGoals('Real', 1)}
+                            className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
                             disabled={loading}
                           >
-                            ×
+                            +
                           </button>
                         </div>
-                      ))}
-                      {formData.goalslistb.length === 0 && (
-                        <p className="text-xs text-text-muted">Keine Torschützen hinzugefügt</p>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </div>
