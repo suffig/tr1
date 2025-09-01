@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { useSupabaseQuery } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
-
-const BAN_TYPES = [
-  { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1 },
-  { value: "Rote Karte", label: "Rote Karte", duration: 2 },
-  { value: "Verletzung", label: "Verletzung", duration: 3 }
-];
+import { BAN_TYPES, getBanTypeColor, getBanIcon } from '../../constants/banTypes';
 
 export default function BansTab() {
   const [selectedType, setSelectedType] = useState('all');
@@ -26,32 +21,6 @@ export default function BansTab() {
     if (!players) return 'Unbekannt';
     const player = players.find(p => p.id === playerId);
     return player?.team || 'Unbekannt';
-  };
-
-  const getBanTypeColor = (type) => {
-    switch (type) {
-      case 'Gelb-Rote Karte':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Rote Karte':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'Verletzung':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getBanIcon = (type) => {
-    switch (type) {
-      case 'Gelb-Rote Karte':
-        return '🟨🟥';
-      case 'Rote Karte':
-        return '🟥';
-      case 'Verletzung':
-        return '🏥';
-      default:
-        return '⚠️';
-    }
   };
 
   const filteredBans = bans?.filter(ban => {

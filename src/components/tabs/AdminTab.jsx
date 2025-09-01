@@ -50,7 +50,7 @@ export default function AdminTab() {
               onClick={() => setActiveSubTab(tab.id)}
               className={`flex-shrink-0 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                 activeSubTab === tab.id
-                  ? 'text-primary border-b-2 border-primary bg-bg-primary'
+                  ? 'text-primary-green border-b-2 border-primary-green bg-bg-primary'
                   : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'
               }`}
             >

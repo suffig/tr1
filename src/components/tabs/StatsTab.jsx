@@ -255,19 +255,19 @@ export default function StatsTab() {
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="modern-card text-center">
-          <div className="text-2xl font-bold text-primary">{totalMatches}</div>
+          <div className="text-2xl font-bold text-primary-green">{totalMatches}</div>
           <div className="text-sm text-text-muted">Spiele</div>
         </div>
         <div className="modern-card text-center">
-          <div className="text-2xl font-bold text-primary">{advancedStats.totalGoals}</div>
+          <div className="text-2xl font-bold text-primary-green">{advancedStats.totalGoals}</div>
           <div className="text-sm text-text-muted">Tore</div>
         </div>
         <div className="modern-card text-center">
-          <div className="text-2xl font-bold text-primary">{totalPlayers}</div>
+          <div className="text-2xl font-bold text-primary-green">{totalPlayers}</div>
           <div className="text-sm text-text-muted">Spieler</div>
         </div>
         <div className="modern-card text-center">
-          <div className="text-2xl font-bold text-primary">{advancedStats.avgGoalsPerMatch}</div>
+          <div className="text-2xl font-bold text-primary-green">{advancedStats.avgGoalsPerMatch}</div>
           <div className="text-sm text-text-muted">⌀ Tore/Spiel</div>
         </div>
       </div>
@@ -498,15 +498,15 @@ export default function StatsTab() {
         <h3 className="font-bold text-lg mb-4">📈 Erweiterte Statistiken</h3>
         <div className="grid md:grid-cols-3 gap-4">
           <div className="text-center p-4 bg-bg-secondary rounded-lg">
-            <div className="text-2xl font-bold text-primary">{advancedStats.highestScoringMatch}</div>
+            <div className="text-2xl font-bold text-primary-green">{advancedStats.highestScoringMatch}</div>
             <div className="text-sm text-text-muted">Tore in einem Spiel</div>
           </div>
           <div className="text-center p-4 bg-bg-secondary rounded-lg">
-            <div className="text-2xl font-bold text-primary">{formatPlayerValue(totalMarketValue)}</div>
+            <div className="text-2xl font-bold text-primary-green">{formatPlayerValue(totalMarketValue)}</div>
             <div className="text-sm text-text-muted">Gesamtmarktwert</div>
           </div>
           <div className="text-center p-4 bg-bg-secondary rounded-lg">
-            <div className="text-2xl font-bold text-primary">{Math.abs(aekWins - realWins)}</div>
+            <div className="text-2xl font-bold text-primary-green">{Math.abs(aekWins - realWins)}</div>
             <div className="text-sm text-text-muted">Siegesdifferenz</div>
           </div>
         </div>
@@ -565,7 +565,7 @@ export default function StatsTab() {
             onClick={() => setSelectedView(view.id)}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
               selectedView === view.id
-                ? 'bg-primary text-white'
+                ? 'bg-primary-green text-white'
                 : 'bg-bg-secondary text-text-muted hover:bg-bg-tertiary'
             }`}
           >

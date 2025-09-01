@@ -2,12 +2,7 @@ import { useState } from 'react';
 import { useSupabaseQuery } from '../../../hooks/useSupabase';
 import { supabaseDb } from '../../../utils/supabase';
 import toast from 'react-hot-toast';
-
-const BAN_TYPES = [
-  { value: "Gelb-Rote Karte", label: "Gelb-Rote Karte", duration: 1, fixedDuration: true, icon: "🟨🟥" },
-  { value: "Rote Karte", label: "Rote Karte", duration: 2, fixedDuration: false, icon: "🟥", minDuration: 1, maxDuration: 6 },
-  { value: "Verletzung", label: "Verletzung", duration: 3, fixedDuration: false, icon: "🏥", minDuration: 1, maxDuration: 6 }
-];
+import { BAN_TYPES } from '../../../constants/banTypes';
 
 export default function AddBanTab() {
   const { data: players } = useSupabaseQuery('players', '*');
