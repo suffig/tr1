@@ -8,8 +8,8 @@ let aekAthen = [];
 let realMadrid = [];
 let ehemalige = [];
 let finances = {
-    aekAthen: { balance: 0 },
-    realMadrid: { balance: 0 }
+    AEK: { balance: 0 },
+    Real: { balance: 0 }
 };
 let transactions = [];
 
@@ -54,8 +54,8 @@ async function loadPlayersAndFinances(renderFn = renderPlayerLists) {
         if (finResult.status === 'fulfilled' && finResult.value.data) {
             const finData = finResult.value.data;
             finances = {
-                aekAthen: finData.find(f => f.team === "AEK") || { balance: 0 },
-                realMadrid: finData.find(f => f.team === "Real") || { balance: 0 }
+                AEK: finData.find(f => f.team === "AEK") || { balance: 0 },
+                Real: finData.find(f => f.team === "Real") || { balance: 0 }
             };
         }
         if (transResult.status === 'fulfilled' && transResult.value.data) {
@@ -496,7 +496,7 @@ async function movePlayerWithTransaction(id, newTeam) {
             amount: abloese,
             info: `Verkauf von ${player.name} (${player.position})`
         }]);
-        let finKey = oldTeam === "AEK" ? "aekAthen" : "realMadrid";
+        let finKey = oldTeam;
         await supabase.from('finances').update({
             balance: (finances[finKey].balance || 0) + abloese
         }).eq('team', oldTeam);
@@ -506,7 +506,7 @@ async function movePlayerWithTransaction(id, newTeam) {
 
     // Von Ehemalige zu TEAM: KAUF
     if (oldTeam === "Ehemalige" && (newTeam === "AEK" || newTeam === "Real")) {
-        let finKey = newTeam === "AEK" ? "aekAthen" : "realMadrid";
+        let finKey = newTeam;
         const konto = finances[finKey].balance || 0;
         if (konto < abloese) {
             ErrorHandler.showUserError("Kontostand zu gering für diesen Transfer!", "warning");
@@ -538,7 +538,7 @@ async function movePlayerToTeam(id, newTeam) {
 async function saveTransactionAndFinance(team, type, amount, info = "") {
     const now = new Date().toISOString().slice(0, 10);
     await supabase.from('transactions').insert([{ date: now, type, team, amount, info }]);
-    const finKey = team === "AEK" ? "aekAthen" : "realMadrid";
+    const finKey = team;
     let updateObj = {};
     updateObj.balance = (finances[finKey].balance || 0) + amount;
     await supabase.from('finances').update(updateObj).eq('team', team);
@@ -583,7 +583,7 @@ async function submitPlayerForm(event, team, id) {
 
     try {
         if (!id && (team === "AEK" || team === "Real")) {
-            let fin = team === "AEK" ? finances.aekAthen : finances.realMadrid;
+            let fin = finances[team];
             if (fin.balance < value * 1000000) {
                 ErrorHandler.showUserError("Kontostand zu gering für diesen Spielerkauf!", "warning");
                 return;
@@ -614,7 +614,7 @@ export function resetKaderState() {
     aekAthen = [];
     realMadrid = [];
     ehemalige = [];
-    finances = { aekAthen: { balance: 0 }, realMadrid: { balance: 0 } };
+    finances = { AEK: { balance: 0 }, Real: { balance: 0 } };
     transactions = [];
     openPanel = null;
 }

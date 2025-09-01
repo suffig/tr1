@@ -40,26 +40,36 @@ export class MatchBusinessLogic {
         await this.deleteMatchTransactions(editId);
       }
 
-      // 3. Insert the match (including own goals info in JSON)
+      // 3. Insert the match (including own goals in goal lists)
+      // Add own goals to goal lists as "Eigentore_TeamName"
+      const processedGoalsListA = [...goalslista];
+      const processedGoalsListB = [...goalslistb];
+      
+      // Add own goals from team A (count for team B)
+      for (let i = 0; i < ownGoalsA; i++) {
+        processedGoalsListB.push("Eigentore_AEK");
+      }
+      
+      // Add own goals from team B (count for team A)  
+      for (let i = 0; i < ownGoalsB; i++) {
+        processedGoalsListA.push("Eigentore_Real");
+      }
+
       const insertObj = {
         date,
         teama,
         teamb,
         goalsa: parseInt(goalsa) || 0,
         goalsb: parseInt(goalsb) || 0,
-        goalslista: JSON.stringify(goalslista),
-        goalslistb: JSON.stringify(goalslistb),
+        goalslista: JSON.stringify(processedGoalsListA),
+        goalslistb: JSON.stringify(processedGoalsListB),
         yellowa: parseInt(yellowa) || 0,
         reda: parseInt(reda) || 0,
         yellowb: parseInt(yellowb) || 0,
         redb: parseInt(redb) || 0,
         manofthematch: manofthematch || null,
         prizeaek,
-        prizereal,
-        // Store own goals in additional info if needed
-        ...(ownGoalsA > 0 || ownGoalsB > 0 ? {
-          owngoals: JSON.stringify({ aek: ownGoalsA, real: ownGoalsB })
-        } : {})
+        prizereal
       };
 
       const matchResult = await supabaseDb.insert('matches', insertObj);
@@ -70,9 +80,9 @@ export class MatchBusinessLogic {
       const matchId = matchResult.data.id;
       const now = new Date().toISOString().slice(0, 10);
 
-      // 4. Update player goals
-      if (goalsa > 0) await this.updatePlayersGoals(goalslista, 'AEK');
-      if (goalsb > 0) await this.updatePlayersGoals(goalslistb, 'Real');
+      // 4. Update player goals (excluding own goals which start with "Eigentore_")
+      if (processedGoalsListA.length > 0) await this.updatePlayersGoals(processedGoalsListA.filter(scorer => !scorer.startsWith("Eigentore_")), 'AEK');
+      if (processedGoalsListB.length > 0) await this.updatePlayersGoals(processedGoalsListB.filter(scorer => !scorer.startsWith("Eigentore_")), 'Real');
 
       // 5. Update spieler_des_spiels statistics
       if (manofthematch) {

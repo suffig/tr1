@@ -1825,7 +1825,7 @@ export function resetMatchesState() {
     aekAthen = [];
     realMadrid = [];
     bans = [];
-    finances = { aekAthen: { balance: 0, debt: 0 }, realMadrid: { balance: 0, debt: 0 } };
+    finances = { AEK: { balance: 0, debt: 0 }, Real: { balance: 0, debt: 0 } };
     spielerDesSpiels = [];
     transactions = [];
     matchesInitialized = false;
