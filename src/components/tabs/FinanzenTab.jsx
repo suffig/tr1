@@ -4,7 +4,7 @@ import LoadingSpinner from '../LoadingSpinner';
 
 export default function FinanzenTab() {
   const [selectedTeam, setSelectedTeam] = useState('AEK');
-  const [collapsedMatches, setCollapsedMatches] = useState(new Set());
+  const [expandedMatches, setExpandedMatches] = useState(new Set());
   
   const { data: finances, loading: financesLoading, refetch: refetchFinances } = useSupabaseQuery('finances', '*');
   const { data: transactions, loading: transactionsLoading } = useSupabaseQuery(
@@ -17,12 +17,29 @@ export default function FinanzenTab() {
     '*', 
     { order: { column: 'id', ascending: false } }
   );
+  const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
   
-  const loading = financesLoading || transactionsLoading || matchesLoading;
+  const loading = financesLoading || transactionsLoading || matchesLoading || playersLoading;
 
   const getTeamFinances = (teamName) => {
     if (!finances) return { balance: 0, debt: 0 };
     return finances.find(f => f.team === teamName) || { balance: 0, debt: 0 };
+  };
+
+  const getTeamSquadValue = (teamName) => {
+    if (!players) return 0;
+    return players
+      .filter(p => p.team === teamName)
+      .reduce((sum, p) => sum + (p.value || 0), 0);
+  };
+
+  const calculateTotalCapital = () => {
+    const aekBalance = getTeamFinances('AEK').balance || 0;
+    const realBalance = getTeamFinances('Real').balance || 0;
+    const aekSquadValue = getTeamSquadValue('AEK');
+    const realSquadValue = getTeamSquadValue('Real');
+    
+    return Math.round(aekBalance + realBalance + aekSquadValue + realSquadValue);
   };
 
   const getTeamTransactions = (teamName) => {
@@ -31,10 +48,14 @@ export default function FinanzenTab() {
   };
 
   const formatCurrency = (amount) => {
+    // Round to whole numbers and format without decimal places
+    const roundedAmount = Math.round(amount || 0);
     return new Intl.NumberFormat('de-DE', {
       style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
+      currency: 'EUR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(roundedAmount);
   };
 
   const getTransactionTypeColor = (type) => {
@@ -109,13 +130,13 @@ export default function FinanzenTab() {
   };
 
   const toggleMatchTransactions = (matchId) => {
-    const newCollapsed = new Set(collapsedMatches);
-    if (newCollapsed.has(matchId)) {
-      newCollapsed.delete(matchId);
+    const newExpanded = new Set(expandedMatches);
+    if (newExpanded.has(matchId)) {
+      newExpanded.delete(matchId);
     } else {
-      newCollapsed.add(matchId);
+      newExpanded.add(matchId);
     }
-    setCollapsedMatches(newCollapsed);
+    setExpandedMatches(newExpanded);
   };
 
   const groupTransactionsByMatch = () => {
@@ -152,7 +173,7 @@ export default function FinanzenTab() {
 
   const aekFinances = getTeamFinances('AEK');
   const realFinances = getTeamFinances('Real');
-  const totalBalance = aekFinances.balance + realFinances.balance;
+  const totalCapital = calculateTotalCapital();
 
   const selectedTeamFinances = getTeamFinances(selectedTeam);
   const selectedTeamTransactions = getTeamTransactions(selectedTeam);
@@ -178,6 +199,7 @@ export default function FinanzenTab() {
           </div>
           <div className="space-y-1 text-sm">
             <div>Kontostand: <span className="font-bold text-blue-600">{formatCurrency(aekFinances.balance)}</span></div>
+            <div>Kaderwert: <span className="font-bold text-blue-600">{formatCurrency(getTeamSquadValue('AEK'))}</span></div>
             <div>Schulden: <span className="font-bold text-blue-600">{formatCurrency(aekFinances.debt || 0)}</span></div>
           </div>
         </div>
@@ -189,6 +211,7 @@ export default function FinanzenTab() {
           </div>
           <div className="space-y-1 text-sm">
             <div>Kontostand: <span className="font-bold text-red-600">{formatCurrency(realFinances.balance)}</span></div>
+            <div>Kaderwert: <span className="font-bold text-red-600">{formatCurrency(getTeamSquadValue('Real'))}</span></div>
             <div>Schulden: <span className="font-bold text-red-600">{formatCurrency(realFinances.debt || 0)}</span></div>
           </div>
         </div>
@@ -199,9 +222,9 @@ export default function FinanzenTab() {
             <h3 className="font-semibold text-primary-green">Gesamt</h3>
           </div>
           <div className="text-2xl font-bold text-text-primary">
-            {formatCurrency(totalBalance)}
+            {formatCurrency(totalCapital)}
           </div>
-          <div className="text-sm text-text-muted">Gesamtkapital</div>
+          <div className="text-sm text-text-muted">Gesamtkapital (Bargeld + Kaderwerte)</div>
         </div>
       </div>
 
@@ -216,7 +239,7 @@ export default function FinanzenTab() {
             {matchGroups.map(({ match, transactions: matchTransactions }, index) => {
               const matchNumber = matchGroups.length - index;
               const colorScheme = getMatchColorScheme(matchNumber);
-              const isCollapsed = collapsedMatches.has(match.id);
+              const isCollapsed = !expandedMatches.has(match.id);
               
               return (
                 <div key={match.id} className={`border-2 ${colorScheme.container} rounded-lg shadow-lg`}>
