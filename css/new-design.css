@@ -651,7 +651,7 @@ body {
 }
 
 /* --- MODAL STYLES --- */
-.modal-overlay {
+.modal-overlay, .modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -671,14 +671,33 @@ body {
   padding: 2rem;
   max-width: 500px;
   width: 100%;
-  max-height: 90vh;
+  max-height: calc(100vh - 120px); /* Account for bottom nav (80px) + padding (40px) */
   overflow-y: auto;
   position: relative;
   box-shadow: var(--shadow-xl);
   animation: slideUp 0.3s ease-out;
 }
 
-.modal-close {
+/* Special styling for match form modal to ensure better fit */
+.modal-content.match-modal-content {
+  max-height: calc(100vh - 100px); /* Slightly more space for match form */
+  padding: 1.5rem; /* Reduce padding to fit more content */
+}
+
+/* Ensure modal is scrollable and buttons are accessible on mobile */
+@media (max-height: 700px) {
+  .modal-content {
+    max-height: calc(100vh - 80px);
+    padding: 1rem;
+  }
+  
+  .modal-content.match-modal-content {
+    max-height: calc(100vh - 60px);
+    padding: 1rem;
+  }
+}
+
+.modal-close, .close-modal-btn {
   position: absolute;
   top: 1rem;
   right: 1rem;
@@ -692,7 +711,15 @@ body {
   transition: all var(--transition-fast);
 }
 
-.modal-close:hover {
+.modal-close:hover, .close-modal-btn:hover {
   color: var(--text-primary);
   background: var(--bg-tertiary);
 }
+
+/* Ensure old close button styling is maintained */
+.close-modal-btn:before {
+  content: '×';
+  font-size: 1.5rem;
+  line-height: 1;
+}
+

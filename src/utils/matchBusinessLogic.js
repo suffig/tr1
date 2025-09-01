@@ -41,18 +41,24 @@ export class MatchBusinessLogic {
       }
 
       // 3. Insert the match (including own goals in goal lists)
-      // Add own goals to goal lists as "Eigentore_TeamName"
+      // Add own goals to goal lists using the new object format
       const processedGoalsListA = [...goalslista];
       const processedGoalsListB = [...goalslistb];
       
-      // Add own goals from team A (count for team B)
-      for (let i = 0; i < ownGoalsA; i++) {
-        processedGoalsListB.push("Eigentore_AEK");
+      // Add own goals from team A (count for team B) in object format
+      if (ownGoalsA > 0) {
+        processedGoalsListB.push({
+          count: ownGoalsA,
+          player: "Eigentore_AEK"
+        });
       }
       
-      // Add own goals from team B (count for team A)  
-      for (let i = 0; i < ownGoalsB; i++) {
-        processedGoalsListA.push("Eigentore_Real");
+      // Add own goals from team B (count for team A) in object format
+      if (ownGoalsB > 0) {
+        processedGoalsListA.push({
+          count: ownGoalsB,
+          player: "Eigentore_Real"
+        });
       }
 
       const insertObj = {
@@ -81,8 +87,26 @@ export class MatchBusinessLogic {
       const now = new Date().toISOString().slice(0, 10);
 
       // 4. Update player goals (excluding own goals which start with "Eigentore_")
-      if (processedGoalsListA.length > 0) await this.updatePlayersGoals(processedGoalsListA.filter(scorer => !scorer.startsWith("Eigentore_")), 'AEK');
-      if (processedGoalsListB.length > 0) await this.updatePlayersGoals(processedGoalsListB.filter(scorer => !scorer.startsWith("Eigentore_")), 'Real');
+      if (processedGoalsListA.length > 0) {
+        // Filter out own goals for new object format or old string format
+        const filteredGoalsA = processedGoalsListA.filter(goal => {
+          if (typeof goal === 'object' && goal.player) {
+            return !goal.player.startsWith("Eigentore_");
+          }
+          return !goal.startsWith("Eigentore_");
+        });
+        await this.updatePlayersGoals(filteredGoalsA, 'AEK');
+      }
+      if (processedGoalsListB.length > 0) {
+        // Filter out own goals for new object format or old string format
+        const filteredGoalsB = processedGoalsListB.filter(goal => {
+          if (typeof goal === 'object' && goal.player) {
+            return !goal.player.startsWith("Eigentore_");
+          }
+          return !goal.startsWith("Eigentore_");
+        });
+        await this.updatePlayersGoals(filteredGoalsB, 'Real');
+      }
 
       // 5. Update spieler_des_spiels statistics
       if (manofthematch) {
@@ -143,22 +167,39 @@ export class MatchBusinessLogic {
    * Update player goal statistics
    */
   static async updatePlayersGoals(goalsList, team) {
-    for (const scorer of goalsList) {
-      if (!scorer || !scorer.trim()) continue;
-      
+    // Handle both new object format and old string array format
+    const goalCounts = {};
+    
+    if (goalsList.length > 0 && typeof goalsList[0] === 'object' && goalsList[0].player !== undefined) {
+      // New object format: [{"count": 4, "player": "Walker"}]
+      goalsList.forEach(goal => {
+        if (goal.player && !goal.player.startsWith("Eigentore_")) {
+          goalCounts[goal.player] = (goalCounts[goal.player] || 0) + (goal.count || 1);
+        }
+      });
+    } else {
+      // Old string array format: ["Walker", "Walker", "Messi"] 
+      for (const scorer of goalsList) {
+        if (!scorer || !scorer.trim() || scorer.startsWith("Eigentore_")) continue;
+        goalCounts[scorer] = (goalCounts[scorer] || 0) + 1;
+      }
+    }
+    
+    // Update each player's goal count
+    for (const [playerName, count] of Object.entries(goalCounts)) {      
       try {
         // Get current player data
         const playerResult = await supabaseDb.select('players', 'goals', { 
-          eq: { name: scorer, team: team } 
+          eq: { name: playerName, team: team } 
         });
         
         if (playerResult.data && playerResult.data.length > 0) {
           const player = playerResult.data[0];
-          const newGoals = (player.goals || 0) + 1;
+          const newGoals = (player.goals || 0) + count;
           
           // Find all players with this name and team, then update the first one
           const updateResult = await supabaseDb.select('players', 'id', { 
-            eq: { name: scorer, team: team } 
+            eq: { name: playerName, team: team } 
           });
           
           if (updateResult.data && updateResult.data.length > 0) {
@@ -166,7 +207,7 @@ export class MatchBusinessLogic {
           }
         }
       } catch (error) {
-        console.warn(`Failed to update goals for player ${scorer}:`, error);
+        console.warn(`Failed to update goals for player ${playerName}:`, error);
       }
     }
   }

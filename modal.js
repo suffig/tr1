@@ -9,9 +9,11 @@ export function showModal(html) {
         document.body.appendChild(modal);
     }
     modal.innerHTML = `
-        <div class="modal" onclick="window.hideModal && window.hideModal()">
+        <div class="modal-overlay" onclick="window.hideModal && window.hideModal()">
             <div class="modal-content" onclick="event.stopPropagation();">
-                <button class="close-modal-btn" aria-label="Schließen" onclick="window.hideModal && window.hideModal(); event.stopPropagation();"></button>
+                <button class="modal-close" aria-label="Schließen" onclick="window.hideModal && window.hideModal(); event.stopPropagation();">
+                    <i class="fas fa-times"></i>
+                </button>
                 ${html}
             </div>
         </div>

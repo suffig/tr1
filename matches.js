@@ -815,12 +815,12 @@ function openMatchForm(id) {
 // Helper function to generate form HTML
 function generateMatchFormHTML(edit, dateVal, match, aekSpieler, realSpieler, aekSorted, realSorted, goalsListA, goalsListB, manofthematch) {
     return `
-    <form id="match-form" class="space-y-4 w-full">
+    <form id="match-form" class="space-y-3 w-full">
         <!-- Datum Section -->
-        <div class="bg-gray-800 border border-gray-600 rounded-xl p-3">
-            <h3 class="text-white text-base font-bold mb-2 text-center">📅 Spieldatum</h3>
+        <div class="bg-gray-800 border border-gray-600 rounded-xl p-2">
+            <h3 class="text-white text-sm font-bold mb-2 text-center">📅 Spieldatum</h3>
             <div class="flex justify-center">
-                <button type="button" id="show-date" class="flex items-center gap-2 text-sm font-semibold text-white hover:text-blue-300 border border-gray-500 hover:border-blue-400 rounded-lg px-4 py-2 bg-gray-700 hover:bg-gray-600 focus:outline-none transition-all focus:ring-2 focus:ring-blue-400" tabindex="0">
+                <button type="button" id="show-date" class="flex items-center gap-2 text-sm font-semibold text-white hover:text-blue-300 border border-gray-500 hover:border-blue-400 rounded-lg px-3 py-2 bg-gray-700 hover:bg-gray-600 focus:outline-none transition-all focus:ring-2 focus:ring-blue-400" tabindex="0">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
@@ -831,39 +831,39 @@ function generateMatchFormHTML(edit, dateVal, match, aekSpieler, realSpieler, ae
         </div>
 
         <!-- Endergebnis Section -->
-        <div class="bg-gray-800 border border-gray-600 rounded-xl p-3">
-            <h3 class="text-white text-base font-bold mb-3 text-center">⚽ Endergebnis</h3>
-            <div class="flex items-center justify-center gap-2 bg-gray-700 rounded-lg p-3 border border-gray-500 min-w-0">
+        <div class="bg-gray-800 border border-gray-600 rounded-xl p-2">
+            <h3 class="text-white text-sm font-bold mb-2 text-center">⚽ Endergebnis</h3>
+            <div class="flex items-center justify-center gap-2 bg-gray-700 rounded-lg p-2 border border-gray-500 min-w-0">
                 <div class="flex flex-col items-center flex-1 min-w-0">
-                    <span class="font-bold text-blue-300 text-sm mb-1 truncate">AEK Athen</span>
+                    <span class="font-bold text-blue-300 text-xs mb-1 truncate">AEK</span>
                 </div>
-                <input type="number" min="0" max="50" name="goalsa" class="border border-gray-500 bg-gray-600 text-white rounded p-2 w-12 h-10 text-center text-lg font-bold cursor-not-allowed flex-shrink-0" readonly placeholder="0" value="${match ? match.goalsa : ""}" title="Wird automatisch aus den Torschützen berechnet">
-                <span class="font-bold text-lg text-white mx-1 flex-shrink-0">:</span>
-                <input type="number" min="0" max="50" name="goalsb" class="border border-gray-500 bg-gray-600 text-white rounded p-2 w-12 h-10 text-center text-lg font-bold cursor-not-allowed flex-shrink-0" readonly placeholder="0" value="${match ? match.goalsb : ""}" title="Wird automatisch aus den Torschützen berechnet">
+                <input type="number" min="0" max="50" name="goalsa" class="border border-gray-500 bg-gray-600 text-white rounded p-2 w-10 h-8 text-center text-sm font-bold cursor-not-allowed flex-shrink-0" readonly placeholder="0" value="${match ? match.goalsa : ""}" title="Wird automatisch aus den Torschützen berechnet">
+                <span class="font-bold text-sm text-white mx-1 flex-shrink-0">:</span>
+                <input type="number" min="0" max="50" name="goalsb" class="border border-gray-500 bg-gray-600 text-white rounded p-2 w-10 h-8 text-center text-sm font-bold cursor-not-allowed flex-shrink-0" readonly placeholder="0" value="${match ? match.goalsb : ""}" title="Wird automatisch aus den Torschützen berechnet">
                 <div class="flex flex-col items-center flex-1 min-w-0">
-                    <span class="font-bold text-red-300 text-sm mb-1 truncate">Real Madrid</span>
+                    <span class="font-bold text-red-300 text-xs mb-1 truncate">Real</span>
                 </div>
             </div>
         </div>
         
         <!-- Torschützen AEK Section -->
-        <div id="scorersA-block" class="bg-gray-800 border border-blue-500 rounded-xl p-3">
-            <h3 class="text-blue-300 text-base font-bold mb-2 flex items-center gap-2">
+        <div id="scorersA-block" class="bg-gray-800 border border-blue-500 rounded-xl p-2">
+            <h3 class="text-blue-300 text-sm font-bold mb-2 flex items-center gap-2">
                 <span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">AEK</span>
                 ⚽ Torschützen
             </h3>
             <div id="scorersA" class="space-y-2 mt-2">${scorerFields("goalslista", goalsListA, aekSpieler)}</div>
             <button type="button" id="addScorerA"
-                class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-3 py-2 rounded-lg active:scale-95 transition text-sm shadow-lg hover:shadow-xl border border-blue-400 mt-2"
-                style="min-height: 36px;">
-                <span class="text-base">+</span>
-                <span>Torschütze hinzufügen</span>
+                class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-2 py-2 rounded-lg active:scale-95 transition text-xs shadow-lg hover:shadow-xl border border-blue-400 mt-2 w-full justify-center"
+                style="min-height: 32px;">
+                <span class="text-sm">+</span>
+                <span>Torschütze</span>
             </button>
         </div>
         
         <!-- Torschützen Real Section -->
-        <div id="scorersB-block" class="bg-gray-800 border border-red-500 rounded-xl p-3">
-            <h3 class="text-red-300 text-base font-bold mb-2 flex items-center gap-2">
+        <div id="scorersB-block" class="bg-gray-800 border border-red-500 rounded-xl p-2">
+            <h3 class="text-red-300 text-sm font-bold mb-2 flex items-center gap-2">
                 <span class="bg-red-600 text-white px-2 py-1 rounded text-xs">Real</span>
                 ⚽ Torschützen
             </h3>
@@ -871,68 +871,60 @@ function generateMatchFormHTML(edit, dateVal, match, aekSpieler, realSpieler, ae
                 ${scorerFields("goalslistb", goalsListB, realSpieler)}
             </div>
             <button type="button" id="addScorerB"
-                class="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-2 rounded-lg active:scale-95 transition text-sm shadow-lg hover:shadow-xl border border-red-400 mt-2"
-                style="min-height: 36px;">
-                <span class="text-base">+</span>
-                <span>Torschütze hinzufügen</span>
+                class="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-semibold px-2 py-2 rounded-lg active:scale-95 transition text-xs shadow-lg hover:shadow-xl border border-red-400 mt-2 w-full justify-center"
+                style="min-height: 32px;">
+                <span class="text-sm">+</span>
+                <span>Torschütze</span>
             </button>
         </div>
         
-        <!-- Karten Section -->
-        <div class="bg-gray-800 border border-yellow-500 rounded-xl p-3">
-            <h3 class="text-yellow-300 text-base font-bold mb-3 text-center">🟨🟥 Karten & Disziplin</h3>
+        <!-- Karten Section - Compact Grid Layout -->
+        <div class="bg-gray-800 border border-yellow-500 rounded-xl p-2">
+            <h3 class="text-yellow-300 text-sm font-bold mb-2 text-center">🟨🟥 Karten</h3>
             
-            <!-- AEK Karten -->
-            <div class="bg-gray-700 border border-blue-500 rounded-lg p-3 mb-3">
-                <h4 class="text-blue-300 text-sm font-bold mb-2 flex items-center gap-2">
-                    <span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">AEK</span>
-                    Karten
-                </h4>
-                <div class="flex flex-col gap-3">
-                    <div class="flex items-center gap-2 bg-gray-600 rounded-lg p-2 min-w-0">
-                        <div class="text-xl w-6 text-center flex-shrink-0">🟨</div>
-                        <span class="text-white font-semibold text-sm flex-1 min-w-0 truncate">Gelbe Karten</span>
-                        <div class="flex items-center gap-1 flex-shrink-0">
-                            <button type="button" class="card-btn card-btn-down bg-red-600 hover:bg-red-500 text-white px-2 py-2 rounded text-xs font-bold w-8 h-8 flex items-center justify-center touch-manipulation" data-target="yellowa" data-min="0">−</button>
-                            <input type="number" min="0" max="20" name="yellowa" class="border border-gray-400 bg-gray-500 text-white rounded p-1 w-10 h-8 text-xs text-center font-bold" value="${match?.yellowa || 0}" readonly>
-                            <button type="button" class="card-btn card-btn-up bg-green-600 hover:bg-green-500 text-white px-2 py-2 rounded text-xs font-bold w-8 h-8 flex items-center justify-center touch-manipulation" data-target="yellowa" data-max="20">+</button>
+            <div class="grid grid-cols-2 gap-2">
+                <!-- AEK Karten -->
+                <div class="bg-gray-700 border border-blue-500 rounded-lg p-2">
+                    <h4 class="text-blue-300 text-xs font-bold mb-2 text-center">AEK</h4>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-1 bg-gray-600 rounded p-1">
+                            <div class="text-sm w-4 text-center flex-shrink-0">🟨</div>
+                            <div class="flex items-center gap-1 flex-1 justify-end">
+                                <button type="button" class="card-btn card-btn-down bg-red-600 hover:bg-red-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation" data-target="yellowa" data-min="0">−</button>
+                                <input type="number" min="0" max="20" name="yellowa" class="border border-gray-400 bg-gray-500 text-white rounded p-1 w-8 h-6 text-xs text-center font-bold" value="${match?.yellowa || 0}" readonly>
+                                <button type="button" class="card-btn card-btn-up bg-green-600 hover:bg-green-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation" data-target="yellowa" data-max="20">+</button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-2 bg-gray-600 rounded-lg p-2 min-w-0">
-                        <div class="text-xl w-6 text-center flex-shrink-0">🟥</div>
-                        <span class="text-white font-semibold text-sm flex-1 min-w-0 truncate">Rote Karten</span>
-                        <div class="flex items-center gap-1 flex-shrink-0">
-                            <button type="button" class="card-btn card-btn-down bg-red-600 hover:bg-red-500 text-white px-2 py-2 rounded text-xs font-bold w-8 h-8 flex items-center justify-center touch-manipulation" data-target="reda" data-min="0">−</button>
-                            <input type="number" min="0" max="11" name="reda" class="border border-gray-400 bg-gray-500 text-white rounded p-1 w-10 h-8 text-xs text-center font-bold" value="${match?.reda || 0}" readonly>
-                            <button type="button" class="card-btn card-btn-up bg-green-600 hover:bg-green-500 text-white px-2 py-2 rounded text-xs font-bold w-8 h-8 flex items-center justify-center touch-manipulation" data-target="reda" data-max="11">+</button>
+                        <div class="flex items-center gap-1 bg-gray-600 rounded p-1">
+                            <div class="text-sm w-4 text-center flex-shrink-0">🟥</div>
+                            <div class="flex items-center gap-1 flex-1 justify-end">
+                                <button type="button" class="card-btn card-btn-down bg-red-600 hover:bg-red-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation" data-target="reda" data-min="0">−</button>
+                                <input type="number" min="0" max="11" name="reda" class="border border-gray-400 bg-gray-500 text-white rounded p-1 w-8 h-6 text-xs text-center font-bold" value="${match?.reda || 0}" readonly>
+                                <button type="button" class="card-btn card-btn-up bg-green-600 hover:bg-green-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation" data-target="reda" data-max="11">+</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Real Karten -->
-            <div class="bg-gray-700 border border-red-500 rounded-lg p-3">
-                <h4 class="text-red-300 text-sm font-bold mb-2 flex items-center gap-2">
-                    <span class="bg-red-600 text-white px-2 py-1 rounded text-xs">Real</span>
-                    Karten
-                </h4>
-                <div class="flex flex-col gap-3">
-                    <div class="flex items-center gap-2 bg-gray-600 rounded-lg p-2 min-w-0">
-                        <div class="text-xl w-6 text-center flex-shrink-0">🟨</div>
-                        <span class="text-white font-semibold text-sm flex-1 min-w-0 truncate">Gelbe Karten</span>
-                        <div class="flex items-center gap-1 flex-shrink-0">
-                            <button type="button" class="card-btn card-btn-down bg-red-600 hover:bg-red-500 text-white px-2 py-2 rounded text-xs font-bold w-8 h-8 flex items-center justify-center touch-manipulation" data-target="yellowb" data-min="0">−</button>
-                            <input type="number" min="0" max="20" name="yellowb" class="border border-gray-400 bg-gray-500 text-white rounded p-1 w-10 h-8 text-xs text-center font-bold" value="${match?.yellowb || 0}" readonly>
-                            <button type="button" class="card-btn card-btn-up bg-green-600 hover:bg-green-500 text-white px-2 py-2 rounded text-xs font-bold w-8 h-8 flex items-center justify-center touch-manipulation" data-target="yellowb" data-max="20">+</button>
+                
+                <!-- Real Karten -->
+                <div class="bg-gray-700 border border-red-500 rounded-lg p-2">
+                    <h4 class="text-red-300 text-xs font-bold mb-2 text-center">Real</h4>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-1 bg-gray-600 rounded p-1">
+                            <div class="text-sm w-4 text-center flex-shrink-0">🟨</div>
+                            <div class="flex items-center gap-1 flex-1 justify-end">
+                                <button type="button" class="card-btn card-btn-down bg-red-600 hover:bg-red-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation" data-target="yellowb" data-min="0">−</button>
+                                <input type="number" min="0" max="20" name="yellowb" class="border border-gray-400 bg-gray-500 text-white rounded p-1 w-8 h-6 text-xs text-center font-bold" value="${match?.yellowb || 0}" readonly>
+                                <button type="button" class="card-btn card-btn-up bg-green-600 hover:bg-green-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation" data-target="yellowb" data-max="20">+</button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-2 bg-gray-600 rounded-lg p-2 min-w-0">
-                        <div class="text-xl w-6 text-center flex-shrink-0">🟥</div>
-                        <span class="text-white font-semibold text-sm flex-1 min-w-0 truncate">Rote Karten</span>
-                        <div class="flex items-center gap-1 flex-shrink-0">
-                            <button type="button" class="card-btn card-btn-down bg-red-600 hover:bg-red-500 text-white px-2 py-2 rounded text-xs font-bold w-8 h-8 flex items-center justify-center touch-manipulation" data-target="redb" data-min="0">−</button>
-                            <input type="number" min="0" max="11" name="redb" class="border border-gray-400 bg-gray-500 text-white rounded p-1 w-10 h-8 text-xs text-center font-bold" value="${match?.redb || 0}" readonly>
-                            <button type="button" class="card-btn card-btn-up bg-green-600 hover:bg-green-500 text-white px-2 py-2 rounded text-xs font-bold w-8 h-8 flex items-center justify-center touch-manipulation" data-target="redb" data-max="11">+</button>
+                        <div class="flex items-center gap-1 bg-gray-600 rounded p-1">
+                            <div class="text-sm w-4 text-center flex-shrink-0">🟥</div>
+                            <div class="flex items-center gap-1 flex-1 justify-end">
+                                <button type="button" class="card-btn card-btn-down bg-red-600 hover:bg-red-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation" data-target="redb" data-min="0">−</button>
+                                <input type="number" min="0" max="11" name="redb" class="border border-gray-400 bg-gray-500 text-white rounded p-1 w-8 h-6 text-xs text-center font-bold" value="${match?.redb || 0}" readonly>
+                                <button type="button" class="card-btn card-btn-up bg-green-600 hover:bg-green-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation" data-target="redb" data-max="11">+</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -940,20 +932,20 @@ function generateMatchFormHTML(edit, dateVal, match, aekSpieler, realSpieler, ae
         </div>
         
         <!-- Spieler des Spiels Section -->
-        <div class="bg-gray-800 border border-yellow-500 rounded-xl p-3">
-            <h3 class="text-yellow-300 text-base font-bold mb-3 text-center">⭐ Spieler des Spiels (SdS)</h3>
+        <div class="bg-gray-800 border border-yellow-500 rounded-xl p-2">
+            <h3 class="text-yellow-300 text-sm font-bold mb-2 text-center">⭐ Spieler des Spiels</h3>
             
             <!-- Team Filter mit verbesserter Optik -->
-            <div class="mb-4 flex gap-2">
-                <button type="button" id="sds-filter-aek" class="sds-filter-btn flex-1 bg-gray-600 hover:bg-blue-600 text-white px-2 py-2 rounded-lg text-sm font-bold transition-all duration-200 border border-gray-500 hover:border-blue-400 flex items-center gap-2 min-h-[40px] justify-center touch-manipulation">
-                    <span class="truncate">AEK Athen</span>
+            <div class="mb-2 flex gap-2">
+                <button type="button" id="sds-filter-aek" class="sds-filter-btn flex-1 bg-gray-600 hover:bg-blue-600 text-white px-2 py-2 rounded-lg text-xs font-bold transition-all duration-200 border border-gray-500 hover:border-blue-400 flex items-center gap-1 min-h-[32px] justify-center touch-manipulation">
+                    <span class="truncate">AEK</span>
                 </button>
-                <button type="button" id="sds-filter-real" class="sds-filter-btn flex-1 bg-gray-600 hover:bg-red-600 text-white px-2 py-2 rounded-lg text-sm font-bold transition-all duration-200 border border-gray-500 hover:border-red-400 flex items-center gap-2 min-h-[40px] justify-center touch-manipulation">
-                    <span class="truncate">Real Madrid</span>
+                <button type="button" id="sds-filter-real" class="sds-filter-btn flex-1 bg-gray-600 hover:bg-red-600 text-white px-2 py-2 rounded-lg text-xs font-bold transition-all duration-200 border border-gray-500 hover:border-red-400 flex items-center gap-1 min-h-[32px] justify-center touch-manipulation">
+                    <span class="truncate">Real</span>
                 </button>
             </div>
             
-            <select name="manofthematch" id="manofthematch-select" class="border border-gray-500 bg-gray-600 text-white rounded-lg p-2 w-full min-h-[40px] text-sm font-semibold">
+            <select name="manofthematch" id="manofthematch-select" class="border border-gray-500 bg-gray-600 text-white rounded-lg p-2 w-full min-h-[32px] text-xs font-semibold">
                 <option value="">Keiner ausgewählt</option>
                 ${aekSorted.map(p => {
                     const sdsCount = getSdsCount(p.name, "AEK");
@@ -966,12 +958,12 @@ function generateMatchFormHTML(edit, dateVal, match, aekSpieler, realSpieler, ae
             </select>
         </div>
         
-        <!-- Action Buttons -->
-        <div class="flex flex-col gap-2 pt-2">
-            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white w-full px-4 py-2 rounded-lg text-base font-bold active:scale-95 transition-all min-h-[44px] touch-manipulation border border-green-400 shadow-lg hover:shadow-xl">
+        <!-- Action Buttons - Fixed at bottom with proper padding -->
+        <div class="flex flex-col gap-2 pt-2 pb-2">
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white w-full px-4 py-3 rounded-lg text-sm font-bold active:scale-95 transition-all min-h-[40px] touch-manipulation border border-green-400 shadow-lg hover:shadow-xl">
                 ${edit ? "💾 Änderungen speichern" : "✅ Match anlegen"}
             </button>
-            <button type="button" class="bg-gray-600 hover:bg-gray-700 text-white w-full px-4 py-2 rounded-lg text-base font-semibold transition-all min-h-[44px] touch-manipulation border border-gray-400" onclick="window.hideModal()">
+            <button type="button" class="bg-gray-600 hover:bg-gray-700 text-white w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all min-h-[40px] touch-manipulation border border-gray-400" onclick="window.hideModal()">
                 ❌ Abbrechen
             </button>
         </div>
@@ -1014,18 +1006,18 @@ function attachMatchFormEventHandlers(edit, id, aekSpieler, realSpieler, aekSort
         const rowCount = container.querySelectorAll('.scorer-row').length;
         const uniqueId = `${name}-count-${rowCount}`;
         const div = document.createElement("div");
-        div.className = "flex gap-2 mb-3 scorer-row items-center bg-gray-600 border border-gray-500 rounded-lg p-2 min-w-0";
+        div.className = "flex gap-2 mb-2 scorer-row items-center bg-gray-600 border border-gray-500 rounded-lg p-2 min-w-0";
         div.innerHTML = `
-            <select name="${name}-player" class="border border-gray-400 bg-gray-500 text-white rounded p-2 text-sm font-semibold flex-1 min-w-0" style="min-width:100px;">
+            <select name="${name}-player" class="border border-gray-400 bg-gray-500 text-white rounded p-2 text-xs font-semibold flex-1 min-w-0" style="min-width:120px;">
                 <option value="">Spieler wählen</option>
                 ${spielerOpts}
             </select>
             <div class="flex items-center gap-1 bg-gray-700 rounded p-1 flex-shrink-0">
-                <button type="button" class="goal-btn goal-btn-down bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded text-xs font-bold w-7 h-7 flex items-center justify-center touch-manipulation" data-target="${uniqueId}" data-min="0">−</button>
-                <input type="number" min="1" name="${name}-count" placeholder="Tore" class="goal-input border border-gray-400 bg-gray-500 text-white rounded p-1 w-8 h-7 text-xs text-center font-bold flex-shrink-0" value="1" readonly id="${uniqueId}">
-                <button type="button" class="goal-btn goal-btn-up bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded text-xs font-bold w-7 h-7 flex items-center justify-center touch-manipulation" data-target="${uniqueId}" data-max="20">+</button>
+                <button type="button" class="goal-btn goal-btn-down bg-red-600 hover:bg-red-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation" data-target="${uniqueId}" data-min="0">−</button>
+                <input type="number" min="1" name="${name}-count" placeholder="Tore" class="goal-input border border-gray-400 bg-gray-500 text-white rounded p-1 w-8 h-6 text-xs text-center font-bold flex-shrink-0" value="1" readonly id="${uniqueId}">
+                <button type="button" class="goal-btn goal-btn-up bg-green-600 hover:bg-green-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation" data-target="${uniqueId}" data-max="20">+</button>
             </div>
-            <button type="button" class="remove-goal-btn bg-red-600 hover:bg-red-700 text-white px-2 py-2 rounded-lg min-h-[44px] w-10 flex items-center justify-center transition-all duration-200 flex-shrink-0 hover:scale-105 touch-manipulation" title="Torschütze entfernen">
+            <button type="button" class="remove-goal-btn bg-red-600 hover:bg-red-700 text-white px-2 py-2 rounded min-h-[32px] w-8 flex items-center justify-center transition-all duration-200 flex-shrink-0 hover:scale-105 touch-manipulation" title="Torschütze entfernen">
                 <i class="fas fa-trash text-xs"></i>
             </button>
         `;
@@ -1274,32 +1266,45 @@ function scorerFields(name, arr, spielerOpts) {
     // No default scorer - start with empty list
     if (!arr.length) return '';
     
-    // Convert string array to aggregated format for form display
-    const aggregatedGoals = {};
-    arr.forEach(playerName => {
-        if (playerName) {
-            aggregatedGoals[playerName] = (aggregatedGoals[playerName] || 0) + 1;
-        }
-    });
+    // Handle both old string array format and new object format
+    let goalsForDisplay = [];
     
-    // Convert to array of objects for form display
-    const goalsForDisplay = Object.entries(aggregatedGoals).map(([player, count]) => ({
-        player,
-        count
-    }));
+    // Check if we have the new object format or old string array format
+    if (arr.length > 0 && typeof arr[0] === 'object' && arr[0].player !== undefined) {
+        // New object format: [{"count": 4, "player": "Walker"}]
+        goalsForDisplay = arr.map(goal => ({
+            player: goal.player,
+            count: goal.count || 1
+        }));
+    } else {
+        // Old string array format: ["Walker", "Walker", "Walker", "Walker", "Messi", "Messi"]
+        // Convert string array to aggregated format for form display
+        const aggregatedGoals = {};
+        arr.forEach(playerName => {
+            if (playerName) {
+                aggregatedGoals[playerName] = (aggregatedGoals[playerName] || 0) + 1;
+            }
+        });
+        
+        // Convert to array of objects for form display
+        goalsForDisplay = Object.entries(aggregatedGoals).map(([player, count]) => ({
+            player,
+            count
+        }));
+    }
     
     return goalsForDisplay.map((g, i) => `
-        <div class="flex gap-2 mb-3 scorer-row items-center bg-gray-600 border-2 border-gray-500 rounded-lg p-3">
-            <select name="${name}-player" class="border-2 border-gray-400 bg-gray-500 text-white rounded-lg p-3 min-h-[44px] text-sm flex-1 font-semibold" style="min-width:150px;">
+        <div class="flex gap-2 mb-2 scorer-row items-center bg-gray-600 border border-gray-500 rounded-lg p-2">
+            <select name="${name}-player" class="border border-gray-400 bg-gray-500 text-white rounded-lg p-2 min-h-[32px] text-xs flex-1 font-semibold" style="min-width:120px;">
                 <option value="">Spieler wählen</option>
                 ${spielerOpts.replace(`value="${g.player}"`, `value="${g.player}" selected`)}
             </select>
-            <div class="flex items-center gap-1 bg-gray-700 rounded-lg p-2 border-2 border-gray-400">
-                <button type="button" class="goal-btn goal-btn-down bg-red-600 hover:bg-red-500 text-white px-2 py-2 rounded-lg text-sm font-bold w-8 h-8 flex items-center justify-center touch-manipulation border border-red-400" data-target="${name}-count-${i}" data-min="0">−</button>
-                <input type="number" min="1" name="${name}-count" placeholder="Tore" class="goal-input border border-gray-400 bg-gray-500 text-white rounded-lg p-1 w-12 min-h-[32px] text-sm text-center font-bold flex-shrink-0" value="${g.count||1}" readonly id="${name}-count-${i}">
-                <button type="button" class="goal-btn goal-btn-up bg-green-600 hover:bg-green-500 text-white px-2 py-2 rounded-lg text-sm font-bold w-8 h-8 flex items-center justify-center touch-manipulation border border-green-400" data-target="${name}-count-${i}" data-max="20">+</button>
+            <div class="flex items-center gap-1 bg-gray-700 rounded p-1 border border-gray-400">
+                <button type="button" class="goal-btn goal-btn-down bg-red-600 hover:bg-red-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation border border-red-400" data-target="${name}-count-${i}" data-min="0">−</button>
+                <input type="number" min="1" name="${name}-count" placeholder="Tore" class="goal-input border border-gray-400 bg-gray-500 text-white rounded p-1 w-8 h-6 text-xs text-center font-bold flex-shrink-0" value="${g.count||1}" readonly id="${name}-count-${i}">
+                <button type="button" class="goal-btn goal-btn-up bg-green-600 hover:bg-green-500 text-white px-1 py-1 rounded text-xs font-bold w-6 h-6 flex items-center justify-center touch-manipulation border border-green-400" data-target="${name}-count-${i}" data-max="20">+</button>
             </div>
-            <button type="button" class="remove-goal-btn bg-red-600 hover:bg-red-700 text-white px-2 py-2 rounded-lg min-h-[44px] w-10 flex items-center justify-center transition-all duration-200 flex-shrink-0 hover:scale-105 touch-manipulation" title="Torschütze entfernen">
+            <button type="button" class="remove-goal-btn bg-red-600 hover:bg-red-700 text-white px-2 py-2 rounded min-h-[32px] w-8 flex items-center justify-center transition-all duration-200 flex-shrink-0 hover:scale-105 touch-manipulation" title="Torschütze entfernen">
                 <i class="fas fa-trash text-xs"></i>
             </button>
         </div>
@@ -1307,11 +1312,22 @@ function scorerFields(name, arr, spielerOpts) {
 }
 
 async function updatePlayersGoals(goalslist, team) {
-    // Count goals per player from string array
+    // Handle both new object format and old string array format
     const goalCounts = {};
-    for (const playerName of goalslist) {
-        if (!playerName) continue;
-        goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+    
+    if (goalslist.length > 0 && typeof goalslist[0] === 'object' && goalslist[0].player !== undefined) {
+        // New object format: [{"count": 4, "player": "Walker"}]
+        goalslist.forEach(goal => {
+            if (goal.player) {
+                goalCounts[goal.player] = (goalCounts[goal.player] || 0) + (goal.count || 1);
+            }
+        });
+    } else {
+        // Old string array format: ["Walker", "Walker", "Messi"]
+        for (const playerName of goalslist) {
+            if (!playerName) continue;
+            goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+        }
     }
     
     // Update each player's goal count
@@ -1440,10 +1456,11 @@ async function submitMatchForm(event, id) {
             const player = d.querySelector(`select[name="${name}-player"]`).value;
             const count = parseInt(d.querySelector(`input[name="${name}-count"]`).value) || 1;
             if (player) {
-                // Add each goal as a separate string entry (original format)
-                for (let i = 0; i < count; i++) {
-                    scorers.push(player);
-                }
+                // Use new object format with count and player properties
+                scorers.push({
+                    count: count,
+                    player: player
+                });
             }
         });
         return scorers;
@@ -1454,7 +1471,7 @@ async function submitMatchForm(event, id) {
     if (goalsa > 0) {
         const groupA = form.querySelector("#scorersA");
         goalslista = getScorers(groupA, "goalslista");
-        const sumA = goalslista.length; // Count strings in array
+        const sumA = goalslista.reduce((sum, goal) => sum + goal.count, 0); // Sum goal counts from objects
         if (sumA > goalsa) {
             alert(`Die Summe der Torschützen-Tore für ${teama} (${sumA}) darf nicht größer als die Gesamtanzahl der Tore (${goalsa}) sein!`);
             // Restore button state and remove indicator
@@ -1470,7 +1487,7 @@ async function submitMatchForm(event, id) {
     if (goalsb > 0) {
         const groupB = form.querySelector("#scorersB");
         goalslistb = getScorers(groupB, "goalslistb");
-        const sumB = goalslistb.length; // Count strings in array
+        const sumB = goalslistb.reduce((sum, goal) => sum + goal.count, 0); // Sum goal counts from objects
         if (sumB > goalsb) {
             alert(`Die Summe der Torschützen-Tore für ${teamb} (${sumB}) darf nicht größer als die Gesamtanzahl der Tore (${goalsb}) sein!`);
             // Restore button state and remove indicator
