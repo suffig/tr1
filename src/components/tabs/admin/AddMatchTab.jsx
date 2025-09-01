@@ -6,11 +6,13 @@ export default function AddMatchTab() {
   const { data: players } = useSupabaseQuery('players', '*');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
-    teama: '',
-    teamb: '',
+    teama: 'AEK',
+    teamb: 'Real',
     date: new Date().toISOString().split('T')[0],
     goalsa: 0,
     goalsb: 0,
+    goalslista: [],
+    goalslistb: [],
     yellowa: 0,
     reda: 0,
     yellowb: 0,
@@ -22,7 +24,45 @@ export default function AddMatchTab() {
   const [loading, setLoading] = useState(false);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // Auto-calculate prize money when goals or cards change
+      if (['goalsa', 'goalsb', 'yellowa', 'reda', 'yellowb', 'redb'].includes(field)) {
+        const goalsa = parseInt(updated.goalsa) || 0;
+        const goalsb = parseInt(updated.goalsb) || 0;
+        const yellowa = parseInt(updated.yellowa) || 0;
+        const reda = parseInt(updated.reda) || 0;
+        const yellowb = parseInt(updated.yellowb) || 0;
+        const redb = parseInt(updated.redb) || 0;
+        
+        let prizeaek = 0, prizereal = 0;
+        let winner = null, loser = null;
+        
+        if (goalsa > goalsb) { 
+          winner = "AEK"; 
+          loser = "Real"; 
+        } else if (goalsa < goalsb) { 
+          winner = "Real"; 
+          loser = "AEK"; 
+        }
+        
+        if (winner && loser) {
+          if (winner === "AEK") {
+            prizeaek = 1000000 - (goalsb * 50000) - (yellowa * 20000) - (reda * 50000);
+            prizereal = -(500000 + goalsa * 50000 + yellowb * 20000 + redb * 50000);
+          } else {
+            prizereal = 1000000 - (goalsa * 50000) - (yellowb * 20000) - (redb * 50000);
+            prizeaek = -(500000 + goalsb * 50000 + yellowa * 20000 + reda * 50000);
+          }
+        }
+        
+        updated.prizeaek = prizeaek;
+        updated.prizereal = prizereal;
+      }
+      
+      return updated;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -36,8 +76,8 @@ export default function AddMatchTab() {
         teamb: formData.teamb.trim(),
         goalsa: parseInt(formData.goalsa) || 0,
         goalsb: parseInt(formData.goalsb) || 0,
-        goalslista: [],
-        goalslistb: [],
+        goalslista: formData.goalslista || [],
+        goalslistb: formData.goalslistb || [],
         yellowa: parseInt(formData.yellowa) || 0,
         reda: parseInt(formData.reda) || 0,
         yellowb: parseInt(formData.yellowb) || 0,
@@ -49,11 +89,13 @@ export default function AddMatchTab() {
       
       // Reset form and close modal
       setFormData({
-        teama: '',
-        teamb: '',
+        teama: 'AEK',
+        teamb: 'Real',
         date: new Date().toISOString().split('T')[0],
         goalsa: 0,
         goalsb: 0,
+        goalslista: [],
+        goalslistb: [],
         yellowa: 0,
         reda: 0,
         yellowb: 0,
@@ -74,6 +116,36 @@ export default function AddMatchTab() {
   };
 
   const isFormValid = formData.teama && formData.teamb && formData.date;
+
+  // Helper functions for goal scorers
+  const getTeamPlayers = (teamName) => {
+    if (!players) return [];
+    return players.filter(p => p.team === teamName);
+  };
+
+  const addGoalScorer = (team) => {
+    const fieldName = team === 'AEK' ? 'goalslista' : 'goalslistb';
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: [...prev[fieldName], '']
+    }));
+  };
+
+  const removeGoalScorer = (team, index) => {
+    const fieldName = team === 'AEK' ? 'goalslista' : 'goalslistb';
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: prev[fieldName].filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateGoalScorer = (team, index, playerName) => {
+    const fieldName = team === 'AEK' ? 'goalslista' : 'goalslistb';
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: prev[fieldName].map((scorer, i) => i === index ? playerName : scorer)
+    }));
+  };
 
   return (
     <div className="p-4">
@@ -128,15 +200,16 @@ export default function AddMatchTab() {
                   <label className="block text-sm font-medium text-text-primary mb-2">
                     Heimteam *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.teama}
                     onChange={(e) => handleInputChange('teama', e.target.value)}
                     className="form-input"
-                    placeholder="z.B. AEK Athen"
                     required
                     disabled={loading}
-                  />
+                  >
+                    <option value="AEK">AEK Athen</option>
+                    <option value="Real">Real Madrid</option>
+                  </select>
                 </div>
 
                 {/* Away Team */}
@@ -144,15 +217,16 @@ export default function AddMatchTab() {
                   <label className="block text-sm font-medium text-text-primary mb-2">
                     Gastteam *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.teamb}
                     onChange={(e) => handleInputChange('teamb', e.target.value)}
                     className="form-input"
-                    placeholder="z.B. Real Madrid"
                     required
                     disabled={loading}
-                  />
+                  >
+                    <option value="Real">Real Madrid</option>
+                    <option value="AEK">AEK Athen</option>
+                  </select>
                 </div>
 
                 {/* Date */}
@@ -197,6 +271,98 @@ export default function AddMatchTab() {
                       className="form-input"
                       disabled={loading}
                     />
+                  </div>
+                </div>
+
+                {/* Goal Scorers */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-text-primary mb-3">⚽ Torschützen</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* AEK Scorers */}
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs text-blue-600 font-medium">AEK Athen</p>
+                        <button
+                          type="button"
+                          onClick={() => addGoalScorer('AEK')}
+                          className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded"
+                          disabled={loading}
+                        >
+                          + Torschütze
+                        </button>
+                      </div>
+                      {formData.goalslista.map((scorer, index) => (
+                        <div key={index} className="flex gap-2">
+                          <select
+                            value={scorer}
+                            onChange={(e) => updateGoalScorer('AEK', index, e.target.value)}
+                            className="form-input text-sm flex-1"
+                            disabled={loading}
+                          >
+                            <option value="">Spieler wählen</option>
+                            {getTeamPlayers('AEK').map((player) => (
+                              <option key={player.id} value={player.name}>
+                                {player.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => removeGoalScorer('AEK', index)}
+                            className="text-red-600 hover:text-red-800 p-1"
+                            disabled={loading}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      {formData.goalslista.length === 0 && (
+                        <p className="text-xs text-text-muted">Keine Torschützen hinzugefügt</p>
+                      )}
+                    </div>
+
+                    {/* Real Scorers */}
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs text-red-600 font-medium">Real Madrid</p>
+                        <button
+                          type="button"
+                          onClick={() => addGoalScorer('Real')}
+                          className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded"
+                          disabled={loading}
+                        >
+                          + Torschütze
+                        </button>
+                      </div>
+                      {formData.goalslistb.map((scorer, index) => (
+                        <div key={index} className="flex gap-2">
+                          <select
+                            value={scorer}
+                            onChange={(e) => updateGoalScorer('Real', index, e.target.value)}
+                            className="form-input text-sm flex-1"
+                            disabled={loading}
+                          >
+                            <option value="">Spieler wählen</option>
+                            {getTeamPlayers('Real').map((player) => (
+                              <option key={player.id} value={player.name}>
+                                {player.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => removeGoalScorer('Real', index)}
+                            className="text-red-600 hover:text-red-800 p-1"
+                            disabled={loading}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      {formData.goalslistb.length === 0 && (
+                        <p className="text-xs text-text-muted">Keine Torschützen hinzugefügt</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -271,7 +437,7 @@ export default function AddMatchTab() {
 
                 {/* Prize Money */}
                 <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium text-text-primary mb-3">💰 Preisgelder</h4>
+                  <h4 className="text-sm font-medium text-text-primary mb-3">💰 Preisgelder (automatisch berechnet)</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-text-primary mb-2">
@@ -279,12 +445,11 @@ export default function AddMatchTab() {
                       </label>
                       <input
                         type="number"
-                        min="0"
                         value={formData.prizeaek}
-                        onChange={(e) => handleInputChange('prizeaek', e.target.value)}
-                        className="form-input"
-                        placeholder="0"
-                        disabled={loading}
+                        className="form-input bg-gray-100"
+                        placeholder="Automatisch berechnet"
+                        disabled
+                        readOnly
                       />
                     </div>
                     <div>
@@ -293,15 +458,17 @@ export default function AddMatchTab() {
                       </label>
                       <input
                         type="number"
-                        min="0"
                         value={formData.prizereal}
-                        onChange={(e) => handleInputChange('prizereal', e.target.value)}
-                        className="form-input"
-                        placeholder="0"
-                        disabled={loading}
+                        className="form-input bg-gray-100"
+                        placeholder="Automatisch berechnet"
+                        disabled
+                        readOnly
                       />
                     </div>
                   </div>
+                  <p className="text-xs text-text-muted mt-2">
+                    Basierend auf Ergebnis und Karten: Gewinner 1M€ - (Verlierer-Tore × 50k€) - (Karten × 20k€/50k€)
+                  </p>
                 </div>
 
                 {/* Player of the Match */}

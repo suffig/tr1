@@ -58,6 +58,12 @@ export default function FinanzenTab() {
     }).format(roundedAmount);
   };
 
+  const formatCurrencyInMillions = (amount) => {
+    // Convert to millions and format with 1 decimal place
+    const amountInMillions = (amount || 0) / 1000000;
+    return `${amountInMillions.toFixed(1)}M €`;
+  };
+
   const getTransactionTypeColor = (type) => {
     switch (type) {
       case 'Preisgeld':
@@ -199,7 +205,7 @@ export default function FinanzenTab() {
           </div>
           <div className="space-y-1 text-sm">
             <div>Kontostand: <span className="font-bold text-blue-600">{formatCurrency(aekFinances.balance)}</span></div>
-            <div>Kaderwert: <span className="font-bold text-blue-600">{formatCurrency(getTeamSquadValue('AEK'))}</span></div>
+            <div>Kaderwert: <span className="font-bold text-blue-600">{formatCurrencyInMillions(getTeamSquadValue('AEK'))}</span></div>
             <div>Schulden: <span className="font-bold text-blue-600">{formatCurrency(aekFinances.debt || 0)}</span></div>
           </div>
         </div>
@@ -211,7 +217,7 @@ export default function FinanzenTab() {
           </div>
           <div className="space-y-1 text-sm">
             <div>Kontostand: <span className="font-bold text-red-600">{formatCurrency(realFinances.balance)}</span></div>
-            <div>Kaderwert: <span className="font-bold text-red-600">{formatCurrency(getTeamSquadValue('Real'))}</span></div>
+            <div>Kaderwert: <span className="font-bold text-red-600">{formatCurrencyInMillions(getTeamSquadValue('Real'))}</span></div>
             <div>Schulden: <span className="font-bold text-red-600">{formatCurrency(realFinances.debt || 0)}</span></div>
           </div>
         </div>

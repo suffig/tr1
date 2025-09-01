@@ -199,7 +199,7 @@ export default function MatchesTab() {
                                       <p className="text-xs text-blue-600 font-medium">AEK:</p>
                                       {match.goalslista.map((goal, idx) => (
                                         <p key={idx} className="text-sm text-text-muted">
-                                          • {getPlayerName(goal.player)} {goal.minute && `(${goal.minute}')`}
+                                          • {typeof goal === 'string' ? goal : getPlayerName(goal.player)} {goal.minute && `(${goal.minute}')`}
                                         </p>
                                       ))}
                                     </div>
@@ -210,7 +210,7 @@ export default function MatchesTab() {
                                       <p className="text-xs text-red-600 font-medium">Real:</p>
                                       {match.goalslistb.map((goal, idx) => (
                                         <p key={idx} className="text-sm text-text-muted">
-                                          • {getPlayerName(goal.player)} {goal.minute && `(${goal.minute}')`}
+                                          • {typeof goal === 'string' ? goal : getPlayerName(goal.player)} {goal.minute && `(${goal.minute}')`}
                                         </p>
                                       ))}
                                     </div>

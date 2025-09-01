@@ -36,6 +36,19 @@ export default function KaderTab() {
     return teamFinance?.balance || 0;
   };
 
+  const getTeamSquadValue = (teamName) => {
+    if (!players) return 0;
+    return players
+      .filter(p => p.team === teamName)
+      .reduce((sum, p) => sum + (p.value || 0), 0);
+  };
+
+  const formatCurrencyInMillions = (amount) => {
+    // Convert to millions and format with 1 decimal place  
+    const amountInMillions = (amount || 0) / 1000000;
+    return `${amountInMillions.toFixed(1)}M €`;
+  };
+
   const getTeamCardClass = (teamName) => {
     const baseClass = "modern-card";
     if (teamName === "AEK") return `${baseClass} border-l-4 border-blue-400`;
@@ -131,6 +144,7 @@ export default function KaderTab() {
       displayName: 'AEK Athen', 
       players: aekPlayers,
       balance: getTeamBalance('AEK'),
+      squadValue: getTeamSquadValue('AEK'),
       icon: '🔵'
     },
     { 
@@ -139,6 +153,7 @@ export default function KaderTab() {
       displayName: 'Real Madrid', 
       players: realPlayers,
       balance: getTeamBalance('Real'),
+      squadValue: getTeamSquadValue('Real'),
       icon: '🔴'
     },
     { 
@@ -147,6 +162,7 @@ export default function KaderTab() {
       displayName: 'Ehemalige', 
       players: ehemaligePlayers,
       balance: 0, // Ehemalige have no finances
+      squadValue: getTeamSquadValue('Ehemalige'),
       icon: '⚪'
     }
   ];
@@ -180,6 +196,11 @@ export default function KaderTab() {
                     </h3>
                     <p className="text-sm text-text-muted">
                       {team.players.length} Spieler
+                      {team.squadValue > 0 && (
+                        <span className="ml-2">
+                          • Kaderwert: {formatCurrencyInMillions(team.squadValue)}
+                        </span>
+                      )}
                       {team.balance !== 0 && (
                         <span className="ml-2">
                           • Balance: €{team.balance.toLocaleString()}
@@ -218,6 +239,11 @@ export default function KaderTab() {
                                   {player.staerke && (
                                     <span className="text-xs text-text-muted">
                                       Stärke: {player.staerke}
+                                    </span>
+                                  )}
+                                  {player.value && (
+                                    <span className="text-xs text-primary-green font-medium">
+                                      {formatCurrencyInMillions(player.value)}
                                     </span>
                                   )}
                                 </div>
