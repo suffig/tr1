@@ -194,7 +194,7 @@ export default function MatchesTab() {
                         
                         {isExpanded && (
                           <div className="px-4 pb-4 border-t border-gray-200 bg-gray-50">
-                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                               
                               {/* Goal Scorers */}
                               <div className="space-y-2">
@@ -316,16 +316,6 @@ export default function MatchesTab() {
                                     <span className="text-red-600">Real:</span> {match.prizereal ? `€${match.prizereal}` : '€0'}
                                   </p>
                                 </div>
-                              </div>
-                              
-                              {/* Player of the Match */}
-                              <div className="space-y-2">
-                                <h4 className="font-semibold text-text-primary flex items-center">
-                                  ⭐ Spieler des Spiels
-                                </h4>
-                                <p className="text-sm text-text-muted">
-                                  {match.manofthematch ? getPlayerName(match.manofthematch) : 'Nicht vergeben'}
-                                </p>
                               </div>
                               
                             </div>
