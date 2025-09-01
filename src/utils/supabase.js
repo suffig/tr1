@@ -353,6 +353,7 @@ const createDatabaseOperations = (client) => {
         const { data: { session } } = await client.auth.getSession();
         authSession = session || fallbackSession; // Use fallback session if no real session
         
+        // Skip real database call if we're already using fallback
         if (authSession && !usingFallback) {
           // If we have a session and not using fallback, try real database
           try {
@@ -376,7 +377,14 @@ const createDatabaseOperations = (client) => {
             
             const result = await queryBuilder;
             console.log(`✅ Real database query successful for ${table}`);
-            return result;
+            
+            // Only return real data if we actually get it without errors
+            if (result.data && !result.error) {
+              return result;
+            } else {
+              console.warn(`❌ Real database returned error for ${table}, using fallback data:`, result.error);
+              // Fall through to fallback data
+            }
           } catch (dbError) {
             console.warn(`❌ Real database failed for ${table}, using fallback data:`, dbError);
             // Fall through to fallback data

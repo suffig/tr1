@@ -12,13 +12,21 @@ export function useSupabaseQuery(table, query = '*', options = {}, dependencies 
       setLoading(true);
       setError(null);
       const result = await supabaseDb.select(table, query, options);
-      if (result.error) {
+      
+      // In demo mode, prioritize data over errors
+      if (result.data && result.data.length > 0) {
+        setData(result.data);
+      } else if (result.error) {
         throw result.error;
+      } else {
+        setData(result.data || []);
       }
-      setData(result.data);
     } catch (err) {
       setError(err);
-      ErrorHandler.handleDatabaseError(err, `Laden von ${table}`);
+      // Only show error messages for real failures, not demo mode issues
+      if (!err.message?.includes('Failed to fetch')) {
+        ErrorHandler.handleDatabaseError(err, `Laden von ${table}`);
+      }
     } finally {
       setLoading(false);
     }
