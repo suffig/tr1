@@ -1095,6 +1095,23 @@ export async function renderStatsTab(containerId = "app") {
             }
         }, 0);
     }
+    
+    } catch (error) {
+        console.error('Error loading stats data:', error);
+        const errorDiv = document.createElement('div');
+        errorDiv.innerHTML = `
+            <div class="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-200 px-4 py-3 rounded mb-4">
+                <strong>Fehler beim Laden der Statistiken.</strong> 
+                Bitte versuchen Sie es erneut.
+                <button onclick="this.parentElement.remove()" class="float-right font-bold text-red-700 dark:text-red-200 hover:text-red-900 dark:hover:text-red-100">×</button>
+            </div>
+        `;
+        const appDiv = document.getElementById(containerId);
+        if (appDiv) {
+            appDiv.innerHTML = '';
+            appDiv.appendChild(errorDiv);
+        }
+    }
 }
 
 // NEW: Generate team analysis and transfer recommendations
