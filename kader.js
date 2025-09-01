@@ -1,6 +1,6 @@
 import { POSITIONEN, savePlayer as dataSavePlayer, deletePlayer as dataDeletePlayer } from './data.js';
 import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
-import { supabaseDb, supabase } from './supabaseClient.js';
+import { dataManager } from './dataManager.js';
 import { isDatabaseAvailable } from './connectionMonitor.js';
 import { ErrorHandler } from './utils.js';
 
@@ -8,8 +8,8 @@ let aekAthen = [];
 let realMadrid = [];
 let ehemalige = [];
 let finances = {
-    aekAthen: { balance: 0 },
-    realMadrid: { balance: 0 }
+    AEK: { balance: 0 },
+    Real: { balance: 0 }
 };
 let transactions = [];
 
@@ -37,29 +37,24 @@ async function loadPlayersAndFinances(renderFn = renderPlayerLists) {
         const appDiv = document.getElementById('app');
         if (appDiv) appDiv.appendChild(loadingDiv);
 
-        const [playersResult, finResult, transResult] = await Promise.allSettled([
-            supabaseDb.select('players', '*'),
-            supabaseDb.select('finances', '*'),
-            supabaseDb.select('transactions', '*', { 
-                order: { column: 'id', ascending: false } 
-            })
-        ]);
-
-        if (playersResult.status === 'fulfilled' && playersResult.value.data) {
-            const players = playersResult.value.data;
-            aekAthen = players.filter(p => p.team === "AEK");
-            realMadrid = players.filter(p => p.team === "Real");
-            ehemalige = players.filter(p => p.team === "Ehemalige");
+        // Use dataManager for consistent data loading
+        const data = await dataManager.loadAllAppData();
+        
+        if (data.players) {
+            aekAthen = data.players.filter(p => p.team === "AEK");
+            realMadrid = data.players.filter(p => p.team === "Real");
+            ehemalige = data.players.filter(p => p.team === "Ehemalige");
         }
-        if (finResult.status === 'fulfilled' && finResult.value.data) {
-            const finData = finResult.value.data;
+        
+        if (data.finances) {
             finances = {
-                aekAthen: finData.find(f => f.team === "AEK") || { balance: 0 },
-                realMadrid: finData.find(f => f.team === "Real") || { balance: 0 }
+                AEK: data.finances.find(f => f.team === "AEK") || { balance: 0 },
+                Real: data.finances.find(f => f.team === "Real") || { balance: 0 }
             };
         }
-        if (transResult.status === 'fulfilled' && transResult.value.data) {
-            transactions = transResult.value.data;
+        
+        if (data.transactions) {
+            transactions = data.transactions;
         }
 
         if (loadingDiv.parentNode) {
@@ -67,6 +62,7 @@ async function loadPlayersAndFinances(renderFn = renderPlayerLists) {
         }
 
         renderFn();
+        
     } catch (error) {
         console.error('Error loading data:', error);
         const errorDiv = document.createElement('div');
@@ -496,7 +492,7 @@ async function movePlayerWithTransaction(id, newTeam) {
             amount: abloese,
             info: `Verkauf von ${player.name} (${player.position})`
         }]);
-        let finKey = oldTeam === "AEK" ? "aekAthen" : "realMadrid";
+        let finKey = oldTeam;
         await supabase.from('finances').update({
             balance: (finances[finKey].balance || 0) + abloese
         }).eq('team', oldTeam);
@@ -506,7 +502,7 @@ async function movePlayerWithTransaction(id, newTeam) {
 
     // Von Ehemalige zu TEAM: KAUF
     if (oldTeam === "Ehemalige" && (newTeam === "AEK" || newTeam === "Real")) {
-        let finKey = newTeam === "AEK" ? "aekAthen" : "realMadrid";
+        let finKey = newTeam;
         const konto = finances[finKey].balance || 0;
         if (konto < abloese) {
             ErrorHandler.showUserError("Kontostand zu gering für diesen Transfer!", "warning");
@@ -538,7 +534,7 @@ async function movePlayerToTeam(id, newTeam) {
 async function saveTransactionAndFinance(team, type, amount, info = "") {
     const now = new Date().toISOString().slice(0, 10);
     await supabase.from('transactions').insert([{ date: now, type, team, amount, info }]);
-    const finKey = team === "AEK" ? "aekAthen" : "realMadrid";
+    const finKey = team;
     let updateObj = {};
     updateObj.balance = (finances[finKey].balance || 0) + amount;
     await supabase.from('finances').update(updateObj).eq('team', team);
@@ -583,7 +579,7 @@ async function submitPlayerForm(event, team, id) {
 
     try {
         if (!id && (team === "AEK" || team === "Real")) {
-            let fin = team === "AEK" ? finances.aekAthen : finances.realMadrid;
+            let fin = finances[team];
             if (fin.balance < value * 1000000) {
                 ErrorHandler.showUserError("Kontostand zu gering für diesen Spielerkauf!", "warning");
                 return;
@@ -614,7 +610,7 @@ export function resetKaderState() {
     aekAthen = [];
     realMadrid = [];
     ehemalige = [];
-    finances = { aekAthen: { balance: 0 }, realMadrid: { balance: 0 } };
+    finances = { AEK: { balance: 0 }, Real: { balance: 0 } };
     transactions = [];
     openPanel = null;
 }
