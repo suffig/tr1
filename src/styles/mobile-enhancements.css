@@ -7,6 +7,9 @@ button {
   min-width: 48px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Improved touch feedback */
@@ -14,6 +17,15 @@ button {
 button:active {
   transform: scale(0.98);
   transition: transform 0.1s ease;
+}
+
+/* Prevent text selection on touch elements */
+.select-none {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* Better spacing for mobile */
@@ -88,10 +100,22 @@ button:active {
     min-width: 56px;
     min-height: 56px;
     padding: 8px 4px;
+    border-radius: 8px;
   }
   
   .nav-item span {
     font-size: 12px;
+    font-weight: 500;
+  }
+  
+  /* Better touch targets for iPhone */
+  .nav-item:active {
+    background-color: rgba(0, 0, 0, 0.1);
+    transform: scale(0.95);
+  }
+  
+  .nav-item.active {
+    background-color: rgba(34, 197, 94, 0.1);
   }
 }
 

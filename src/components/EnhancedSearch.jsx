@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 
 export default function EnhancedSearch({ 
   data = [], 
@@ -12,6 +12,7 @@ export default function EnhancedSearch({
   const [activeFilters, setActiveFilters] = useState({});
   const [sortBy, setSortBy] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
+  const lastResultsRef = useRef(null);
 
   // Filter and search data
   const filteredData = useMemo(() => {
@@ -64,9 +65,12 @@ export default function EnhancedSearch({
     return filtered;
   }, [data, query, activeFilters, sortBy, sortOrder, searchFields, filterOptions]);
 
-  // Update parent with results
-  useMemo(() => {
-    onResults?.(filteredData);
+  // Update parent with results - use useCallback to prevent infinite loops
+  useEffect(() => {
+    if (onResults && JSON.stringify(filteredData) !== lastResultsRef.current) {
+      lastResultsRef.current = JSON.stringify(filteredData);
+      onResults(filteredData);
+    }
   }, [filteredData, onResults]);
 
   const handleFilterChange = (filterKey, value) => {
@@ -236,7 +240,10 @@ export default function EnhancedSearch({
 
 // Helper function to get nested object values
 function getNestedValue(obj, path) {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+  if (!obj || !path) return '';
+  return path.split('.').reduce((current, key) => {
+    return (current && current[key] !== undefined) ? current[key] : '';
+  }, obj);
 }
 
 // Helper function to format field names for display
