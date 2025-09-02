@@ -226,6 +226,19 @@ class StatsCalculator {
   }
 }
 
+// Alcohol conversion utilities
+const alcoholUtils = {
+  clToLiters: (cl) => (cl / 100).toFixed(3),
+  clToShots: (cl) => (cl / 2).toFixed(0), // 2cl per shot
+  clToGlasses: (cl) => (cl / 20).toFixed(1), // 20cl per glass
+  formatAlcoholDisplay: (cl) => ({
+    cl,
+    liters: (cl / 100).toFixed(3),
+    shots: Math.floor(cl / 2),
+    glasses: (cl / 20).toFixed(1)
+  })
+};
+
 export default function StatsTab({ onNavigate }) {
   const [selectedView, setSelectedView] = useState('dashboard');
   // Alcohol calculator state - moved from renderAlkohol function to component level
@@ -233,7 +246,13 @@ export default function StatsTab({ onNavigate }) {
     aekPlayer: '',
     realPlayer: '',
     aekGoals: 0,
-    realGoals: 0
+    realGoals: 0,
+    playerData: {
+      aekChef: { name: '', weight: 70, gender: 'male' },
+      realChef: { name: '', weight: 70, gender: 'male' }
+    },
+    gameDay: new Date().toISOString().split('T')[0],
+    beerCount: 0
   });
   
   const { data: matches, loading: matchesLoading } = useSupabaseQuery('matches', '*');
@@ -1194,32 +1213,55 @@ export default function StatsTab({ onNavigate }) {
       return (calculatorValues.aekGoals + calculatorValues.realGoals) * 2;
     };
 
+    // Blood Alcohol Content calculation using Widmark formula
+    const calculateBloodAlcohol = (alcoholCl, playerData) => {
+      if (!playerData.weight || alcoholCl === 0) return '0.00';
+      
+      // Convert cl of 40% alcohol to grams of pure alcohol
+      const alcoholGrams = (alcoholCl * 10) * 0.4; // 1cl = 10ml, 40% alcohol content
+      
+      // Widmark factors (typical values)
+      const r = playerData.gender === 'female' ? 0.55 : 0.68;
+      
+      // Basic BAC calculation: alcohol (g) / (weight (kg) * r)
+      const bac = alcoholGrams / (playerData.weight * r);
+      
+      // Convert to per mille and account for typical drinking duration
+      return (bac * 10).toFixed(2);
+    };
+
     return (
       <div className="space-y-6">
-        {/* Overview Statistics */}
+        {/* Overview Statistics with Unit Conversions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="modern-card text-center">
             <div className="text-3xl mb-2">🍺</div>
             <div className="text-2xl font-bold text-primary-green">{alcoholStats.totalShots}cl</div>
             <div className="text-sm text-text-muted">Gesamt Schnaps</div>
-            <div className="text-xs text-text-muted mt-1">
-              ≈ {(alcoholStats.totalShots / 20).toFixed(1)} Gläser
+            <div className="text-xs text-text-muted mt-1 space-y-1">
+              <div>≈ {alcoholUtils.clToLiters(alcoholStats.totalShots)}L</div>
+              <div>≈ {alcoholUtils.clToShots(alcoholStats.totalShots)} Shots</div>
+              <div>≈ {alcoholUtils.clToGlasses(alcoholStats.totalShots)} Gläser</div>
             </div>
           </div>
           <div className="modern-card text-center">
             <div className="text-3xl mb-2">🔵</div>
             <div className="text-2xl font-bold text-blue-600">{alcoholStats.aekShots}cl</div>
             <div className="text-sm text-text-muted">AEK getrunken</div>
-            <div className="text-xs text-text-muted mt-1">
-              {alcoholStats.totalShots > 0 ? ((alcoholStats.aekShots / alcoholStats.totalShots) * 100).toFixed(1) : 0}% vom Gesamt
+            <div className="text-xs text-text-muted mt-1 space-y-1">
+              <div>≈ {alcoholUtils.clToLiters(alcoholStats.aekShots)}L</div>
+              <div>≈ {alcoholUtils.clToShots(alcoholStats.aekShots)} Shots</div>
+              <div>{alcoholStats.totalShots > 0 ? ((alcoholStats.aekShots / alcoholStats.totalShots) * 100).toFixed(1) : 0}% vom Gesamt</div>
             </div>
           </div>
           <div className="modern-card text-center">
             <div className="text-3xl mb-2">🔴</div>
             <div className="text-2xl font-bold text-red-600">{alcoholStats.realShots}cl</div>
             <div className="text-sm text-text-muted">Real getrunken</div>
-            <div className="text-xs text-text-muted mt-1">
-              {alcoholStats.totalShots > 0 ? ((alcoholStats.realShots / alcoholStats.totalShots) * 100).toFixed(1) : 0}% vom Gesamt
+            <div className="text-xs text-text-muted mt-1 space-y-1">
+              <div>≈ {alcoholUtils.clToLiters(alcoholStats.realShots)}L</div>
+              <div>≈ {alcoholUtils.clToShots(alcoholStats.realShots)} Shots</div>
+              <div>{alcoholStats.totalShots > 0 ? ((alcoholStats.realShots / alcoholStats.totalShots) * 100).toFixed(1) : 0}% vom Gesamt</div>
             </div>
           </div>
         </div>
@@ -1244,7 +1286,10 @@ export default function StatsTab({ onNavigate }) {
                   </span>
                   <div>
                     <div className="font-medium">{player}</div>
-                    <div className="text-sm text-text-muted">≈ {(shots / 20).toFixed(1)} Gläser</div>
+                    <div className="text-sm text-text-muted space-x-2">
+                      <span>≈ {alcoholUtils.clToLiters(shots)}L</span>
+                      <span>≈ {alcoholUtils.clToShots(shots)} Shots</span>
+                    </div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1261,91 +1306,368 @@ export default function StatsTab({ onNavigate }) {
           </div>
         </div>
 
-        {/* Alcohol Calculator */}
+        {/* Match Overview with Alcohol Consumption */}
         <div className="modern-card">
-          <h3 className="font-bold text-lg mb-4">🧮 Alkohol-Rechner</h3>
+          <h3 className="font-bold text-lg mb-4">📋 Spiele & Alkohol-Übersicht</h3>
           <div className="text-sm text-text-muted mb-4">
-            Berechne, wie viel Alkohol bei einem hypothetischen Spiel getrunken werden müsste
+            Übersicht über alle Spiele und den dabei konsumierten Alkohol
           </div>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">AEK Tore</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="20"
-                  value={calculatorValues.aekGoals}
-                  onChange={(e) => setCalculatorValues(prev => ({
-                    ...prev,
-                    aekGoals: parseInt(e.target.value) || 0
-                  }))}
-                  className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
-                />
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {matches?.slice().reverse().map((match, index) => {
+              const aekGoals = match.goalsa || 0;
+              const realGoals = match.goalsb || 0;
+              const totalAlcohol = (aekGoals + realGoals) * 2;
+              const aekDrinks = realGoals * 2;
+              const realDrinks = aekGoals * 2;
+              
+              return (
+                <div key={match.id || index} className="p-3 bg-bg-secondary rounded-lg border border-border-light">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-medium text-lg">
+                        {aekGoals}:{realGoals} 
+                        <span className="text-sm text-text-muted ml-2">
+                          ({match.date || 'Kein Datum'})
+                        </span>
+                      </div>
+                      <div className="text-sm text-text-muted">
+                        AEK vs Real Madrid
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-primary-green">{totalAlcohol}cl</div>
+                      <div className="text-xs text-text-muted">
+                        {alcoholUtils.clToLiters(totalAlcohol)}L | {alcoholUtils.clToShots(totalAlcohol)} Shots
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <div className="text-center p-2 bg-blue-50 rounded">
+                      <div className="text-sm font-bold text-blue-600">{aekDrinks}cl</div>
+                      <div className="text-xs text-blue-700">AEK trinkt</div>
+                    </div>
+                    <div className="text-center p-2 bg-red-50 rounded">
+                      <div className="text-sm font-bold text-red-600">{realDrinks}cl</div>
+                      <div className="text-xs text-red-700">Real trinkt</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {(!matches || matches.length === 0) && (
+              <div className="text-center text-text-muted py-4">
+                Noch keine Spiele vorhanden
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Real Tore</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="20"
-                  value={calculatorValues.realGoals}
-                  onChange={(e) => setCalculatorValues(prev => ({
-                    ...prev,
-                    realGoals: parseInt(e.target.value) || 0
-                  }))}
-                  className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
-                />
+            )}
+          </div>
+        </div>
+
+        {/* Enhanced Alcohol Calculator */}
+        <div className="modern-card">
+          <h3 className="font-bold text-lg mb-4">🧮 Erweiterte Alkohol-Rechner</h3>
+          <div className="text-sm text-text-muted mb-6">
+            Berechne Alkoholkonsum für Spiele und Spieltage inklusive Bier-Konsum und Blutalkohol
+          </div>
+          
+          {/* Basic Game Calculator */}
+          <div className="mb-6">
+            <h4 className="font-semibold mb-3">⚽ Spiel-Rechner</h4>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">AEK Tore</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="20"
+                    value={calculatorValues.aekGoals}
+                    onChange={(e) => setCalculatorValues(prev => ({
+                      ...prev,
+                      aekGoals: parseInt(e.target.value) || 0
+                    }))}
+                    className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Real Tore</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="20"
+                    value={calculatorValues.realGoals}
+                    onChange={(e) => setCalculatorValues(prev => ({
+                      ...prev,
+                      realGoals: parseInt(e.target.value) || 0
+                    }))}
+                    className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="space-y-4">
-              <div className="p-4 bg-bg-secondary rounded-lg">
-                <div className="text-center">
-                  <div className="text-3xl mb-2">🥃</div>
-                  <div className="text-2xl font-bold text-primary-green">{calculateMatchAlcohol()}cl</div>
-                  <div className="text-sm text-text-muted">Gesamt Schnaps</div>
-                  <div className="text-xs text-text-muted mt-1">
-                    ≈ {(calculateMatchAlcohol() / 20).toFixed(1)} Gläser
+              <div className="space-y-4">
+                <div className="p-4 bg-bg-secondary rounded-lg">
+                  <div className="text-center">
+                    <div className="text-3xl mb-2">🥃</div>
+                    <div className="text-2xl font-bold text-primary-green">{calculateMatchAlcohol()}cl</div>
+                    <div className="text-sm text-text-muted">Gesamt Schnaps</div>
+                    <div className="text-xs text-text-muted mt-1 space-y-1">
+                      <div>≈ {alcoholUtils.clToLiters(calculateMatchAlcohol())}L</div>
+                      <div>≈ {alcoholUtils.clToShots(calculateMatchAlcohol())} Shots</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <div className="text-lg font-bold text-blue-600">{calculatorValues.realGoals * 2}cl</div>
+                    <div className="text-sm text-blue-700">AEK trinkt</div>
+                    <div className="text-xs text-blue-700">{alcoholUtils.clToShots(calculatorValues.realGoals * 2)} Shots</div>
+                  </div>
+                  <div className="text-center p-3 bg-red-50 rounded-lg">
+                    <div className="text-lg font-bold text-red-600">{calculatorValues.aekGoals * 2}cl</div>
+                    <div className="text-sm text-red-700">Real trinkt</div>
+                    <div className="text-xs text-red-700">{alcoholUtils.clToShots(calculatorValues.aekGoals * 2)} Shots</div>
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <div className="text-lg font-bold text-blue-600">{calculatorValues.realGoals * 2}cl</div>
-                  <div className="text-sm text-blue-700">AEK trinkt</div>
+            </div>
+          </div>
+
+          {/* Game Day Calculator */}
+          <div className="mb-6 border-t pt-6">
+            <h4 className="font-semibold mb-3">📅 Spieltag-Rechner</h4>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Spieltag (Datum)</label>
+                  <input
+                    type="date"
+                    value={calculatorValues.gameDay}
+                    onChange={(e) => setCalculatorValues(prev => ({
+                      ...prev,
+                      gameDay: e.target.value
+                    }))}
+                    className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                  />
                 </div>
-                <div className="text-center p-3 bg-red-50 rounded-lg">
-                  <div className="text-lg font-bold text-red-600">{calculatorValues.aekGoals * 2}cl</div>
-                  <div className="text-sm text-red-700">Real trinkt</div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Bier-Anzahl (0,5L je)</label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={calculatorValues.beerCount}
+                      onChange={(e) => setCalculatorValues(prev => ({
+                        ...prev,
+                        beerCount: parseInt(e.target.value) || 0
+                      }))}
+                      className="flex-1 px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                    />
+                    <button
+                      onClick={() => setCalculatorValues(prev => ({
+                        ...prev,
+                        beerCount: prev.beerCount + 1
+                      }))}
+                      className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+                      title="0,5L Bier (5% Alkohol) hinzufügen"
+                    >
+                      🍺 +0,5L
+                    </button>
+                  </div>
+                  <div className="text-xs text-text-muted mt-1">
+                    Gesamt: {(calculatorValues.beerCount * 0.5).toFixed(1)}L Bier (5% Alkohol)
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="p-4 bg-bg-secondary rounded-lg">
+                  <h5 className="font-medium mb-2">Spieltag-Alkohol</h5>
+                  <div className="text-sm space-y-1">
+                    <div>Schnaps: {calculateMatchAlcohol()}cl (40% Alkohol)</div>
+                    <div>Bier: {(calculatorValues.beerCount * 0.5 * 5).toFixed(1)}cl reiner Alkohol</div>
+                    <div className="border-t pt-1 font-semibold">
+                      Gesamt: {(calculateMatchAlcohol() * 0.4 + calculatorValues.beerCount * 0.5 * 0.05).toFixed(1)}cl reiner Alkohol
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+
+          {/* Player Data & Blood Alcohol Calculator */}
+          <div className="border-t pt-6">
+            <h4 className="font-semibold mb-3">👥 Spieler-Daten & Blutalkohol</h4>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <h5 className="font-medium text-blue-600 mb-2">🔵 Chef AEK</h5>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Name"
+                      value={calculatorValues.playerData.aekChef.name}
+                      onChange={(e) => setCalculatorValues(prev => ({
+                        ...prev,
+                        playerData: {
+                          ...prev.playerData,
+                          aekChef: { ...prev.playerData.aekChef, name: e.target.value }
+                        }
+                      }))}
+                      className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        placeholder="Gewicht (kg)"
+                        min="40"
+                        max="150"
+                        value={calculatorValues.playerData.aekChef.weight}
+                        onChange={(e) => setCalculatorValues(prev => ({
+                          ...prev,
+                          playerData: {
+                            ...prev.playerData,
+                            aekChef: { ...prev.playerData.aekChef, weight: parseInt(e.target.value) || 70 }
+                          }
+                        }))}
+                        className="px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                      />
+                      <select
+                        value={calculatorValues.playerData.aekChef.gender}
+                        onChange={(e) => setCalculatorValues(prev => ({
+                          ...prev,
+                          playerData: {
+                            ...prev.playerData,
+                            aekChef: { ...prev.playerData.aekChef, gender: e.target.value }
+                          }
+                        }))}
+                        className="px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                      >
+                        <option value="male">Männlich</option>
+                        <option value="female">Weiblich</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h5 className="font-medium text-red-600 mb-2">🔴 Chef Real</h5>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Name"
+                      value={calculatorValues.playerData.realChef.name}
+                      onChange={(e) => setCalculatorValues(prev => ({
+                        ...prev,
+                        playerData: {
+                          ...prev.playerData,
+                          realChef: { ...prev.playerData.realChef, name: e.target.value }
+                        }
+                      }))}
+                      className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        placeholder="Gewicht (kg)"
+                        min="40"
+                        max="150"
+                        value={calculatorValues.playerData.realChef.weight}
+                        onChange={(e) => setCalculatorValues(prev => ({
+                          ...prev,
+                          playerData: {
+                            ...prev.playerData,
+                            realChef: { ...prev.playerData.realChef, weight: parseInt(e.target.value) || 70 }
+                          }
+                        }))}
+                        className="px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                      />
+                      <select
+                        value={calculatorValues.playerData.realChef.gender}
+                        onChange={(e) => setCalculatorValues(prev => ({
+                          ...prev,
+                          playerData: {
+                            ...prev.playerData,
+                            realChef: { ...prev.playerData.realChef, gender: e.target.value }
+                          }
+                        }))}
+                        className="px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                      >
+                        <option value="male">Männlich</option>
+                        <option value="female">Weiblich</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="p-4 bg-bg-secondary rounded-lg">
+                  <h5 className="font-medium mb-3">🧪 Blutalkohol-Rechnung</h5>
+                  <div className="space-y-3">
+                    <div className="p-3 border border-blue-200 rounded-lg">
+                      <div className="text-sm font-medium text-blue-600">
+                        {calculatorValues.playerData.aekChef.name || 'Chef AEK'} trinkt: {calculatorValues.realGoals * 2}cl
+                      </div>
+                      <div className="text-xs text-text-muted mt-1">
+                        BAK: ≈ {calculateBloodAlcohol(calculatorValues.realGoals * 2, calculatorValues.playerData.aekChef)}‰
+                      </div>
+                    </div>
+                    <div className="p-3 border border-red-200 rounded-lg">
+                      <div className="text-sm font-medium text-red-600">
+                        {calculatorValues.playerData.realChef.name || 'Chef Real'} trinkt: {calculatorValues.aekGoals * 2}cl
+                      </div>
+                      <div className="text-xs text-text-muted mt-1">
+                        BAK: ≈ {calculateBloodAlcohol(calculatorValues.aekGoals * 2, calculatorValues.playerData.realChef)}‰
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-text-muted mt-3">
+                    <strong>Hinweis:</strong> BAK-Berechnung ist eine Näherung (Widmark-Formel). 
+                    Exakte Werte können abweichen.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="text-sm text-yellow-800">
-              <strong>Regel:</strong> Für jedes geschossene Tor muss der Gegner 2cl Schnaps trinken.
+              <strong>Regeln:</strong> Für jedes geschossene Tor muss der Gegner 2cl Schnaps trinken. 
+              0,5L Bier (5% Alkohol) entspricht 2,5cl reinem Alkohol.
             </div>
           </div>
         </div>
 
-        {/* Team Alcohol Statistics */}
+        {/* Enhanced Team Alcohol Statistics */}
         <div className="grid md:grid-cols-2 gap-6">
           <div className="modern-card border-l-4 border-blue-400">
             <h3 className="font-bold text-lg mb-4 text-blue-600">🔵 AEK Alkohol-Bilanz</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span>Getrunken (durch Real Tore):</span>
-                <span className="font-semibold text-red-600">{alcoholStats.aekShots}cl</span>
+                <div className="text-right">
+                  <div className="font-semibold text-red-600">{alcoholStats.aekShots}cl</div>
+                  <div className="text-xs text-text-muted">
+                    {alcoholUtils.clToLiters(alcoholStats.aekShots)}L | {alcoholUtils.clToShots(alcoholStats.aekShots)} Shots
+                  </div>
+                </div>
               </div>
               <div className="flex justify-between">
                 <span>Verursacht (durch AEK Tore):</span>
-                <span className="font-semibold text-green-600">{alcoholStats.realShots}cl</span>
+                <div className="text-right">
+                  <div className="font-semibold text-green-600">{alcoholStats.realShots}cl</div>
+                  <div className="text-xs text-text-muted">
+                    {alcoholUtils.clToLiters(alcoholStats.realShots)}L | {alcoholUtils.clToShots(alcoholStats.realShots)} Shots
+                  </div>
+                </div>
               </div>
               <div className="flex justify-between border-t pt-2">
                 <span className="font-medium">Alkohol-Bilanz:</span>
-                <span className={`font-bold ${alcoholStats.realShots > alcoholStats.aekShots ? 'text-green-600' : 'text-red-600'}`}>
-                  {alcoholStats.realShots > alcoholStats.aekShots ? '+' : ''}{alcoholStats.realShots - alcoholStats.aekShots}cl
-                </span>
+                <div className="text-right">
+                  <div className={`font-bold ${alcoholStats.realShots > alcoholStats.aekShots ? 'text-green-600' : 'text-red-600'}`}>
+                    {alcoholStats.realShots > alcoholStats.aekShots ? '+' : ''}{alcoholStats.realShots - alcoholStats.aekShots}cl
+                  </div>
+                  <div className="text-xs text-text-muted">
+                    {alcoholUtils.clToShots(Math.abs(alcoholStats.realShots - alcoholStats.aekShots))} Shots Differenz
+                  </div>
+                </div>
               </div>
               <div className="text-xs text-text-muted">
                 {alcoholStats.realShots > alcoholStats.aekShots ? 'AEK verursacht mehr als getrunken' : 'AEK trinkt mehr als verursacht'}
@@ -1357,17 +1679,32 @@ export default function StatsTab({ onNavigate }) {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span>Getrunken (durch AEK Tore):</span>
-                <span className="font-semibold text-red-600">{alcoholStats.realShots}cl</span>
+                <div className="text-right">
+                  <div className="font-semibold text-red-600">{alcoholStats.realShots}cl</div>
+                  <div className="text-xs text-text-muted">
+                    {alcoholUtils.clToLiters(alcoholStats.realShots)}L | {alcoholUtils.clToShots(alcoholStats.realShots)} Shots
+                  </div>
+                </div>
               </div>
               <div className="flex justify-between">
                 <span>Verursacht (durch Real Tore):</span>
-                <span className="font-semibold text-green-600">{alcoholStats.aekShots}cl</span>
+                <div className="text-right">
+                  <div className="font-semibold text-green-600">{alcoholStats.aekShots}cl</div>
+                  <div className="text-xs text-text-muted">
+                    {alcoholUtils.clToLiters(alcoholStats.aekShots)}L | {alcoholUtils.clToShots(alcoholStats.aekShots)} Shots
+                  </div>
+                </div>
               </div>
               <div className="flex justify-between border-t pt-2">
                 <span className="font-medium">Alkohol-Bilanz:</span>
-                <span className={`font-bold ${alcoholStats.aekShots > alcoholStats.realShots ? 'text-green-600' : 'text-red-600'}`}>
-                  {alcoholStats.aekShots > alcoholStats.realShots ? '+' : ''}{alcoholStats.aekShots - alcoholStats.realShots}cl
-                </span>
+                <div className="text-right">
+                  <div className={`font-bold ${alcoholStats.aekShots > alcoholStats.realShots ? 'text-green-600' : 'text-red-600'}`}>
+                    {alcoholStats.aekShots > alcoholStats.realShots ? '+' : ''}{alcoholStats.aekShots - alcoholStats.realShots}cl
+                  </div>
+                  <div className="text-xs text-text-muted">
+                    {alcoholUtils.clToShots(Math.abs(alcoholStats.aekShots - alcoholStats.realShots))} Shots Differenz
+                  </div>
+                </div>
               </div>
               <div className="text-xs text-text-muted">
                 {alcoholStats.aekShots > alcoholStats.realShots ? 'Real verursacht mehr als getrunken' : 'Real trinkt mehr als verursacht'}
@@ -1392,35 +1729,42 @@ export default function StatsTab({ onNavigate }) {
   };
 
   return (
-    <div className="p-4 pb-20">
+    <div className="p-4 pb-24 mobile-safe-bottom">
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-text-primary mb-2">📊 Statistiken</h2>
         <p className="text-text-muted">Umfassende Analyse von Spielen, Spielern und Teams</p>
       </div>
 
-      {/* View Navigation */}
-      <div className="icon-only-nav flex overflow-x-auto space-x-2 mb-6 pb-2">
-        {views.map((view) => (
-          <button
-            key={view.id}
-            onClick={() => setSelectedView(view.id)}
-            className={`stats-nav-button flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
-              selectedView === view.id
-                ? 'bg-primary-green text-white'
-                : 'bg-bg-secondary text-text-muted hover:bg-bg-tertiary'
-            }`}
-            title={view.label}
-            aria-label={view.label}
-          >
-            <span>{view.icon}</span>
-            <span className="font-medium hidden sm:inline">{view.label}</span>
-          </button>
-        ))}
+      {/* View Navigation with Scroll Indicators */}
+      <div className="relative mb-6">
+        <div className="icon-only-nav flex overflow-x-auto space-x-2 pb-2 scroll-indicator-container">
+          {views.map((view) => (
+            <button
+              key={view.id}
+              onClick={() => setSelectedView(view.id)}
+              className={`stats-nav-button flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+                selectedView === view.id
+                  ? 'bg-primary-green text-white'
+                  : 'bg-bg-secondary text-text-muted hover:bg-bg-tertiary'
+              }`}
+              title={view.label}
+              aria-label={view.label}
+            >
+              <span>{view.icon}</span>
+              <span className="font-medium hidden sm:inline">{view.label}</span>
+            </button>
+          ))}
+        </div>
+        {/* Scroll Indicators */}
+        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-8 bg-gradient-to-r from-bg-primary to-transparent pointer-events-none opacity-50 md:hidden"></div>
+        <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-8 bg-gradient-to-l from-bg-primary to-transparent pointer-events-none opacity-50 md:hidden"></div>
       </div>
 
       {/* Content */}
-      {renderCurrentView()}
+      <div className="form-container">
+        {renderCurrentView()}
+      </div>
     </div>
   );
 }

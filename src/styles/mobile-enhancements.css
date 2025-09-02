@@ -721,3 +721,57 @@ button:focus {
     display: none;
   }
 }
+
+/* Mobile overlap prevention */
+.mobile-safe-bottom {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.form-container {
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 640px) {
+  .mobile-safe-bottom {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  
+  .form-container {
+    margin-bottom: 3rem;
+  }
+}
+
+/* Scroll indicators for navigation */
+.scroll-indicator-container {
+  position: relative;
+}
+
+.scroll-indicator-container::before,
+.scroll-indicator-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.scroll-indicator-container::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.8), transparent);
+}
+
+.scroll-indicator-container::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(255, 255, 255, 0.8), transparent);
+}
+
+@media (max-width: 768px) {
+  .scroll-indicator-container.can-scroll-left::before,
+  .scroll-indicator-container.can-scroll-right::after {
+    opacity: 1;
+  }
+}
