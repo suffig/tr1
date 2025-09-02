@@ -150,8 +150,8 @@ export default function SearchTab() {
                   <p className="text-sm text-text-secondary">
                     {item.position} • {item.team} • {item.value || 0}M €
                   </p>
-                  {item.goals > 0 && (
-                    <p className="text-xs text-primary-green">⚽ {item.goals} Tore</p>
+                  {(item.goals || 0) > 0 && (
+                    <p className="text-xs text-primary-green">⚽ {item.goals || 0} Tore</p>
                   )}
                 </div>
                 <div className="text-right">

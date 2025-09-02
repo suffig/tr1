@@ -249,7 +249,6 @@ export default function StatsTab({ onNavigate }) {
 
   // Basic data calculations
   const totalMatches = matches?.length || 0;
-  const totalPlayers = players?.length || 0;
   const aekPlayers = players?.filter(p => p.team === 'AEK') || [];
   const realPlayers = players?.filter(p => p.team === 'Real') || [];
 
@@ -302,14 +301,6 @@ export default function StatsTab({ onNavigate }) {
     const topSdSPlayer = playerStats
       .filter(p => p.sdsCount > 0)
       .sort((a, b) => b.sdsCount - a.sdsCount)[0];
-    
-    // Calculate highest victory
-    const highestVictory = matches?.reduce((max, match) => {
-      const aekGoals = match.goalsa || 0;
-      const realGoals = match.goalsb || 0;
-      const goalDiff = Math.abs(aekGoals - realGoals);
-      return goalDiff > max.diff ? { diff: goalDiff, match } : max;
-    }, { diff: 0, match: null });
     
     // Calculate player with most goals in a single match
     const mostGoalsInMatch = matches?.reduce((max, match) => {
