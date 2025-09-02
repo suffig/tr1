@@ -6,7 +6,7 @@ import AddTransactionTab from './admin/AddTransactionTab';
 import DeleteTab from './admin/DeleteTab';
 import SearchTab from './admin/SearchTab';
 
-export default function AdminTab({ onLogout }) {
+export default function AdminTab({ onLogout, onNavigate }) {
   const [activeSubTab, setActiveSubTab] = useState('search');
 
   const subTabs = [
@@ -21,7 +21,7 @@ export default function AdminTab({ onLogout }) {
   const renderSubTabContent = () => {
     switch (activeSubTab) {
       case 'search':
-        return <SearchTab />;
+        return <SearchTab onNavigate={onNavigate} />;
       case 'matches':
         return <AddMatchTab />;
       case 'bans':
@@ -33,7 +33,7 @@ export default function AdminTab({ onLogout }) {
       case 'delete':
         return <DeleteTab />;
       default:
-        return <SearchTab />;
+        return <SearchTab onNavigate={onNavigate} />;
     }
   };
 

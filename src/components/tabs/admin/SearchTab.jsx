@@ -3,7 +3,7 @@ import { useSupabaseQuery } from '../../../hooks/useSupabase';
 import EnhancedSearch from '../../EnhancedSearch';
 import LoadingSpinner from '../../LoadingSpinner';
 
-export default function SearchTab() {
+export default function SearchTab({ onNavigate }) {
   const [activeSearchType, setActiveSearchType] = useState('players');
   const [searchResults, setSearchResults] = useState([]);
 
@@ -63,8 +63,70 @@ export default function SearchTab() {
       label: 'Spiele',
       icon: 'fas fa-futbol',
       data: matches || [],
-      searchFields: ['date', 'goalsa', 'goalsb'],
-      filterOptions: []
+      searchFields: ['date', 'goalsa', 'goalsb', 'goalscorers', 'manofthematch', 'teama', 'teamb'],
+      filterOptions: [],
+      searchExtractor: (match) => {
+        // Extract searchable content from match data
+        const searchableText = [];
+        
+        // Basic match info
+        if (match.date) searchableText.push(new Date(match.date).toLocaleDateString('de-DE'));
+        if (match.teama) searchableText.push(match.teama);
+        if (match.teamb) searchableText.push(match.teamb);
+        if (match.goalsa !== undefined) searchableText.push(match.goalsa.toString());
+        if (match.goalsb !== undefined) searchableText.push(match.goalsb.toString());
+        
+        // Extract goalscorer names from goalslista
+        if (match.goalslista) {
+          try {
+            const goalsList = typeof match.goalslista === 'string' 
+              ? JSON.parse(match.goalslista) 
+              : match.goalslista;
+            
+            if (Array.isArray(goalsList)) {
+              goalsList.forEach(goal => {
+                if (typeof goal === 'string') {
+                  searchableText.push(goal);
+                } else if (goal && goal.player) {
+                  searchableText.push(goal.player);
+                }
+              });
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+        
+        // Extract goalscorer names from goalslistb
+        if (match.goalslistb) {
+          try {
+            const goalsList = typeof match.goalslistb === 'string' 
+              ? JSON.parse(match.goalslistb) 
+              : match.goalslistb;
+            
+            if (Array.isArray(goalsList)) {
+              goalsList.forEach(goal => {
+                if (typeof goal === 'string') {
+                  searchableText.push(goal);
+                } else if (goal && goal.player) {
+                  searchableText.push(goal.player);
+                }
+              });
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+        
+        // Add Man of the Match (SdS)
+        if (match.manofthematch) {
+          searchableText.push(match.manofthematch);
+          searchableText.push('Spieler des Spiels');
+          searchableText.push('SdS');
+        }
+        
+        return searchableText.join(' ').toLowerCase();
+      }
     },
     {
       id: 'transactions',
@@ -127,6 +189,30 @@ export default function SearchTab() {
 
   const currentSearchType = searchTypes.find(type => type.id === activeSearchType);
 
+  // Handler for clicking on search results
+  const handleResultClick = (item, type) => {
+    switch (type) {
+      case 'players':
+        // Navigate to player management
+        onNavigate?.('squad'); // or wherever players are managed
+        break;
+      case 'matches':
+        // Navigate to matches view
+        onNavigate?.('matches');
+        break;
+      case 'transactions':
+        // Navigate to financial view
+        onNavigate?.('finances');
+        break;
+      case 'bans':
+        // Navigate to bans view
+        onNavigate?.('bans');
+        break;
+      default:
+        break;
+    }
+  };
+
   const renderSearchResults = () => {
     const results = searchResults.length > 0 ? searchResults : currentSearchType.data;
     
@@ -142,10 +228,14 @@ export default function SearchTab() {
     return (
       <div className="divide-y divide-border-light">
         {results.map((item) => (
-          <div key={item.id} className="p-4 hover:bg-bg-secondary transition-colors">
+          <button
+            key={item.id}
+            onClick={() => handleResultClick(item, activeSearchType)}
+            className="w-full p-4 hover:bg-bg-secondary transition-colors text-left focus:outline-none focus:ring-2 focus:ring-primary-green focus:ring-inset"
+          >
             {activeSearchType === 'players' && (
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <h3 className="font-medium text-text-primary">{item.name}</h3>
                   <p className="text-sm text-text-secondary">
                     {item.position} • {item.team} • {item.value || 0}M €
@@ -154,68 +244,119 @@ export default function SearchTab() {
                     <p className="text-xs text-primary-green">⚽ {item.goals || 0} Tore</p>
                   )}
                 </div>
-                <div className="text-right">
+                <div className="text-right ml-4">
                   <div className="text-lg font-bold text-primary-green">
                     {item.value || 0}M €
                   </div>
+                  <div className="text-xs text-text-muted">Zum Spieler →</div>
                 </div>
               </div>
             )}
 
             {activeSearchType === 'matches' && (
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <h3 className="font-medium text-text-primary">
                     {new Date(item.date).toLocaleDateString('de-DE')}
                   </h3>
                   <p className="text-sm text-text-secondary">
-                    AEK {item.goalsa || 0} - {item.goalsb || 0} Real
+                    {item.teama || 'AEK'} {item.goalsa || 0} - {item.goalsb || 0} {item.teamb || 'Real'}
                   </p>
+                  {/* Show goalscorers if available */}
+                  {(() => {
+                    const goalscorers = [];
+                    
+                    // Extract goalscorers from both teams
+                    try {
+                      if (item.goalslista) {
+                        const aekGoals = typeof item.goalslista === 'string' 
+                          ? JSON.parse(item.goalslista) 
+                          : item.goalslista;
+                        if (Array.isArray(aekGoals)) {
+                          aekGoals.forEach(goal => {
+                            const name = typeof goal === 'string' ? goal : goal?.player;
+                            if (name) goalscorers.push(`${name} (AEK)`);
+                          });
+                        }
+                      }
+                      
+                      if (item.goalslistb) {
+                        const realGoals = typeof item.goalslistb === 'string' 
+                          ? JSON.parse(item.goalslistb) 
+                          : item.goalslistb;
+                        if (Array.isArray(realGoals)) {
+                          realGoals.forEach(goal => {
+                            const name = typeof goal === 'string' ? goal : goal?.player;
+                            if (name) goalscorers.push(`${name} (Real)`);
+                          });
+                        }
+                      }
+                    } catch (e) {
+                      // Ignore parse errors
+                    }
+                    
+                    return goalscorers.length > 0 ? (
+                      <p className="text-xs text-text-muted mt-1">
+                        ⚽ {goalscorers.slice(0, 3).join(', ')}
+                        {goalscorers.length > 3 ? '...' : ''}
+                      </p>
+                    ) : null;
+                  })()}
+                  
+                  {/* Show Man of the Match if available */}
+                  {item.manofthematch && (
+                    <p className="text-xs text-yellow-600 mt-1">
+                      ⭐ SdS: {item.manofthematch}
+                    </p>
+                  )}
                 </div>
-                <div className="text-right">
+                <div className="text-right ml-4">
                   <div className="text-lg font-bold text-primary-green">
                     {(item.goalsa || 0) + (item.goalsb || 0)} Tore
                   </div>
+                  <div className="text-xs text-text-muted">Zum Spiel →</div>
                 </div>
               </div>
             )}
 
             {activeSearchType === 'transactions' && (
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <h3 className="font-medium text-text-primary">{item.type || 'Transaktion'}</h3>
                   <p className="text-sm text-text-secondary">{item.description || 'Keine Beschreibung'}</p>
                   <p className="text-xs text-text-secondary">
                     {new Date(item.date).toLocaleDateString('de-DE')}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="text-right ml-4">
                   <div className={`text-lg font-bold ${
                     (item.amount || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
                     {(item.amount || 0) > 0 ? '+' : ''}{item.amount || 0}€
                   </div>
+                  <div className="text-xs text-text-muted">Zu Finanzen →</div>
                 </div>
               </div>
             )}
 
             {activeSearchType === 'bans' && (
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <h3 className="font-medium text-text-primary">{item.player_name}</h3>
                   <p className="text-sm text-text-secondary">{item.team} • {item.type}</p>
                   {item.reason && (
                     <p className="text-xs text-text-secondary">{item.reason}</p>
                   )}
                 </div>
-                <div className="text-right">
+                <div className="text-right ml-4">
                   <div className="text-sm text-accent-red">
                     {item.duration || 1} Spiel{(item.duration || 1) !== 1 ? 'e' : ''}
                   </div>
+                  <div className="text-xs text-text-muted">Zu Sperren →</div>
                 </div>
               </div>
             )}
-          </div>
+          </button>
         ))}
       </div>
     );
@@ -236,7 +377,7 @@ export default function SearchTab() {
       </div>
 
       {/* Search Type Tabs */}
-      <div className="flex overflow-x-auto space-x-2 pb-2">
+      <div className="icon-only-nav flex overflow-x-auto space-x-2 pb-2">
         {searchTypes.map((type) => (
           <button
             key={type.id}
@@ -244,7 +385,7 @@ export default function SearchTab() {
               setActiveSearchType(type.id);
               setSearchResults([]);
             }}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+            className={`search-nav-button flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
               activeSearchType === type.id
                 ? 'bg-primary-green text-white'
                 : 'bg-bg-secondary text-text-muted hover:bg-bg-tertiary'
@@ -264,6 +405,7 @@ export default function SearchTab() {
         data={currentSearchType.data}
         searchFields={currentSearchType.searchFields}
         filterOptions={currentSearchType.filterOptions}
+        searchExtractor={currentSearchType.searchExtractor}
         onResults={setSearchResults}
         placeholder={`${currentSearchType.label} durchsuchen...`}
       />
