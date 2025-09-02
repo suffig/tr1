@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 const tabs = [
   { id: 'matches', icon: '⚽', label: 'Spiele', ariaLabel: 'Zu Spiele-Übersicht wechseln' },
   { id: 'bans', icon: '🚫', label: 'Bans', ariaLabel: 'Zu Bans-Übersicht wechseln' },

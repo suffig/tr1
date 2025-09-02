@@ -9,7 +9,6 @@ export default function FormationVisualizerModal({ onClose, players = [] }) {
   const [selectedFormation, setSelectedFormation] = useState('4-4-2');
   const [fieldPlayers, setFieldPlayers] = useState({});
   const [availablePlayers, setAvailablePlayers] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
 
   // Formation definitions
   const formations = {

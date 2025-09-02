@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
  * Export/Import Manager Component for React
  * Provides data backup and restore functionality
  */
-export default function ExportImportManager({ onClose, type = 'all' }) {
+export default function ExportImportManager({ onClose }) {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importFile, setImportFile] = useState(null);

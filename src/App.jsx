@@ -195,12 +195,11 @@ function App() {
 // Error Boundary Component
 function ErrorBoundary({ children }) {
   const [hasError, setHasError] = React.useState(false);
-  const [error, setError] = React.useState(null);
 
   React.useEffect(() => {
     const handleError = (event) => {
+      console.error('Global error caught:', event.error);
       setHasError(true);
-      setError(event.error);
     };
 
     window.addEventListener('error', handleError);

@@ -181,12 +181,6 @@ export default function AddMatchTab() {
     });
   };
 
-  // Get goal count for a specific player
-  const getPlayerGoalCount = (team, playerName) => {
-    const fieldName = team === 'AEK' ? 'goalslista' : 'goalslistb';
-    const scorer = formData[fieldName].find(s => s.player === playerName);
-    return scorer ? scorer.count : 0;
-  };
 
   // Add/remove own goals
   const adjustOwnGoals = (team, delta) => {

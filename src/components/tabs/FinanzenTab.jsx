@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { useSupabaseQuery } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
 import ExportImportManager from '../ExportImportManager';
+import FinancialAnalytics from './FinancialAnalytics';
 import toast from 'react-hot-toast';
 
 export default function FinanzenTab() {
   const [selectedTeam, setSelectedTeam] = useState('AEK');
   const [expandedMatches, setExpandedMatches] = useState(new Set());
   const [showExportImport, setShowExportImport] = useState(false);
+  const [currentView, setCurrentView] = useState('overview');
   
-  const { data: finances, loading: financesLoading, refetch: refetchFinances } = useSupabaseQuery('finances', '*');
+  const { data: finances, loading: financesLoading } = useSupabaseQuery('finances', '*');
   const { data: transactions, loading: transactionsLoading } = useSupabaseQuery(
     'transactions', 
     '*', 
@@ -65,32 +67,9 @@ export default function FinanzenTab() {
     }).format(roundedAmount);
   };
 
-  const formatCurrencyInMillions = (amount) => {
-    // Takes a euro amount and displays it in millions
-    // Input: euro amount, Output: "X.XM €"
-    const amountInMillions = (amount || 0) / 1000000;
-    return `${amountInMillions.toFixed(1)}M €`;
-  };
-
   const formatPlayerValue = (value) => {
     // Helper function for player values which are already stored in millions
     return `${(value || 0).toFixed(1)}M €`;
-  };
-
-  const getTransactionTypeColor = (type) => {
-    switch (type) {
-      case 'Preisgeld':
-      case 'SdS Bonus':
-      case 'Sonstiges':
-        return 'text-primary-green';
-      case 'Strafe':
-      case 'Spielerkauf':
-        return 'text-accent-red';
-      case 'Spielerverkauf':
-        return 'text-primary-green';
-      default:
-        return 'text-text-primary';
-    }
   };
 
   const getTransactionIcon = (type) => {
@@ -211,7 +190,38 @@ export default function FinanzenTab() {
         </p>
       </div>
 
-      {/* Team Balance Overview */}
+      {/* View Navigation */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <button
+          onClick={() => setCurrentView('overview')}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+            currentView === 'overview'
+              ? 'bg-primary-blue text-white'
+              : 'bg-bg-secondary text-text-primary hover:bg-bg-tertiary'
+          }`}
+        >
+          <span>💰</span>
+          <span className="hidden sm:inline">Übersicht</span>
+        </button>
+        <button
+          onClick={() => setCurrentView('analytics')}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+            currentView === 'analytics'
+              ? 'bg-primary-green text-white'
+              : 'bg-bg-secondary text-text-primary hover:bg-bg-tertiary'
+          }`}
+        >
+          <span>📊</span>
+          <span className="hidden sm:inline">Analyse</span>
+        </button>
+      </div>
+
+      {/* Conditional Content */}
+      {currentView === 'analytics' ? (
+        <FinancialAnalytics />
+      ) : (
+        <>
+          {/* Original Overview Content */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="modern-card text-center border-l-4 border-blue-400">
           <div className="flex items-center justify-center mb-2">
@@ -580,6 +590,8 @@ export default function FinanzenTab() {
       {/* Export/Import Modal */}
       {showExportImport && (
         <ExportImportManager onClose={() => setShowExportImport(false)} />
+      )}
+        </>
       )}
     </div>
   );

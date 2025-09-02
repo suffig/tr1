@@ -1,0 +1,476 @@
+/* Mobile Responsiveness Enhancements for TR1 FIFA Tracker */
+
+/* Enhanced touch targets and spacing */
+.btn,
+button {
+  min-height: 48px;
+  min-width: 48px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Improved touch feedback */
+.btn:active,
+button:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* Better spacing for mobile */
+@media (max-width: 640px) {
+  .p-4 {
+    padding: 1rem 0.75rem;
+  }
+  
+  .gap-4 {
+    gap: 0.75rem;
+  }
+  
+  .space-y-4 > * + * {
+    margin-top: 0.75rem;
+  }
+  
+  .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+  
+  .md\:grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+  
+  .md\:grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .md\:grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Enhanced form inputs for mobile */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    min-height: 48px;
+    padding: 12px 16px;
+  }
+  
+  .modern-card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* Better table responsiveness */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  table {
+    font-size: 14px;
+  }
+  
+  th,
+  td {
+    padding: 8px 4px;
+    min-width: 60px;
+  }
+}
+
+/* Improved navigation for mobile */
+@media (max-width: 640px) {
+  .modern-bottom-nav {
+    padding: 8px 4px;
+  }
+  
+  .nav-item {
+    min-width: 56px;
+    min-height: 56px;
+    padding: 8px 4px;
+  }
+  
+  .nav-item span {
+    font-size: 12px;
+  }
+}
+
+/* Enhanced modal sizing for mobile */
+@media (max-width: 640px) {
+  .modal-content {
+    width: 95vw;
+    max-width: 95vw;
+    margin: 10px auto;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .modal-header {
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .modal-footer {
+    padding: 1rem;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+  }
+}
+
+/* Better text sizing and readability */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.75rem;
+    line-height: 1.3;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+  }
+  
+  h3 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+  }
+  
+  .text-sm {
+    font-size: 14px;
+  }
+  
+  .text-xs {
+    font-size: 12px;
+  }
+}
+
+/* Enhanced scroll behavior */
+.scroll-smooth {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Better focus states for accessibility */
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+
+/* Reduced motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark mode improvements for mobile */
+@media (prefers-color-scheme: dark) and (max-width: 640px) {
+  .modern-card {
+    background-color: #1F2937;
+    border-color: #374151;
+  }
+  
+  input,
+  select,
+  textarea {
+    background-color: #1F2937;
+    border-color: #374151;
+    color: #F9FAFB;
+  }
+  
+  .modern-bottom-nav {
+    background-color: #111827;
+    border-color: #374151;
+  }
+}
+
+/* Landscape mode optimizations */
+@media (max-width: 640px) and (orientation: landscape) {
+  .min-h-screen {
+    min-height: 100vh;
+  }
+  
+  .modern-bottom-nav {
+    padding: 4px 2px;
+  }
+  
+  .nav-item {
+    min-height: 48px;
+    padding: 4px 2px;
+  }
+  
+  .nav-item span {
+    font-size: 11px;
+  }
+}
+
+/* Safe area support for modern iOS devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Better loading states for mobile */
+@media (max-width: 640px) {
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .skeleton-loader {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+}
+
+/* Enhanced grid layouts for mobile */
+@media (max-width: 640px) {
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  
+  .finance-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .player-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+}
+
+/* Better button groups for mobile */
+@media (max-width: 640px) {
+  .button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .button-group button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .horizontal-scroll {
+    display: flex;
+    overflow-x: auto;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .horizontal-scroll button {
+    flex-shrink: 0;
+    min-width: 120px;
+  }
+}
+
+/* Improved form layouts */
+@media (max-width: 640px) {
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .form-label {
+    font-weight: 500;
+    font-size: 14px;
+    color: #374151;
+  }
+  
+  .form-help {
+    font-size: 12px;
+    color: #6B7280;
+    margin-top: 0.25rem;
+  }
+  
+  .form-error {
+    font-size: 12px;
+    color: #EF4444;
+    margin-top: 0.25rem;
+  }
+}
+
+/* Enhanced card layouts */
+@media (max-width: 640px) {
+  .card-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1F2937;
+  }
+  
+  .card-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .card-body {
+    flex: 1;
+  }
+  
+  .card-footer {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #E5E7EB;
+  }
+}
+
+/* Better toast notifications for mobile */
+@media (max-width: 640px) {
+  .toast-container {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    right: 1rem;
+    z-index: 9999;
+  }
+  
+  .toast {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .toast-success {
+    background-color: #10B981;
+    color: white;
+  }
+  
+  .toast-error {
+    background-color: #EF4444;
+    color: white;
+  }
+  
+  .toast-info {
+    background-color: #3B82F6;
+    color: white;
+  }
+  
+  .toast-warning {
+    background-color: #F59E0B;
+    color: white;
+  }
+}
+
+/* Performance optimizations */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Better scrolling for mobile */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E0 #F7FAFC;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #F7FAFC;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #CBD5E0;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #A0AEC0;
+}
+
+/* Utility classes for mobile */
+.mobile-only {
+  display: block;
+}
+
+.desktop-only {
+  display: none;
+}
+
+@media (min-width: 641px) {
+  .mobile-only {
+    display: none;
+  }
+  
+  .desktop-only {
+    display: block;
+  }
+}

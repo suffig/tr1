@@ -3,7 +3,7 @@ import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
 import ExportImportManager from '../ExportImportManager';
 import FormationVisualizerModal from '../FormationVisualizerModal';
-import { POSITIONS, TEAMS } from '../../utils/errorHandling';
+import { POSITIONS } from '../../utils/errorHandling';
 import toast from 'react-hot-toast';
 
 export default function KaderTab() {
@@ -13,7 +13,7 @@ export default function KaderTab() {
   const [editingPlayer, setEditingPlayer] = useState(null);
   
   const { data: players, loading, error, refetch } = useSupabaseQuery('players', '*');
-  const { insert, update, remove } = useSupabaseMutation('players');
+  const { update, remove } = useSupabaseMutation('players');
   
   const POSITION_ORDER = {
     "TH": 0, "IV": 1, "LV": 2, "RV": 3, "ZDM": 4, "ZM": 5,
@@ -113,13 +113,6 @@ export default function KaderTab() {
     if (teamName === "Real") return "text-red-600";
     if (teamName === "Ehemalige") return "text-slate-600";
     return "text-gray-600";
-  };
-
-  const getTeamIcon = (teamName) => {
-    if (teamName === "AEK") return "🔵";
-    if (teamName === "Real") return "🔴";
-    if (teamName === "Ehemalige") return "⚪";
-    return "⚽";
   };
 
   // Minimal CRUD functions without changing the design
