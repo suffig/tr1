@@ -228,6 +228,13 @@ class StatsCalculator {
 
 export default function StatsTab({ onNavigate }) {
   const [selectedView, setSelectedView] = useState('dashboard');
+  // Alcohol calculator state - moved from renderAlkohol function to component level
+  const [calculatorValues, setCalculatorValues] = useState({
+    aekPlayer: '',
+    realPlayer: '',
+    aekGoals: 0,
+    realGoals: 0
+  });
   
   const { data: matches, loading: matchesLoading } = useSupabaseQuery('matches', '*');
   const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
@@ -495,7 +502,6 @@ export default function StatsTab({ onNavigate }) {
                   let maxStreak = 0;
                   let currentAekStreak = 0;
                   let currentRealStreak = 0;
-                  let maxTeam = '';
                   
                   matches?.forEach(match => {
                     const aekGoals = match.goalsa || 0;
@@ -506,14 +512,12 @@ export default function StatsTab({ onNavigate }) {
                       currentRealStreak = 0;
                       if (currentAekStreak > maxStreak) {
                         maxStreak = currentAekStreak;
-                        maxTeam = 'AEK';
                       }
                     } else if (realGoals > aekGoals) {
                       currentRealStreak++;
                       currentAekStreak = 0;
                       if (currentRealStreak > maxStreak) {
                         maxStreak = currentRealStreak;
-                        maxTeam = 'Real';
                       }
                     } else {
                       currentAekStreak = 0;
@@ -566,14 +570,12 @@ export default function StatsTab({ onNavigate }) {
                 {(() => {
                   // Calculate most productive player (goals per match played)
                   let bestRatio = 0;
-                  let bestPlayer = null;
                   
                   playerStats.forEach(player => {
                     if (player.matchesPlayed > 0) {
                       const ratio = player.goals / player.matchesPlayed;
                       if (ratio > bestRatio) {
                         bestRatio = ratio;
-                        bestPlayer = player.name;
                       }
                     }
                   });
@@ -1132,13 +1134,6 @@ export default function StatsTab({ onNavigate }) {
   );
 
   const renderAlkohol = () => {
-    const [calculatorValues, setCalculatorValues] = useState({
-      aekPlayer: '',
-      realPlayer: '',
-      aekGoals: 0,
-      realGoals: 0
-    });
-
     // Calculate alcohol statistics
     const calculateAlcoholStats = () => {
       const stats = {

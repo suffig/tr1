@@ -686,3 +686,38 @@ button:focus {
     font-size: 1.125rem;
   }
 }
+
+/* Utility classes for scrollbars */
+.scrollbar-hide {
+  /* Firefox */
+  scrollbar-width: none;
+  /* Safari and Chrome */
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Better mobile navigation spacing */
+@media (max-width: 480px) {
+  .nav-item {
+    padding: 0.5rem 0.25rem;
+    min-width: 48px;
+  }
+  
+  .nav-item span {
+    font-size: 0.625rem;
+    line-height: 1;
+  }
+  
+  /* Ensure navigation doesn't overflow */
+  .bottom-nav-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .bottom-nav-container::-webkit-scrollbar {
+    display: none;
+  }
+}
