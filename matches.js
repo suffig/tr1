@@ -764,7 +764,27 @@ function openMatchForm(id) {
             return;
         }
 
-        // Spieler-Optionen SORTIERT nach SdS-Anzahl (absteigend), dann nach Toren (absteigend) - safely
+        // Separate sorting for goal scorers (by goals first, then SdS) and man of the match (by SdS first, then goals)
+        
+        // For goal scorer dropdowns: sort by goals first (descending), then by SdS count (descending)
+        const aekSortedForGoals = [...matchesData.aek].sort((a, b) => {
+            const aGoals = a.goals || 0;
+            const bGoals = b.goals || 0;
+            if (aGoals !== bGoals) return bGoals - aGoals; // Sort by goals first
+            const aSdsCount = getSdsCount(a.name, "AEK");
+            const bSdsCount = getSdsCount(b.name, "AEK");
+            return bSdsCount - aSdsCount; // Then by SdS count
+        });
+        const realSortedForGoals = [...matchesData.real].sort((a, b) => {
+            const aGoals = a.goals || 0;
+            const bGoals = b.goals || 0;
+            if (aGoals !== bGoals) return bGoals - aGoals; // Sort by goals first
+            const aSdsCount = getSdsCount(a.name, "Real");
+            const bSdsCount = getSdsCount(b.name, "Real");
+            return bSdsCount - aSdsCount; // Then by SdS count
+        });
+        
+        // For man of the match dropdown: sort by SdS count first (descending), then by goals (descending)
         const aekSorted = [...matchesData.aek].sort((a, b) => {
             const aSdsCount = getSdsCount(a.name, "AEK");
             const bSdsCount = getSdsCount(b.name, "AEK");
@@ -782,12 +802,13 @@ function openMatchForm(id) {
             return bGoals - aGoals; // Then by goals
         });
         
-        const aekSpieler = aekSorted.map(p => {
+        // Generate player options for goal scorers (sorted by goals)
+        const aekSpieler = aekSortedForGoals.map(p => {
             const goals = p.goals || 0;
             return `<option value="${DOM.sanitizeForAttribute(p.name)}">${DOM.sanitizeForHTML(p.name)} (${goals} Tore)</option>`;
         }).join('');
         
-        const realSpieler = realSorted.map(p => {
+        const realSpieler = realSortedForGoals.map(p => {
             const goals = p.goals || 0;
             return `<option value="${DOM.sanitizeForAttribute(p.name)}">${DOM.sanitizeForHTML(p.name)} (${goals} Tore)</option>`;
         }).join('');
@@ -819,7 +840,7 @@ function openMatchForm(id) {
         
         // Attach event handlers safely with a small delay to ensure DOM is ready
 		setTimeout(() => {
-			attachMatchFormEventHandlers(edit, match?.id, aekSpieler, realSpieler, aekSorted, realSorted, manofthematch);
+			attachMatchFormEventHandlers(edit, match?.id, aekSpieler, realSpieler, aekSortedForGoals, realSortedForGoals, aekSorted, realSorted, manofthematch);
 			const modalContent = document.querySelector('.modal-content');
 			if (modalContent) {
 				modalContent.classList.add('match-modal-content');
@@ -1009,7 +1030,7 @@ DOM.sanitizeForAttribute = function(str) {
 };
 
 // Helper function to attach event handlers to the match form
-function attachMatchFormEventHandlers(edit, id, aekSpieler, realSpieler, aekSorted, realSorted, manofthematch) {
+function attachMatchFormEventHandlers(edit, id, aekSpieler, realSpieler, aekSortedForGoals, realSortedForGoals, aekSorted, realSorted, manofthematch) {
     // Datum-Show/Hide (wie gehabt)
     document.getElementById('show-date').onclick = function() {
         document.getElementById('date-input').classList.toggle('hidden');
@@ -1563,15 +1584,15 @@ async function submitMatchForm(event, id) {
         await supabase.from('matches').delete().eq('id', id);
     }
 
-    // Save Match (JSON für goalslista/goalslistb)
+    // Save Match (JSONB für goalslista/goalslistb - no stringify needed)
     const insertObj = {
         date,
         teama,
         teamb,
         goalsa,
         goalsb,
-        goalslista: JSON.stringify(goalslista),
-        goalslistb: JSON.stringify(goalslistb),
+        goalslista,  // Store as object array directly for JSONB
+        goalslistb,  // Store as object array directly for JSONB
         yellowa,
         reda,
         yellowb,
@@ -1835,11 +1856,22 @@ async function deleteMatch(id) {
     const removeGoals = async (goalslist, team) => {
         if (!goalslist || !Array.isArray(goalslist)) return;
         
-        // Count goals per player from string array
+        // Count goals per player - handle both new object format and old string array format
         const goalCounts = {};
-        for (const playerName of goalslist) {
-            if (!playerName) continue;
-            goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+        
+        if (goalslist.length > 0 && typeof goalslist[0] === 'object' && goalslist[0].player !== undefined) {
+            // New object format: [{"count": 4, "player": "Walker"}]
+            goalslist.forEach(goal => {
+                if (goal.player) {
+                    goalCounts[goal.player] = (goalCounts[goal.player] || 0) + (goal.count || 1);
+                }
+            });
+        } else {
+            // Old string array format: ["Walker", "Walker", "Messi"]
+            for (const playerName of goalslist) {
+                if (!playerName) continue;
+                goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+            }
         }
         
         // Remove each player's goal count

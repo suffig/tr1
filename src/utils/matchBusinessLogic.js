@@ -67,10 +67,8 @@ export class MatchBusinessLogic {
         teamb,
         goalsa: parseInt(goalsa) || 0,
         goalsb: parseInt(goalsb) || 0,
-        //goalslista: JSON.stringify(processedGoalsListA),
-		//goalslistb: JSON.stringify(processedGoalsListB),
-		goalslista,    // [{player, count}, ...]
-		goalslistb,
+		goalslista,    // Store as object array directly for JSONB
+		goalslistb,    // Store as object array directly for JSONB
         yellowa: parseInt(yellowa) || 0,
         reda: parseInt(reda) || 0,
         yellowb: parseInt(yellowb) || 0,
