@@ -79,7 +79,7 @@ export default function AddPlayerTab() {
   const isFormValid = formData.name && formData.team && formData.position && formData.value !== '';
 
   return (
-    <div className="p-4">
+    <div className="p-4 pb-20">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-text-primary mb-2">
           Neuen Spieler hinzufügen

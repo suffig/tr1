@@ -5,6 +5,7 @@ export default function GlobalSearch({ onNavigate, onClose }) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [activeFilter, setActiveFilter] = useState('all');
 
   // Fetch all data for search
   const { data: players } = useSupabaseQuery('players', '*');
@@ -12,7 +13,16 @@ export default function GlobalSearch({ onNavigate, onClose }) {
   const { data: bans } = useSupabaseQuery('bans', '*');
   const { data: transactions } = useSupabaseQuery('transactions', '*', { order: { column: 'date', ascending: false } });
 
-  const searchResults = getSearchResults(query, { players, matches, bans, transactions });
+  const allResults = getSearchResults(query, { players, matches, bans, transactions });
+  const searchResults = activeFilter === 'all' ? allResults : allResults.filter(result => result.type === activeFilter);
+
+  const filters = [
+    { id: 'all', label: 'Alle', icon: '🔍' },
+    { id: 'player', label: 'Spieler', icon: '👥' },
+    { id: 'match', label: 'Spiele', icon: '⚽' },
+    { id: 'transaction', label: 'Finanzen', icon: '💰' },
+    { id: 'ban', label: 'Sperren', icon: '🚫' }
+  ];
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
@@ -101,7 +111,7 @@ export default function GlobalSearch({ onNavigate, onClose }) {
           <div className="bg-bg-primary border border-border-light rounded-lg shadow-xl w-full max-w-2xl mx-4">
             {/* Search Input */}
             <div className="p-4 border-b border-border-light">
-              <div className="relative">
+              <div className="relative mb-4">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
                   <span className="text-text-secondary" aria-hidden="true">🔍</span>
                 </div>
@@ -112,6 +122,24 @@ export default function GlobalSearch({ onNavigate, onClose }) {
                   placeholder="Spieler, Spiele, Transaktionen suchen..."
                   className="w-full pl-10 pr-4 py-3 bg-bg-secondary border border-border-light rounded-lg text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-green focus:border-transparent"
                 />
+              </div>
+              
+              {/* Filter Buttons */}
+              <div className="flex flex-wrap gap-2">
+                {filters.map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() => setActiveFilter(filter.id)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                      activeFilter === filter.id
+                        ? 'bg-primary-green text-white'
+                        : 'bg-bg-secondary text-text-muted hover:bg-bg-tertiary hover:text-text-primary border border-border-light'
+                    }`}
+                  >
+                    <span className="text-xs" aria-hidden="true">{filter.icon}</span>
+                    <span className="hidden sm:inline">{filter.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
