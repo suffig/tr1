@@ -4,11 +4,13 @@ import AddBanTab from './admin/AddBanTab';
 import AddPlayerTab from './admin/AddPlayerTab';
 import AddTransactionTab from './admin/AddTransactionTab';
 import DeleteTab from './admin/DeleteTab';
+import SearchTab from './admin/SearchTab';
 
 export default function AdminTab({ onLogout }) {
-  const [activeSubTab, setActiveSubTab] = useState('matches');
+  const [activeSubTab, setActiveSubTab] = useState('search');
 
   const subTabs = [
+    { id: 'search', label: 'Globale Suche', icon: 'fas fa-search' },
     { id: 'matches', label: 'Spiele hinzufügen', icon: 'fas fa-futbol' },
     { id: 'bans', label: 'Sperren hinzufügen', icon: 'fas fa-ban' },
     { id: 'players', label: 'Spieler hinzufügen', icon: 'fas fa-users' },
@@ -18,6 +20,8 @@ export default function AdminTab({ onLogout }) {
 
   const renderSubTabContent = () => {
     switch (activeSubTab) {
+      case 'search':
+        return <SearchTab />;
       case 'matches':
         return <AddMatchTab />;
       case 'bans':
@@ -29,7 +33,7 @@ export default function AdminTab({ onLogout }) {
       case 'delete':
         return <DeleteTab />;
       default:
-        return <AddMatchTab />;
+        return <SearchTab />;
     }
   };
 
