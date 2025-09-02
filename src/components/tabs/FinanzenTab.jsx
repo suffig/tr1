@@ -4,7 +4,6 @@ import LoadingSpinner from '../LoadingSpinner';
 import ExportImportManager from '../ExportImportManager';
 import FinancialAnalytics from './FinancialAnalytics';
 import FinancialInsights from '../FinancialInsights';
-import EnhancedSearch from '../EnhancedSearch';
 import toast from 'react-hot-toast';
 
 export default function FinanzenTab({ onNavigate }) { // eslint-disable-line no-unused-vars
@@ -12,7 +11,6 @@ export default function FinanzenTab({ onNavigate }) { // eslint-disable-line no-
   const [expandedMatches, setExpandedMatches] = useState(new Set());
   const [showExportImport, setShowExportImport] = useState(false);
   const [currentView, setCurrentView] = useState('overview');
-  const [searchResults, setSearchResults] = useState([]);
   
   const { data: finances, loading: financesLoading } = useSupabaseQuery('finances', '*');
   const { data: transactions, loading: transactionsLoading } = useSupabaseQuery(
@@ -250,62 +248,13 @@ export default function FinanzenTab({ onNavigate }) { // eslint-disable-line no-
         </div>
       ) : currentView === 'transactions' ? (
         <div className="space-y-4">
-          {/* Enhanced Search for Transactions */}
-          <EnhancedSearch
-            data={transactions || []}
-            searchFields={['type', 'description', 'amount', 'date']}
-            filterOptions={[
-              {
-                key: 'type',
-                label: 'Typ',
-                options: [
-                  { value: 'transfer', label: 'Transfer' },
-                  { value: 'preis', label: 'Preisgeld' },
-                  { value: 'strafe', label: 'Strafe' },
-                  { value: 'sonstige', label: 'Sonstige' }
-                ],
-                filterFn: (transaction, value) => {
-                  const type = transaction.type?.toLowerCase() || '';
-                  const desc = transaction.description?.toLowerCase() || '';
-                  switch (value) {
-                    case 'transfer': return type.includes('transfer') || desc.includes('transfer');
-                    case 'preis': return type.includes('preis') || desc.includes('preis') || transaction.amount > 0;
-                    case 'strafe': return type.includes('strafe') || desc.includes('strafe');
-                    case 'sonstige': return !type.includes('transfer') && !type.includes('preis') && !type.includes('strafe');
-                    default: return true;
-                  }
-                }
-              },
-              {
-                key: 'amount',
-                label: 'Betrag',
-                options: [
-                  { value: 'positive', label: 'Einnahmen' },
-                  { value: 'negative', label: 'Ausgaben' },
-                  { value: 'large', label: 'Über 1000€' }
-                ],
-                filterFn: (transaction, value) => {
-                  const amount = transaction.amount || 0;
-                  switch (value) {
-                    case 'positive': return amount > 0;
-                    case 'negative': return amount < 0;
-                    case 'large': return Math.abs(amount) > 1000;
-                    default: return true;
-                  }
-                }
-              }
-            ]}
-            onResults={setSearchResults}
-            placeholder="Transaktionen durchsuchen..."
-          />
-
           {/* Transactions List */}
           <div className="bg-bg-primary border border-border-light rounded-lg shadow-sm">
             <div className="p-4 border-b border-border-light">
               <h3 className="text-lg font-semibold text-text-primary">Alle Transaktionen</h3>
             </div>
             <div className="divide-y divide-border-light max-h-96 overflow-y-auto">
-              {(searchResults.length > 0 ? searchResults : transactions || []).map((transaction) => (
+              {(transactions || []).map((transaction) => (
                 <div key={transaction.id} className="p-4 hover:bg-bg-secondary transition-colors duration-200">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
@@ -331,7 +280,7 @@ export default function FinanzenTab({ onNavigate }) { // eslint-disable-line no-
                   </div>
                 </div>
               ))}
-              {(searchResults.length === 0 && transactions?.length === 0) && (
+              {transactions?.length === 0 && (
                 <div className="p-6 text-center text-text-secondary">
                   <div className="text-4xl mb-2">💰</div>
                   <p>Keine Transaktionen gefunden</p>

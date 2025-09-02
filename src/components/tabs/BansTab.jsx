@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useSupabaseQuery } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
-import EnhancedSearch from '../EnhancedSearch';
 import { BAN_TYPES, getBanTypeColor, getBanIcon } from '../../constants/banTypes';
 
 export default function BansTab({ onNavigate }) { // eslint-disable-line no-unused-vars
   const [selectedType, setSelectedType] = useState('all');
-  const [searchResults, setSearchResults] = useState([]);
   
   const { data: bans, loading: bansLoading } = useSupabaseQuery('bans', '*');
   const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
@@ -27,7 +25,7 @@ export default function BansTab({ onNavigate }) { // eslint-disable-line no-unus
 
   const filteredBans = (() => {
     // Use search results if available, otherwise use all bans
-    const bansToFilter = searchResults.length > 0 ? searchResults : (bans || []);
+    const bansToFilter = (bans || []);
     
     return bansToFilter.filter(ban => {
       if (selectedType === 'all') return true;
@@ -50,47 +48,6 @@ export default function BansTab({ onNavigate }) { // eslint-disable-line no-unus
         <h2 className="text-xl font-semibold text-text-primary mb-4">
           Sperren-Übersicht
         </h2>
-
-        {/* Enhanced Search */}
-        <EnhancedSearch
-          data={bans || []}
-          searchFields={['player_name', 'type', 'reason', 'totalgames', 'matchesserved']}
-          filterOptions={[
-            {
-              key: 'status',
-              label: 'Status',
-              options: [
-                { value: 'active', label: 'Aktiv' },
-                { value: 'completed', label: 'Beendet' }
-              ],
-              filterFn: (ban, value) => {
-                const remaining = (ban.totalgames || 0) - (ban.matchesserved || 0);
-                if (value === 'active') return remaining > 0;
-                if (value === 'completed') return remaining === 0;
-                return true;
-              }
-            },
-            {
-              key: 'type',
-              label: 'Art der Sperre',
-              options: BAN_TYPES.map(type => ({ value: type.value, label: type.label }))
-            },
-            {
-              key: 'team',
-              label: 'Team',
-              options: [
-                { value: 'AEK', label: 'AEK' },
-                { value: 'Real', label: 'Real' }
-              ],
-              filterFn: (ban, value) => {
-                const player = players?.find(p => p.id === ban.player_id);
-                return player?.team === value;
-              }
-            }
-          ]}
-          onResults={setSearchResults}
-          placeholder="Sperren durchsuchen..."
-        />
         
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-4">
