@@ -7,7 +7,7 @@ const tabs = [
   { id: 'admin', icon: '⚙️', label: 'Verwaltung', ariaLabel: 'Zu Verwaltung wechseln' },
 ];
 
-export default function BottomNavigation({ activeTab, onTabChange, onLogout }) {
+export default function BottomNavigation({ activeTab, onTabChange }) {
   return (
     <nav 
       className="fixed bottom-0 left-0 right-0 bg-bg-secondary border-t border-border-light shadow-lg z-50"
@@ -29,15 +29,6 @@ export default function BottomNavigation({ activeTab, onTabChange, onLogout }) {
             <span className="text-xs">{tab.label}</span>
           </button>
         ))}
-        
-        <button
-          onClick={onLogout}
-          className="nav-item flex-1 text-accent-red hover:text-accent-red rounded-lg transition-all duration-200 hover:bg-bg-tertiary focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-          aria-label="Abmelden"
-        >
-          <div className="text-lg mb-1" aria-hidden="true">🚪</div>
-          <span className="text-xs">Logout</span>
-        </button>
       </div>
     </nav>
   );

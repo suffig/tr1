@@ -72,7 +72,7 @@ function App() {
       case 'stats':
         return <StatsTab />;
       case 'admin':
-        return <AdminTab />;
+        return <AdminTab onLogout={handleLogout} />;
       default:
         return <MatchesTab />;
     }
@@ -149,7 +149,6 @@ function App() {
       <BottomNavigation 
         activeTab={activeTab}
         onTabChange={handleTabChange}
-        onLogout={handleLogout}
       />
 
       {/* Toast Notifications */}

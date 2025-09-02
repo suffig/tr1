@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSupabaseQuery } from '../../../hooks/useSupabase';
 import { supabaseDb } from '../../../utils/supabase';
+import { TEAMS, getTeamDisplay } from '../../../constants/teams';
 import toast from 'react-hot-toast';
 import { BAN_TYPES } from '../../../constants/banTypes';
 
@@ -161,8 +162,11 @@ export default function AddBanTab() {
                     disabled={loading}
                   >
                     <option value="">Team wählen</option>
-                    <option value="AEK">🔵 AEK Athen</option>
-                    <option value="Real">🔴 Real Madrid</option>
+                    {TEAMS.filter(team => team.value !== 'Ehemalige').map((team) => (
+                      <option key={team.value} value={team.value}>
+                        {getTeamDisplay(team.value)}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

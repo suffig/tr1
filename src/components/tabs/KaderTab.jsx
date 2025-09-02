@@ -13,7 +13,7 @@ export default function KaderTab() {
   const [editingPlayer, setEditingPlayer] = useState(null);
   
   const { data: players, loading, error, refetch } = useSupabaseQuery('players', '*');
-  const { update, remove } = useSupabaseMutation('players');
+  const { update } = useSupabaseMutation('players');
   
   const POSITION_ORDER = {
     "TH": 0, "IV": 1, "LV": 2, "RV": 3, "ZDM": 4, "ZM": 5,
@@ -130,19 +130,6 @@ export default function KaderTab() {
       toast.error('Fehler beim Aktualisieren des Spielers: ' + error.message);
     }
   };
-
-  const handleDeletePlayer = async (player) => {
-    if (!confirm(`Sind Sie sicher, dass Sie ${player.name} löschen möchten?`)) return;
-    
-    try {
-      await remove(player.id);
-      refetch();
-    } catch (error) {
-      alert('Fehler beim Löschen des Spielers: ' + error.message);
-    }
-  };
-
-
 
   if (loading) {
     return <LoadingSpinner message="Lade Kader..." />;
@@ -343,13 +330,6 @@ export default function KaderTab() {
                               title="Bearbeiten"
                             >
                               <i className="fas fa-edit text-sm"></i>
-                            </button>
-                            <button
-                              onClick={() => handleDeletePlayer(player)}
-                              className="text-text-muted hover:text-accent-red transition-colors p-1"
-                              title="Löschen"
-                            >
-                              <i className="fas fa-trash text-sm"></i>
                             </button>
                           </div>
                         </div>
