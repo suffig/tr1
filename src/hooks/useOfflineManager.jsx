@@ -72,23 +72,16 @@ export default function useOfflineManager() {
 }
 
 /**
- * Offline Status Indicator Component
+ * Offline Status Indicator Component - Small corner icon
  */
 export function OfflineIndicator() {
-  const { isOnline, wasOffline } = useOfflineManager();
+  const { isOnline } = useOfflineManager();
 
-  if (isOnline && !wasOffline) return null;
+  if (isOnline) return null;
 
   return (
-    <div className={`fixed top-2 left-2 z-50 px-3 py-1 rounded-full text-sm font-medium transition-all duration-300 ${
-      isOnline 
-        ? 'bg-green-500 text-white' 
-        : 'bg-red-500 text-white'
-    }`}>
-      <div className="flex items-center gap-2">
-        <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-white' : 'bg-white animate-pulse'}`}></div>
-        {isOnline ? 'Online' : 'Offline'}
-      </div>
+    <div className="fixed top-3 right-3 z-50 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-lg">
+      <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
     </div>
   );
 }

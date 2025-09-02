@@ -8,8 +8,6 @@ import Login from './components/Login';
 import BottomNavigation from './components/BottomNavigation';
 import LoadingSpinner, { FullScreenLoader } from './components/LoadingSpinner';
 import GlobalSearch from './components/GlobalSearch';
-import QuickActions from './components/QuickActions';
-import SmartNotifications from './components/SmartNotifications';
 import PerformanceMonitor from './components/PerformanceMonitor';
 
 // Lazy load tab components for better performance
@@ -17,6 +15,7 @@ const MatchesTab = lazy(() => import('./components/tabs/MatchesTab'));
 const KaderTab = lazy(() => import('./components/tabs/KaderTab'));
 const BansTab = lazy(() => import('./components/tabs/BansTab'));
 const FinanzenTab = lazy(() => import('./components/tabs/FinanzenTab'));
+const AITab = lazy(() => import('./components/tabs/AITab'));
 const StatsTab = lazy(() => import('./components/tabs/StatsTab'));
 const AdminTab = lazy(() => import('./components/tabs/AdminTab'));
 
@@ -26,17 +25,6 @@ function App() {
   const [tabLoading, setTabLoading] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(true);
-
-  // Add this useEffect to handle hiding notifications when needed
-  useEffect(() => {
-    // Auto-hide notifications on admin tab
-    if (activeTab === 'admin') {
-      setShowNotifications(false);
-    } else {
-      setShowNotifications(true);
-    }
-  }, [activeTab]);
 
   // Check if we're in demo mode
   useEffect(() => {
@@ -81,6 +69,28 @@ function App() {
   // Enable touch gestures for mobile navigation
   useTouchGestures(handleTabChange, activeTab);
 
+  // Global search shortcut and event listener
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        setShowGlobalSearch(true);
+      }
+    };
+
+    const handleGlobalSearchToggle = () => {
+      setShowGlobalSearch(true);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('global-search-toggle', handleGlobalSearchToggle);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('global-search-toggle', handleGlobalSearchToggle);
+    };
+  }, []);
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -92,41 +102,6 @@ function App() {
   const handleGlobalSearchNavigate = (tab, action) => {
     handleTabChange(tab, action);
     setShowGlobalSearch(false);
-  };
-
-  const handleQuickAction = (action) => {
-    switch (action) {
-      case 'global-search': {
-        setShowGlobalSearch(true);
-        break;
-      }
-      case 'formation-planner': {
-        // Trigger formation planner
-        const formationEvent = new CustomEvent('fifa-tracker-action', { 
-          detail: { action: 'formation-planner' } 
-        });
-        window.dispatchEvent(formationEvent);
-        break;
-      }
-      case 'team-balance': {
-        // Trigger team balance analysis
-        const balanceEvent = new CustomEvent('fifa-tracker-action', { 
-          detail: { action: 'team-balance' } 
-        });
-        window.dispatchEvent(balanceEvent);
-        break;
-      }
-      case 'create-backup': {
-        // Trigger backup creation
-        const backupEvent = new CustomEvent('fifa-tracker-action', { 
-          detail: { action: 'create-backup' } 
-        });
-        window.dispatchEvent(backupEvent);
-        break;
-      }
-      default:
-        console.log('Unknown quick action:', action);
-    }
   };
 
   const renderTabContent = () => {
@@ -141,6 +116,8 @@ function App() {
         return <FinanzenTab {...props} />;
       case 'squad':
         return <KaderTab {...props} />;
+      case 'ai':
+        return <AITab {...props} />;
       case 'stats':
         return <StatsTab {...props} />;
       case 'admin':
@@ -199,20 +176,6 @@ function App() {
             <span aria-hidden="true">⚠️</span>
             Demo-Modus aktiv - Supabase CDN blockiert
           </span>
-        </div>
-      )}
-
-      {/* Quick Actions Toolbar */}
-      <QuickActions 
-        activeTab={activeTab}
-        onNavigate={handleTabChange}
-        onAction={handleQuickAction}
-      />
-
-      {/* Smart Notifications */}
-      {showNotifications && (
-        <div className="px-4 py-2">
-          <SmartNotifications onNavigate={handleTabChange} />
         </div>
       )}
       

@@ -72,19 +72,6 @@ export default function KaderTab({ onNavigate }) { // eslint-disable-line no-unu
     alert(`📊 Spieler-Report:\n\n${report}`);
   };
 
-  const balanceTeams = () => {
-    const aekCount = getTeamPlayers("AEK").length;
-    const realCount = getTeamPlayers("Real").length;
-    const difference = Math.abs(aekCount - realCount);
-    
-    if (difference <= 1) {
-      alert('✅ Teams sind bereits ausgeglichen!');
-    } else {
-      const needMore = aekCount > realCount ? 'Real Madrid' : 'AEK Athen';
-      alert(`⚖️ Team-Balance:\n${needMore} benötigt ${difference} weitere Spieler für ausgeglichene Teams.`);
-    }
-  };
-
   const suggestTransfers = () => {
     if (!players || players.length < 4) {
       alert('🔄 Nicht genügend Spieler für Transfer-Analyse');
@@ -95,20 +82,31 @@ export default function KaderTab({ onNavigate }) { // eslint-disable-line no-unu
     const realPlayers = getTeamPlayers("Real");
     const suggestions = [];
     
-    // Simple transfer suggestions based on team imbalance
+    // AI-powered transfer suggestions based on multiple factors
     if (aekPlayers.length > realPlayers.length + 2) {
       const leastValuable = aekPlayers.sort((a, b) => (a.value || 0) - (b.value || 0))[0];
-      suggestions.push(`🔄 ${leastValuable.name} von AEK zu Real transferieren`);
+      suggestions.push(`🤖 KI empfiehlt: ${leastValuable.name} von AEK zu Real transferieren`);
     } else if (realPlayers.length > aekPlayers.length + 2) {
       const leastValuable = realPlayers.sort((a, b) => (a.value || 0) - (b.value || 0))[0];
-      suggestions.push(`🔄 ${leastValuable.name} von Real zu AEK transferieren`);
+      suggestions.push(`🤖 KI empfiehlt: ${leastValuable.name} von Real zu AEK transferieren`);
     }
+    
+    // AI suggestion for position coverage
+    const positions = ['TH', 'IV', 'ZM', 'ST'];
+    positions.forEach(pos => {
+      const aekCount = aekPlayers.filter(p => p.position === pos).length;
+      const realCount = realPlayers.filter(p => p.position === pos).length;
+      if (Math.abs(aekCount - realCount) > 1) {
+        const needMore = aekCount > realCount ? 'Real' : 'AEK';
+        suggestions.push(`🎯 KI-Analyse: ${needMore} benötigt mehr ${pos}-Spieler`);
+      }
+    });
     
     if (suggestions.length === 0) {
-      suggestions.push('✅ Teams sind gut ausbalanciert - keine Transfers nötig');
+      suggestions.push('🤖 KI-Analyse: Teams sind optimal ausbalanciert!');
     }
     
-    alert(`🔄 Transfer-Empfehlungen:\n\n${suggestions.join('\n')}`);
+    alert(`🤖 KI Transfer-Empfehlungen:\n\n${suggestions.join('\n')}`);
   };
 
   const getTeamColor = (teamName) => {
@@ -253,18 +251,11 @@ export default function KaderTab({ onNavigate }) { // eslint-disable-line no-unu
             <span>Spieler-Report</span>
           </button>
           <button
-            onClick={balanceTeams}
-            className="flex items-center justify-center space-x-2 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors text-sm"
-          >
-            <span>⚖️</span>
-            <span>Teams ausgleichen</span>
-          </button>
-          <button
             onClick={suggestTransfers}
             className="flex items-center justify-center space-x-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors text-sm"
           >
-            <span>🔄</span>
-            <span>Transfer-Tipps</span>
+            <span>🤖</span>
+            <span>KI Transfer-Tipps</span>
           </button>
           
           {/* New Enhanced Features */}
