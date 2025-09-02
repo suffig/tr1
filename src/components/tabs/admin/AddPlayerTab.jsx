@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabaseDb } from '../../../utils/supabase';
+import { TEAMS, getTeamDisplay } from '../../../constants/teams';
 import toast from 'react-hot-toast';
 
 const POSITIONS = [
@@ -9,12 +10,6 @@ const POSITIONS = [
   { value: 'ZM', label: 'Zentrales Mittelfeld (ZM)' },
   { value: 'OM', label: 'Offensives Mittelfeld (OM)' },
   { value: 'ST', label: 'Stürmer (ST)' },
-];
-
-const TEAMS = [
-  { value: 'AEK', label: '🔵 AEK Athen', color: 'blue' },
-  { value: 'Real', label: '🔴 Real Madrid', color: 'red' },
-  { value: 'Ehemalige', label: 'Ehemalige', color: 'gray' },
 ];
 
 export default function AddPlayerTab() {
@@ -163,7 +158,7 @@ export default function AddPlayerTab() {
                     <option value="">Team wählen</option>
                     {TEAMS.map((team) => (
                       <option key={team.value} value={team.value}>
-                        {team.label}
+                        {getTeamDisplay(team.value)}
                       </option>
                     ))}
                   </select>
@@ -267,7 +262,7 @@ export default function AddPlayerTab() {
                 team.color === 'blue' ? 'text-blue-600' : 
                 team.color === 'red' ? 'text-red-600' : 'text-gray-600'
               }`}>
-                {team.color === 'blue' ? '🔵' : team.color === 'red' ? '🔴' : '⚫'} {team.label}
+                {getTeamDisplay(team.value)}
               </span>
               <div className="text-xs text-text-muted mt-1">({team.value})</div>
             </div>

@@ -3,15 +3,17 @@ import AddMatchTab from './admin/AddMatchTab';
 import AddBanTab from './admin/AddBanTab';
 import AddPlayerTab from './admin/AddPlayerTab';
 import AddTransactionTab from './admin/AddTransactionTab';
+import DeleteTab from './admin/DeleteTab';
 
-export default function AdminTab() {
+export default function AdminTab({ onLogout }) {
   const [activeSubTab, setActiveSubTab] = useState('matches');
 
   const subTabs = [
     { id: 'matches', label: 'Spiele hinzufügen', icon: 'fas fa-futbol' },
     { id: 'bans', label: 'Sperren hinzufügen', icon: 'fas fa-ban' },
-    { id: 'players', label: 'Spieler hinzufügen', icon: '👥' },
+    { id: 'players', label: 'Spieler hinzufügen', icon: 'fas fa-users' },
     { id: 'transactions', label: 'Transaktionen hinzufügen', icon: 'fas fa-euro-sign' },
+    { id: 'delete', label: 'Daten löschen', icon: 'fas fa-trash' },
   ];
 
   const renderSubTabContent = () => {
@@ -24,6 +26,8 @@ export default function AdminTab() {
         return <AddPlayerTab />;
       case 'transactions':
         return <AddTransactionTab />;
+      case 'delete':
+        return <DeleteTab />;
       default:
         return <AddMatchTab />;
     }
@@ -32,13 +36,23 @@ export default function AdminTab() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 bg-bg-secondary border-b border-border-light">
-        <h2 className="text-xl font-semibold text-text-primary mb-1">
-          Verwaltung
-        </h2>
-        <p className="text-text-muted text-sm">
-          Hinzufügen und verwalten von Daten
-        </p>
+      <div className="p-4 bg-bg-secondary border-b border-border-light flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-semibold text-text-primary mb-1">
+            Verwaltung
+          </h2>
+          <p className="text-text-muted text-sm">
+            Hinzufügen und verwalten von Daten
+          </p>
+        </div>
+        <button
+          onClick={onLogout}
+          className="flex items-center px-3 py-2 bg-accent-red text-white rounded-lg hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+          aria-label="Abmelden"
+        >
+          <i className="fas fa-sign-out-alt mr-2"></i>
+          <span className="text-sm">Logout</span>
+        </button>
       </div>
 
       {/* Sub-tab navigation */}

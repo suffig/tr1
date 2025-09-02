@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabaseDb } from '../../../utils/supabase';
+import { TEAMS, getTeamDisplay } from '../../../constants/teams';
 import toast from 'react-hot-toast';
 
 const TRANSACTION_TYPES = [
@@ -10,11 +11,6 @@ const TRANSACTION_TYPES = [
   { value: 'Echtgeld-Ausgleich', label: 'Echtgeld-Ausgleich', icon: '💳' },
   { value: 'SdS Bonus', label: 'Spieler des Spiels Bonus', icon: '⭐' },
   { value: 'Sonstiges', label: 'Sonstiges', icon: '📈' },
-];
-
-const TEAMS = [
-  { value: 'AEK', label: '🔵 AEK Athen', color: 'blue' },
-  { value: 'Real', label: '🔴 Real Madrid', color: 'red' },
 ];
 
 export default function AddTransactionTab() {
@@ -177,9 +173,9 @@ export default function AddTransactionTab() {
                     disabled={loading}
                   >
                     <option value="">Team wählen</option>
-                    {TEAMS.map((team) => (
+                    {TEAMS.filter(team => team.value !== 'Ehemalige').map((team) => (
                       <option key={team.value} value={team.value}>
-                        {team.label}
+                        {getTeamDisplay(team.value)}
                       </option>
                     ))}
                   </select>
@@ -304,10 +300,10 @@ export default function AddTransactionTab() {
       <div className="mt-6 modern-card">
         <h4 className="font-semibold text-text-primary mb-3">Verfügbare Teams</h4>
         <div className="grid grid-cols-2 gap-2">
-          {TEAMS.map((team) => (
+          {TEAMS.filter(team => team.value !== 'Ehemalige').map((team) => (
             <div key={team.value} className="p-3 bg-bg-secondary rounded-lg text-center">
               <span className={`font-medium ${team.color === 'blue' ? 'text-blue-600' : 'text-red-600'}`}>
-                {team.color === 'blue' ? '🔵' : '🔴'} {team.label}
+                {getTeamDisplay(team.value)}
               </span>
               <div className="text-xs text-text-muted mt-1">({team.value})</div>
             </div>
