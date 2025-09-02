@@ -189,20 +189,25 @@ export default function SpielerTab() {
                         {getBadge(index)}
                         {getTeamIndicator(scorer.player?.team)}
                         <div>
-                          <div className="font-semibold text-text-primary">
+                          <div className="font-medium text-text-primary">
                             {scorer.name}
+                            {scorer.goals > 1 && (
+                              <span className="ml-2 text-xs bg-primary-green text-white px-2 py-1 rounded">
+                                {scorer.goals}x
+                              </span>
+                            )}
                           </div>
-                          <div className="text-sm text-text-muted">
-                            {scorer.player?.position || 'Unbekannt'} • {scorer.player?.team || 'Unbekannt'}
+                          <div className="text-xs text-text-muted">
+                            Marktwert: {scorer.player?.value || 0}M € • {scorer.player?.position || 'Unbekannt'}
+                          </div>
+                          <div className="text-xs text-text-muted">
+                            {scorer.player?.team || 'Unbekannt'}
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-primary-green">
-                          {scorer.goals}
-                        </div>
-                        <div className="text-xs text-text-muted">
-                          {scorer.goals === 1 ? 'Tor' : 'Tore'}
+                          {scorer.goals} ⚽
                         </div>
                       </div>
                     </div>

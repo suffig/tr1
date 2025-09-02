@@ -385,7 +385,7 @@ export default function FinanzenTab() {
                               </div>
                               
                               <div className="text-right">
-                                <div className={`text-lg font-bold ${getTransactionTypeColor(transaction.type)}`}>
+                                <div className={`text-lg font-bold ${transaction.amount >= 0 ? 'text-primary-green' : 'text-accent-red'}`}>
                                   {transaction.amount < 0 ? '-' : '+'}
                                   {formatCurrency(Math.abs(transaction.amount || 0))}
                                 </div>
@@ -477,7 +477,7 @@ export default function FinanzenTab() {
                       </div>
                       
                       <div className="text-right">
-                        <div className={`text-lg font-bold ${getTransactionTypeColor(transaction.type)}`}>
+                        <div className={`text-lg font-bold ${transaction.amount >= 0 ? 'text-primary-green' : 'text-accent-red'}`}>
                           {transaction.amount < 0 ? '-' : '+'}
                           {formatCurrency(Math.abs(transaction.amount || 0))}
                         </div>
