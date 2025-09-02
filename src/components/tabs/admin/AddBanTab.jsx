@@ -67,8 +67,7 @@ export default function AddBanTab() {
         type: selectedBanType.value,
         totalgames: finalDuration,
         matchesserved: 0,
-        reason: formData.reason || selectedBanType.value,
-        created_at: new Date().toISOString()
+        reason: formData.reason || selectedBanType.value
       });
 
       if (result.error) {
