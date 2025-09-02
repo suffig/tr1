@@ -15,12 +15,12 @@ export default function BottomNavigation({ activeTab, onTabChange }) {
       role="navigation"
       aria-label="Hauptnavigation"
     >
-      <div className="flex justify-between items-center px-1 py-2">
+      <div className="flex items-center px-1 py-2 overflow-x-auto scrollbar-hide bottom-nav-container">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`nav-item flex-1 flex flex-col items-center justify-center rounded-lg transition-all duration-200 hover:bg-bg-tertiary focus:outline-none focus:ring-2 focus:ring-primary-green focus:ring-opacity-50 active:scale-95 touch-target ${
+            className={`nav-item flex flex-col items-center justify-center rounded-lg transition-all duration-200 hover:bg-bg-tertiary focus:outline-none focus:ring-2 focus:ring-primary-green focus:ring-opacity-50 active:scale-95 touch-target flex-shrink-0 ${
               activeTab === tab.id ? 'active text-primary-green' : 'text-text-muted'
             }`}
             aria-label={tab.ariaLabel}
@@ -28,7 +28,7 @@ export default function BottomNavigation({ activeTab, onTabChange }) {
             style={{ minHeight: '56px', minWidth: '56px' }}
           >
             <div className="text-lg mb-1 select-none" aria-hidden="true">{tab.icon}</div>
-            <span className="text-xs font-medium select-none">{tab.label}</span>
+            <span className="text-xs font-medium select-none text-center truncate max-w-[60px]">{tab.label}</span>
           </button>
         ))}
       </div>
