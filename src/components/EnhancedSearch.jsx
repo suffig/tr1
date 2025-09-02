@@ -110,17 +110,30 @@ export default function EnhancedSearch({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={placeholder}
-            className="w-full pl-10 pr-10 py-2 bg-bg-secondary border border-border-light rounded-lg text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-green focus:border-transparent"
+            placeholder={`${placeholder} (Strg+K für globale Suche)`}
+            className="w-full pl-10 pr-20 py-2 bg-bg-secondary border border-border-light rounded-lg text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-green focus:border-transparent"
           />
-          {query && (
+          <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-3">
             <button
-              onClick={() => setQuery('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-secondary hover:text-text-primary"
+              onClick={() => {
+                const event = new CustomEvent('global-search-toggle');
+                window.dispatchEvent(event);
+              }}
+              className="text-text-secondary hover:text-primary-green transition-colors p-1 rounded"
+              title="Globale Suche öffnen (Strg+K)"
             >
-              <span aria-hidden="true">✕</span>
+              <span aria-hidden="true">🌐</span>
             </button>
-          )}
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                className="text-text-secondary hover:text-text-primary transition-colors p-1 rounded"
+                title="Suchfeld leeren"
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
