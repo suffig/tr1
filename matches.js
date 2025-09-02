@@ -703,9 +703,19 @@ function matchHtml(match, nr) {
             <span class="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-600 to-yellow-500 text-yellow-100 px-3 py-2 rounded-lg text-sm font-bold shadow-lg">
               ⭐ ${match.manofthematch}
               <span class="text-xs font-medium opacity-90">(${(() => {
-                // Determine team from match data using string array format
-                if (match.goalslista && match.goalslista.includes(match.manofthematch)) return 'AEK';
-                if (match.goalslistb && match.goalslistb.includes(match.manofthematch)) return 'Real';
+                // Determine team from match data - handle both object and string array formats
+                const checkPlayerInGoals = (goalsList, playerName) => {
+                  if (!goalsList || !goalsList.length) return false;
+                  // Handle object format: [{"count": 1, "player": "Kante"}]
+                  if (typeof goalsList[0] === 'object' && goalsList[0].player !== undefined) {
+                    return goalsList.some(goal => goal.player === playerName);
+                  }
+                  // Handle string array format: ["Kante", "Walker"]
+                  return goalsList.includes(playerName);
+                };
+                
+                if (checkPlayerInGoals(match.goalslista, match.manofthematch)) return 'AEK';
+                if (checkPlayerInGoals(match.goalslistb, match.manofthematch)) return 'Real';
                 // Fallback: check if player is in AEK or Real team
                 return matchesData.aek.find(p => p.name === match.manofthematch) ? 'AEK' : 'Real';
               })()})</span>
@@ -1836,8 +1846,20 @@ async function deleteMatch(id) {
     // 5. Spieler des Spiels rückgängig machen
     if (match.manofthematch) {
         let sdsTeam = null;
-        if (match.goalslista && match.goalslista.includes(match.manofthematch)) sdsTeam = "AEK";
-        else if (match.goalslistb && match.goalslistb.includes(match.manofthematch)) sdsTeam = "Real";
+        
+        // Helper function to check if player is in goals list - handle both object and string array formats
+        const checkPlayerInGoals = (goalsList, playerName) => {
+          if (!goalsList || !goalsList.length) return false;
+          // Handle object format: [{"count": 1, "player": "Kante"}]
+          if (typeof goalsList[0] === 'object' && goalsList[0].player !== undefined) {
+            return goalsList.some(goal => goal.player === playerName);
+          }
+          // Handle string array format: ["Kante", "Walker"]
+          return goalsList.includes(playerName);
+        };
+        
+        if (checkPlayerInGoals(match.goalslista, match.manofthematch)) sdsTeam = "AEK";
+        else if (checkPlayerInGoals(match.goalslistb, match.manofthematch)) sdsTeam = "Real";
         else {
             const { data: p } = await supabase.from('players').select('team').eq('name', match.manofthematch).single();
             sdsTeam = p?.team;
