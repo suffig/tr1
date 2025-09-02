@@ -330,15 +330,18 @@ export default function StatsTab({ onNavigate }) {
 
     return (
       <div className="space-y-6">
-        {/* Enhanced Quick Stats Grid */}
+        {/* Consolidated Quick Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="modern-card text-center">
             <div className="text-2xl font-bold text-primary-green">{totalMatches}</div>
-            <div className="text-sm text-text-muted">Spiele</div>
+            <div className="text-sm text-text-muted">Spiele gespielt</div>
           </div>
           <div className="modern-card text-center">
             <div className="text-2xl font-bold text-primary-green">{advancedStats.totalGoals}</div>
-            <div className="text-sm text-text-muted">Tore</div>
+            <div className="text-sm text-text-muted">Tore insgesamt</div>
+            <div className="text-xs text-text-muted mt-1">
+              ⌀ {totalMatches > 0 ? (advancedStats.totalGoals / totalMatches).toFixed(1) : '0.0'}/Spiel
+            </div>
           </div>
           <div className="modern-card text-center">
             <div className="text-lg font-bold text-primary-green">
@@ -347,6 +350,12 @@ export default function StatsTab({ onNavigate }) {
             <div className="text-sm text-text-muted">
               🥇 Topscorer ({topScorer ? topScorer.goals : 0} Tore)
             </div>
+            <div className="text-xs text-text-muted mt-1">
+              {topScorer && topScorer.matchesPlayed > 0 ? 
+                `⌀ ${(topScorer.goals / topScorer.matchesPlayed).toFixed(2)}/Spiel` : 
+                '⌀ 0.00/Spiel'
+              }
+            </div>
           </div>
           <div className="modern-card text-center">
             <div className="text-lg font-bold text-primary-green">
@@ -354,6 +363,12 @@ export default function StatsTab({ onNavigate }) {
             </div>
             <div className="text-sm text-text-muted">
               ⭐ Top SdS ({topSdSPlayer ? topSdSPlayer.sdsCount : 0}x)
+            </div>
+            <div className="text-xs text-text-muted mt-1">
+              {topSdSPlayer && topSdSPlayer.matchesPlayed > 0 ? 
+                `${((topSdSPlayer.sdsCount / topSdSPlayer.matchesPlayed) * 100).toFixed(1)}% Quote` : 
+                '0.0% Quote'
+              }
             </div>
           </div>
         </div>
@@ -471,19 +486,8 @@ export default function StatsTab({ onNavigate }) {
 
         {/* New Interesting Statistics */}
         <div className="modern-card">
-          <h3 className="font-bold text-lg mb-4">💡 Interessante Statistiken</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-              <div className="text-xl font-bold text-purple-600">
-                {(() => {
-                  // Calculate average goals per match
-                  return totalMatches > 0 ? (advancedStats.totalGoals / totalMatches).toFixed(1) : '0.0';
-                })()}
-              </div>
-              <div className="text-sm text-purple-700">⌀ Tore/Spiel</div>
-              <div className="text-xs text-purple-600 mt-1">Alle Teams</div>
-            </div>
-            
+          <h3 className="font-bold text-lg mb-4">💡 Besondere Statistiken</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="text-center p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
               <div className="text-xl font-bold text-green-600">
                 {(() => {
@@ -577,7 +581,7 @@ export default function StatsTab({ onNavigate }) {
                   return bestRatio.toFixed(2);
                 })()}
               </div>
-              <div className="text-sm text-yellow-700">⚡ Beste Torquote</div>
+              <div className="text-sm text-yellow-700">⚡ Höchste Effizienz</div>
               <div className="text-xs text-yellow-600 mt-1">
                 {(() => {
                   let bestRatio = 0;
@@ -613,7 +617,9 @@ export default function StatsTab({ onNavigate }) {
                 })()}
               </div>
               <div className="text-sm text-blue-700">⚖️ Team-Balance</div>
-              <div className="text-xs text-blue-600 mt-1">Ausgeglichenheit</div>
+              <div className="text-xs text-blue-600 mt-1">
+                Ausgeglichenheit ({teamRecords.aek.wins}:{teamRecords.real.wins})
+              </div>
             </div>
           </div>
         </div>
@@ -797,22 +803,24 @@ export default function StatsTab({ onNavigate }) {
             <h4 className="font-semibold text-blue-600">AEK Athen</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span>Spieler:</span>
+                <span>Aktive Spieler:</span>
                 <span className="font-medium">{aekPlayers.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tore gesamt:</span>
-                <span className="font-medium">{advancedStats.aekTotalGoals}</span>
               </div>
               <div className="flex justify-between">
                 <span>Siege:</span>
                 <span className="font-medium">{aekWins}</span>
               </div>
               <div className="flex justify-between">
-                <span>Siegquote:</span>
-                <span className="font-medium">
-                  {totalMatches > 0 ? ((aekWins / totalMatches) * 100).toFixed(1) : 0}%
-                </span>
+                <span>Niederlagen:</span>
+                <span className="font-medium">{teamRecords.aek.losses}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Gesamtmarktwert:</span>
+                <span className="font-medium">{formatPlayerValue(aekMarketValue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Zu Null Spiele:</span>
+                <span className="font-medium">{advancedStats.cleanSheets.aek}</span>
               </div>
             </div>
           </div>
@@ -820,22 +828,24 @@ export default function StatsTab({ onNavigate }) {
             <h4 className="font-semibold text-red-600">Real Madrid</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span>Spieler:</span>
+                <span>Aktive Spieler:</span>
                 <span className="font-medium">{realPlayers.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tore gesamt:</span>
-                <span className="font-medium">{advancedStats.realTotalGoals}</span>
               </div>
               <div className="flex justify-between">
                 <span>Siege:</span>
                 <span className="font-medium">{realWins}</span>
               </div>
               <div className="flex justify-between">
-                <span>Siegquote:</span>
-                <span className="font-medium">
-                  {totalMatches > 0 ? ((realWins / totalMatches) * 100).toFixed(1) : 0}%
-                </span>
+                <span>Niederlagen:</span>
+                <span className="font-medium">{teamRecords.real.losses}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Gesamtmarktwert:</span>
+                <span className="font-medium">{formatPlayerValue(realMarketValue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Zu Null Spiele:</span>
+                <span className="font-medium">{advancedStats.cleanSheets.real}</span>
               </div>
             </div>
           </div>
@@ -876,20 +886,18 @@ export default function StatsTab({ onNavigate }) {
         {/* Performance Analysis */}
         <div className="mt-6 grid md:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <h4 className="font-semibold text-text-primary">🎯 Offensiv-Performance</h4>
+            <h4 className="font-semibold text-text-primary">🎯 Offensive Highlights</h4>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Durchschnittliche Tore pro Spiel:</span>
-                <span className="font-medium">
-                  {totalMatches > 0 ? ((advancedStats.aekTotalGoals + advancedStats.realTotalGoals) / totalMatches).toFixed(1) : '0.0'}
-                </span>
-              </div>
               <div className="flex justify-between">
                 <span>Torreichstes Team:</span>
                 <span className="font-medium">
                   {advancedStats.aekTotalGoals >= advancedStats.realTotalGoals ? 'AEK Athen' : 'Real Madrid'}
                   ({Math.max(advancedStats.aekTotalGoals, advancedStats.realTotalGoals)} Tore)
                 </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Höchste Einzelspiel-Toranzahl:</span>
+                <span className="font-medium">{advancedStats.highestScoringMatch} Tore</span>
               </div>
               <div className="flex justify-between">
                 <span>Aktivster Torschütze:</span>
