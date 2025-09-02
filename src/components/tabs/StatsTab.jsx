@@ -60,8 +60,7 @@ class StatsCalculator {
 
   calculatePlayerStats() {
     return this.players.map(player => {
-      const matchGoals = this.countPlayerGoalsFromMatches(player.name, player.team);
-      const matchesPlayed = this.countPlayerMatches(player.name, player.team);
+      const matchesPlayed = this.countPlayerMatches();
       const playerBans = this.bans.filter(b => b.player_id === player.id);
       
       const sdsRecord = this.spielerDesSpiels.find(sds => 
@@ -112,7 +111,7 @@ class StatsCalculator {
     return totalGoals;
   }
 
-  countPlayerMatches(playerName, playerTeam) {
+  countPlayerMatches() {
     // For now, assume all players participated in all matches
     // In a real implementation, you'd track participation per match
     return this.matches.length;
@@ -228,11 +227,6 @@ export default function StatsTab() {
         {result}
       </span>
     ));
-  };
-
-  const formatCurrencyInMillions = (amount) => {
-    // Values are already stored in millions in the database
-    return `${(amount || 0).toFixed(1)}M €`;
   };
 
   const formatPlayerValue = (value) => {
@@ -418,7 +412,7 @@ export default function StatsTab() {
             </tr>
           </thead>
           <tbody>
-            {playerStats.map((player, index) => (
+            {playerStats.map((player) => (
               <tr key={player.id} className="border-b border-border-light hover:bg-bg-secondary">
                 <td className="py-2 font-medium">{player.name}</td>
                 <td className="py-2">

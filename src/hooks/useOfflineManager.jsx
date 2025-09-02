@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
@@ -5,7 +6,7 @@ import toast from 'react-hot-toast';
  * Offline Manager Hook for React
  * Provides offline detection and status management
  */
-export function useOfflineManager() {
+export default function useOfflineManager() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [wasOffline, setWasOffline] = useState(false);
 
@@ -92,4 +93,3 @@ export function OfflineIndicator() {
   );
 }
 
-export default useOfflineManager;

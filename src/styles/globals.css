@@ -1,9 +1,9 @@
+/* Import mobile enhancements */
+@import './mobile-enhancements.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import mobile enhancements */
-@import './mobile-enhancements.css';
 
 /* Custom FIFA Tracker styles */
 @layer base {

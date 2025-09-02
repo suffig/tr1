@@ -67,32 +67,9 @@ export default function FinanzenTab() {
     }).format(roundedAmount);
   };
 
-  const formatCurrencyInMillions = (amount) => {
-    // Takes a euro amount and displays it in millions
-    // Input: euro amount, Output: "X.XM €"
-    const amountInMillions = (amount || 0) / 1000000;
-    return `${amountInMillions.toFixed(1)}M €`;
-  };
-
   const formatPlayerValue = (value) => {
     // Helper function for player values which are already stored in millions
     return `${(value || 0).toFixed(1)}M €`;
-  };
-
-  const getTransactionTypeColor = (type) => {
-    switch (type) {
-      case 'Preisgeld':
-      case 'SdS Bonus':
-      case 'Sonstiges':
-        return 'text-primary-green';
-      case 'Strafe':
-      case 'Spielerkauf':
-        return 'text-accent-red';
-      case 'Spielerverkauf':
-        return 'text-primary-green';
-      default:
-        return 'text-text-primary';
-    }
   };
 
   const getTransactionIcon = (type) => {

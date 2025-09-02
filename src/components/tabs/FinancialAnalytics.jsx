@@ -37,10 +37,10 @@ export default function FinancialAnalytics() {
     });
 
     return {
-      profitLoss: calculateProfitLoss(filteredTransactions, finances),
+      profitLoss: calculateProfitLoss(filteredTransactions),
       roi: calculateROI(filteredTransactions, players),
       trends: calculateFinancialTrends(filteredTransactions),
-      forecasting: calculateFinancialForecasting(filteredTransactions, matches),
+      forecasting: calculateFinancialForecasting(filteredTransactions),
       efficiency: calculateFinancialEfficiency(filteredTransactions, matches),
       risks: calculateFinancialRisks(finances, players)
     };
@@ -400,7 +400,7 @@ function formatCurrency(amount) {
 }
 
 // Financial calculation functions
-function calculateProfitLoss(transactions, finances) {
+function calculateProfitLoss(transactions) {
   const income = transactions
     .filter(t => ['Preisgeld', 'SdS Bonus', 'Sonstiges', 'Spielerverkauf'].includes(t.type))
     .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
@@ -489,11 +489,9 @@ function calculateFinancialTrends(transactions) {
   };
 }
 
-function calculateFinancialForecasting(transactions, matches) {
+function calculateFinancialForecasting(transactions) {
   const avgMonthlyIncome = transactions.length > 0 ? 
     transactions.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0) / 12 : 1000;
-  
-  const matchFrequency = matches.length > 0 ? matches.length / 12 : 1;
   
   return {
     nextMonth: {

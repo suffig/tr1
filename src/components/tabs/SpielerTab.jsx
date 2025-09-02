@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSupabaseQuery } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
 

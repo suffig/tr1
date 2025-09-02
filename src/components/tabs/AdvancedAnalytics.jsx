@@ -9,9 +9,8 @@ export default function AdvancedAnalytics() {
   
   const { data: matches, loading: matchesLoading } = useSupabaseQuery('matches', '*');
   const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
-  const { data: finances, loading: financesLoading } = useSupabaseQuery('finances', '*');
   
-  const loading = matchesLoading || playersLoading || financesLoading;
+  const loading = matchesLoading || playersLoading;
 
   // Enhanced analytics calculations
   const analytics = useMemo(() => {
@@ -32,9 +31,9 @@ export default function AdvancedAnalytics() {
     });
 
     return {
-      performance: calculatePerformanceAnalytics(filteredMatches, players),
+      performance: calculatePerformanceAnalytics(filteredMatches),
       trends: calculateTrendAnalytics(filteredMatches),
-      efficiency: calculateEfficiencyMetrics(filteredMatches, players),
+      efficiency: calculateEfficiencyMetrics(filteredMatches),
       predictions: calculatePredictions(filteredMatches),
       playerComparison: calculatePlayerComparisons(filteredMatches, players)
     };
@@ -394,7 +393,7 @@ function getEfficiencyColor(efficiency) {
 }
 
 // Analytics calculation functions
-function calculatePerformanceAnalytics(matches, players) {
+function calculatePerformanceAnalytics(matches) {
   const aekGoals = matches.reduce((sum, m) => sum + (m.goalsa || 0), 0);
   const realGoals = matches.reduce((sum, m) => sum + (m.goalsb || 0), 0);
   const totalMatches = matches.length;
@@ -432,7 +431,7 @@ function calculateTrendAnalytics(matches) {
   };
 }
 
-function calculateEfficiencyMetrics(matches, players) {
+function calculateEfficiencyMetrics(matches) {
   const totalMatches = matches.length;
   const totalGoals = matches.reduce((sum, m) => sum + (m.goalsa || 0) + (m.goalsb || 0), 0);
   

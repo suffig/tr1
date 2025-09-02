@@ -51,9 +51,6 @@ export default function MatchesTab() {
     };
   };
 
-  // Helper function to get player name only (for backwards compatibility)
-  const getPlayerName = (playerName) => playerName || 'Unbekannt';
-
   const toggleMatchDetails = (matchId) => {
     const newExpanded = new Set(expandedMatches);
     if (newExpanded.has(matchId)) {

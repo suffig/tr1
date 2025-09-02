@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useSupabaseQuery } from '../../../hooks/useSupabase';
 import { supabaseDb } from '../../../utils/supabase';
 import toast from 'react-hot-toast';
 
@@ -19,7 +18,6 @@ const TEAMS = [
 ];
 
 export default function AddTransactionTab() {
-  const { data: finances } = useSupabaseQuery('finances', '*');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     team: '',
