@@ -288,6 +288,7 @@ export default function StatsTab({ onNavigate }) {
     { id: 'players', label: 'Spieler', icon: '👥' },
     { id: 'teams', label: 'Teams', icon: '🏆' },
     { id: 'trends', label: 'Trends', icon: '📈' },
+    { id: 'alkohol', label: 'Alkohol', icon: '🍺' },
     { id: 'advanced', label: 'Erweitert', icon: '🔬' },
   ];
 
@@ -329,15 +330,18 @@ export default function StatsTab({ onNavigate }) {
 
     return (
       <div className="space-y-6">
-        {/* Enhanced Quick Stats Grid */}
+        {/* Consolidated Quick Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="modern-card text-center">
             <div className="text-2xl font-bold text-primary-green">{totalMatches}</div>
-            <div className="text-sm text-text-muted">Spiele</div>
+            <div className="text-sm text-text-muted">Spiele gespielt</div>
           </div>
           <div className="modern-card text-center">
             <div className="text-2xl font-bold text-primary-green">{advancedStats.totalGoals}</div>
-            <div className="text-sm text-text-muted">Tore</div>
+            <div className="text-sm text-text-muted">Tore insgesamt</div>
+            <div className="text-xs text-text-muted mt-1">
+              ⌀ {totalMatches > 0 ? (advancedStats.totalGoals / totalMatches).toFixed(1) : '0.0'}/Spiel
+            </div>
           </div>
           <div className="modern-card text-center">
             <div className="text-lg font-bold text-primary-green">
@@ -346,6 +350,12 @@ export default function StatsTab({ onNavigate }) {
             <div className="text-sm text-text-muted">
               🥇 Topscorer ({topScorer ? topScorer.goals : 0} Tore)
             </div>
+            <div className="text-xs text-text-muted mt-1">
+              {topScorer && topScorer.matchesPlayed > 0 ? 
+                `⌀ ${(topScorer.goals / topScorer.matchesPlayed).toFixed(2)}/Spiel` : 
+                '⌀ 0.00/Spiel'
+              }
+            </div>
           </div>
           <div className="modern-card text-center">
             <div className="text-lg font-bold text-primary-green">
@@ -353,6 +363,12 @@ export default function StatsTab({ onNavigate }) {
             </div>
             <div className="text-sm text-text-muted">
               ⭐ Top SdS ({topSdSPlayer ? topSdSPlayer.sdsCount : 0}x)
+            </div>
+            <div className="text-xs text-text-muted mt-1">
+              {topSdSPlayer && topSdSPlayer.matchesPlayed > 0 ? 
+                `${((topSdSPlayer.sdsCount / topSdSPlayer.matchesPlayed) * 100).toFixed(1)}% Quote` : 
+                '0.0% Quote'
+              }
             </div>
           </div>
         </div>
@@ -434,7 +450,7 @@ export default function StatsTab({ onNavigate }) {
         {/* Additional Statistics */}
         <div className="modern-card">
           <h3 className="font-bold text-lg mb-4">📊 Erweiterte Statistiken</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-3 bg-bg-secondary rounded-lg">
               <div className="text-xl font-bold text-primary-green">
                 {(() => {
@@ -452,13 +468,7 @@ export default function StatsTab({ onNavigate }) {
               </div>
               <div className="text-sm text-text-muted">⌀ Sperrenlänge</div>
             </div>
-            <div className="text-center p-3 bg-bg-secondary rounded-lg">
-              <div className="text-xl font-bold text-accent-orange">
-                {totalMatches > 0 ? ((aekWins + realWins) / totalMatches * 100).toFixed(1) : '0.0'}%
-              </div>
-              <div className="text-sm text-text-muted">Entscheidungsquote</div>
-              <div className="text-xs text-text-muted">(keine Unentschieden)</div>
-            </div>
+
             <div className="text-center p-3 bg-bg-secondary rounded-lg">
               <div className="text-xl font-bold text-accent-blue">
                 {playerStats.filter(p => p.goals > 0).length}
@@ -470,6 +480,146 @@ export default function StatsTab({ onNavigate }) {
                 {bans?.length || 0}
               </div>
               <div className="text-sm text-text-muted">Gesamt Sperren</div>
+            </div>
+          </div>
+        </div>
+
+        {/* New Interesting Statistics */}
+        <div className="modern-card">
+          <h3 className="font-bold text-lg mb-4">💡 Besondere Statistiken</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="text-center p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
+              <div className="text-xl font-bold text-green-600">
+                {(() => {
+                  // Calculate longest winning streak
+                  let maxStreak = 0;
+                  let currentAekStreak = 0;
+                  let currentRealStreak = 0;
+                  let maxTeam = '';
+                  
+                  matches?.forEach(match => {
+                    const aekGoals = match.goalsa || 0;
+                    const realGoals = match.goalsb || 0;
+                    
+                    if (aekGoals > realGoals) {
+                      currentAekStreak++;
+                      currentRealStreak = 0;
+                      if (currentAekStreak > maxStreak) {
+                        maxStreak = currentAekStreak;
+                        maxTeam = 'AEK';
+                      }
+                    } else if (realGoals > aekGoals) {
+                      currentRealStreak++;
+                      currentAekStreak = 0;
+                      if (currentRealStreak > maxStreak) {
+                        maxStreak = currentRealStreak;
+                        maxTeam = 'Real';
+                      }
+                    } else {
+                      currentAekStreak = 0;
+                      currentRealStreak = 0;
+                    }
+                  });
+                  
+                  return maxStreak;
+                })()}
+              </div>
+              <div className="text-sm text-green-700">🔥 Längste Siegesserie</div>
+              <div className="text-xs text-green-600 mt-1">
+                {(() => {
+                  let maxStreak = 0;
+                  let currentAekStreak = 0;
+                  let currentRealStreak = 0;
+                  let maxTeam = '';
+                  
+                  matches?.forEach(match => {
+                    const aekGoals = match.goalsa || 0;
+                    const realGoals = match.goalsb || 0;
+                    
+                    if (aekGoals > realGoals) {
+                      currentAekStreak++;
+                      currentRealStreak = 0;
+                      if (currentAekStreak > maxStreak) {
+                        maxStreak = currentAekStreak;
+                        maxTeam = 'AEK';
+                      }
+                    } else if (realGoals > aekGoals) {
+                      currentRealStreak++;
+                      currentAekStreak = 0;
+                      if (currentRealStreak > maxStreak) {
+                        maxStreak = currentRealStreak;
+                        maxTeam = 'Real';
+                      }
+                    } else {
+                      currentAekStreak = 0;
+                      currentRealStreak = 0;
+                    }
+                  });
+                  
+                  return maxTeam || 'Keine';
+                })()}
+              </div>
+            </div>
+
+            <div className="text-center p-3 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+              <div className="text-xl font-bold text-yellow-600">
+                {(() => {
+                  // Calculate most productive player (goals per match played)
+                  let bestRatio = 0;
+                  let bestPlayer = null;
+                  
+                  playerStats.forEach(player => {
+                    if (player.matchesPlayed > 0) {
+                      const ratio = player.goals / player.matchesPlayed;
+                      if (ratio > bestRatio) {
+                        bestRatio = ratio;
+                        bestPlayer = player.name;
+                      }
+                    }
+                  });
+                  
+                  return bestRatio.toFixed(2);
+                })()}
+              </div>
+              <div className="text-sm text-yellow-700">⚡ Höchste Effizienz</div>
+              <div className="text-xs text-yellow-600 mt-1">
+                {(() => {
+                  let bestRatio = 0;
+                  let bestPlayer = null;
+                  
+                  playerStats.forEach(player => {
+                    if (player.matchesPlayed > 0) {
+                      const ratio = player.goals / player.matchesPlayed;
+                      if (ratio > bestRatio) {
+                        bestRatio = ratio;
+                        bestPlayer = player.name;
+                      }
+                    }
+                  });
+                  
+                  return bestPlayer || 'Keine Daten';
+                })()}
+              </div>
+            </div>
+
+            <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
+              <div className="text-xl font-bold text-blue-600">
+                {(() => {
+                  // Calculate team balance (how close teams are in wins)
+                  const aekWins = teamRecords.aek.wins;
+                  const realWins = teamRecords.real.wins;
+                  const totalDecisiveMatches = aekWins + realWins;
+                  
+                  if (totalDecisiveMatches === 0) return '100%';
+                  
+                  const balanceRatio = Math.min(aekWins, realWins) / Math.max(aekWins, realWins);
+                  return `${(balanceRatio * 100).toFixed(0)}%`;
+                })()}
+              </div>
+              <div className="text-sm text-blue-700">⚖️ Team-Balance</div>
+              <div className="text-xs text-blue-600 mt-1">
+                Ausgeglichenheit ({teamRecords.aek.wins}:{teamRecords.real.wins})
+              </div>
             </div>
           </div>
         </div>
@@ -653,22 +803,24 @@ export default function StatsTab({ onNavigate }) {
             <h4 className="font-semibold text-blue-600">AEK Athen</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span>Spieler:</span>
+                <span>Aktive Spieler:</span>
                 <span className="font-medium">{aekPlayers.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tore gesamt:</span>
-                <span className="font-medium">{advancedStats.aekTotalGoals}</span>
               </div>
               <div className="flex justify-between">
                 <span>Siege:</span>
                 <span className="font-medium">{aekWins}</span>
               </div>
               <div className="flex justify-between">
-                <span>Siegquote:</span>
-                <span className="font-medium">
-                  {totalMatches > 0 ? ((aekWins / totalMatches) * 100).toFixed(1) : 0}%
-                </span>
+                <span>Niederlagen:</span>
+                <span className="font-medium">{teamRecords.aek.losses}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Gesamtmarktwert:</span>
+                <span className="font-medium">{formatPlayerValue(aekMarketValue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Zu Null Spiele:</span>
+                <span className="font-medium">{advancedStats.cleanSheets.aek}</span>
               </div>
             </div>
           </div>
@@ -676,22 +828,24 @@ export default function StatsTab({ onNavigate }) {
             <h4 className="font-semibold text-red-600">Real Madrid</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span>Spieler:</span>
+                <span>Aktive Spieler:</span>
                 <span className="font-medium">{realPlayers.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tore gesamt:</span>
-                <span className="font-medium">{advancedStats.realTotalGoals}</span>
               </div>
               <div className="flex justify-between">
                 <span>Siege:</span>
                 <span className="font-medium">{realWins}</span>
               </div>
               <div className="flex justify-between">
-                <span>Siegquote:</span>
-                <span className="font-medium">
-                  {totalMatches > 0 ? ((realWins / totalMatches) * 100).toFixed(1) : 0}%
-                </span>
+                <span>Niederlagen:</span>
+                <span className="font-medium">{teamRecords.real.losses}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Gesamtmarktwert:</span>
+                <span className="font-medium">{formatPlayerValue(realMarketValue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Zu Null Spiele:</span>
+                <span className="font-medium">{advancedStats.cleanSheets.real}</span>
               </div>
             </div>
           </div>
@@ -732,20 +886,18 @@ export default function StatsTab({ onNavigate }) {
         {/* Performance Analysis */}
         <div className="mt-6 grid md:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <h4 className="font-semibold text-text-primary">🎯 Offensiv-Performance</h4>
+            <h4 className="font-semibold text-text-primary">🎯 Offensive Highlights</h4>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Durchschnittliche Tore pro Spiel:</span>
-                <span className="font-medium">
-                  {totalMatches > 0 ? ((advancedStats.aekTotalGoals + advancedStats.realTotalGoals) / totalMatches).toFixed(1) : '0.0'}
-                </span>
-              </div>
               <div className="flex justify-between">
                 <span>Torreichstes Team:</span>
                 <span className="font-medium">
                   {advancedStats.aekTotalGoals >= advancedStats.realTotalGoals ? 'AEK Athen' : 'Real Madrid'}
                   ({Math.max(advancedStats.aekTotalGoals, advancedStats.realTotalGoals)} Tore)
                 </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Höchste Einzelspiel-Toranzahl:</span>
+                <span className="font-medium">{advancedStats.highestScoringMatch} Tore</span>
               </div>
               <div className="flex justify-between">
                 <span>Aktivster Torschütze:</span>
@@ -979,12 +1131,266 @@ export default function StatsTab({ onNavigate }) {
     </div>
   );
 
+  const renderAlkohol = () => {
+    const [calculatorValues, setCalculatorValues] = useState({
+      aekPlayer: '',
+      realPlayer: '',
+      aekGoals: 0,
+      realGoals: 0
+    });
+
+    // Calculate alcohol statistics
+    const calculateAlcoholStats = () => {
+      const stats = {
+        totalShots: 0,
+        aekShots: 0,
+        realShots: 0,
+        playerShots: {}
+      };
+
+      matches?.forEach(match => {
+        const aekGoals = match.goalsa || 0;
+        const realGoals = match.goalsb || 0;
+
+        // Each goal scored means 2cl for opponent
+        stats.totalShots += (aekGoals + realGoals) * 2; // 2cl per goal
+        stats.aekShots += realGoals * 2; // AEK drinks when Real scores
+        stats.realShots += aekGoals * 2; // Real drinks when AEK scores
+
+        // Parse goalslists to track individual player alcohol caused
+        if (match.goalslista) {
+          try {
+            const goals = typeof match.goalslista === 'string' ? JSON.parse(match.goalslista) : match.goalslista;
+            goals.forEach(goal => {
+              const player = typeof goal === 'object' ? goal.player : goal;
+              const count = typeof goal === 'object' ? goal.count : 1;
+              if (!stats.playerShots[player]) stats.playerShots[player] = 0;
+              stats.playerShots[player] += count * 2; // 2cl per goal for opponent
+            });
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+
+        if (match.goalslistb) {
+          try {
+            const goals = typeof match.goalslistb === 'string' ? JSON.parse(match.goalslistb) : match.goalslistb;
+            goals.forEach(goal => {
+              const player = typeof goal === 'object' ? goal.player : goal;
+              const count = typeof goal === 'object' ? goal.count : 1;
+              if (!stats.playerShots[player]) stats.playerShots[player] = 0;
+              stats.playerShots[player] += count * 2; // 2cl per goal for opponent
+            });
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+      });
+
+      return stats;
+    };
+
+    const alcoholStats = calculateAlcoholStats();
+    const topAlcoholCausers = Object.entries(alcoholStats.playerShots)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 10);
+
+    const calculateMatchAlcohol = () => {
+      return (calculatorValues.aekGoals + calculatorValues.realGoals) * 2;
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Overview Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="modern-card text-center">
+            <div className="text-3xl mb-2">🍺</div>
+            <div className="text-2xl font-bold text-primary-green">{alcoholStats.totalShots}cl</div>
+            <div className="text-sm text-text-muted">Gesamt Schnaps</div>
+            <div className="text-xs text-text-muted mt-1">
+              ≈ {(alcoholStats.totalShots / 20).toFixed(1)} Gläser
+            </div>
+          </div>
+          <div className="modern-card text-center">
+            <div className="text-3xl mb-2">🔵</div>
+            <div className="text-2xl font-bold text-blue-600">{alcoholStats.aekShots}cl</div>
+            <div className="text-sm text-text-muted">AEK getrunken</div>
+            <div className="text-xs text-text-muted mt-1">
+              {alcoholStats.totalShots > 0 ? ((alcoholStats.aekShots / alcoholStats.totalShots) * 100).toFixed(1) : 0}% vom Gesamt
+            </div>
+          </div>
+          <div className="modern-card text-center">
+            <div className="text-3xl mb-2">🔴</div>
+            <div className="text-2xl font-bold text-red-600">{alcoholStats.realShots}cl</div>
+            <div className="text-sm text-text-muted">Real getrunken</div>
+            <div className="text-xs text-text-muted mt-1">
+              {alcoholStats.totalShots > 0 ? ((alcoholStats.realShots / alcoholStats.totalShots) * 100).toFixed(1) : 0}% vom Gesamt
+            </div>
+          </div>
+        </div>
+
+        {/* Top Alcohol Causers */}
+        <div className="modern-card">
+          <h3 className="font-bold text-lg mb-4">🍻 Top Alkohol-Verursacher</h3>
+          <div className="text-sm text-text-muted mb-4">
+            Spieler, die mit ihren Toren am meisten Alkohol für den Gegner verursacht haben
+          </div>
+          <div className="space-y-3">
+            {topAlcoholCausers.map(([player, shots], index) => (
+              <div key={player} className="flex items-center justify-between py-2 border-b border-border-light last:border-b-0">
+                <div className="flex items-center space-x-3">
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    index === 0 ? 'bg-yellow-500 text-white' :
+                    index === 1 ? 'bg-gray-400 text-white' :
+                    index === 2 ? 'bg-orange-600 text-white' :
+                    'bg-gray-200 text-gray-600'
+                  }`}>
+                    {index + 1}
+                  </span>
+                  <div>
+                    <div className="font-medium">{player}</div>
+                    <div className="text-sm text-text-muted">≈ {(shots / 20).toFixed(1)} Gläser</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-primary-green">{shots}cl</div>
+                  <div className="text-sm text-text-muted">verursacht</div>
+                </div>
+              </div>
+            ))}
+            {topAlcoholCausers.length === 0 && (
+              <div className="text-center text-text-muted py-4">
+                Noch keine Tore geschossen - noch kein Alkohol verursacht!
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Alcohol Calculator */}
+        <div className="modern-card">
+          <h3 className="font-bold text-lg mb-4">🧮 Alkohol-Rechner</h3>
+          <div className="text-sm text-text-muted mb-4">
+            Berechne, wie viel Alkohol bei einem hypothetischen Spiel getrunken werden müsste
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">AEK Tore</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={calculatorValues.aekGoals}
+                  onChange={(e) => setCalculatorValues(prev => ({
+                    ...prev,
+                    aekGoals: parseInt(e.target.value) || 0
+                  }))}
+                  className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Real Tore</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={calculatorValues.realGoals}
+                  onChange={(e) => setCalculatorValues(prev => ({
+                    ...prev,
+                    realGoals: parseInt(e.target.value) || 0
+                  }))}
+                  className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="p-4 bg-bg-secondary rounded-lg">
+                <div className="text-center">
+                  <div className="text-3xl mb-2">🥃</div>
+                  <div className="text-2xl font-bold text-primary-green">{calculateMatchAlcohol()}cl</div>
+                  <div className="text-sm text-text-muted">Gesamt Schnaps</div>
+                  <div className="text-xs text-text-muted mt-1">
+                    ≈ {(calculateMatchAlcohol() / 20).toFixed(1)} Gläser
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <div className="text-lg font-bold text-blue-600">{calculatorValues.realGoals * 2}cl</div>
+                  <div className="text-sm text-blue-700">AEK trinkt</div>
+                </div>
+                <div className="text-center p-3 bg-red-50 rounded-lg">
+                  <div className="text-lg font-bold text-red-600">{calculatorValues.aekGoals * 2}cl</div>
+                  <div className="text-sm text-red-700">Real trinkt</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="text-sm text-yellow-800">
+              <strong>Regel:</strong> Für jedes geschossene Tor muss der Gegner 2cl Schnaps trinken.
+            </div>
+          </div>
+        </div>
+
+        {/* Team Alcohol Statistics */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="modern-card border-l-4 border-blue-400">
+            <h3 className="font-bold text-lg mb-4 text-blue-600">🔵 AEK Alkohol-Bilanz</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span>Getrunken (durch Real Tore):</span>
+                <span className="font-semibold text-red-600">{alcoholStats.aekShots}cl</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Verursacht (durch AEK Tore):</span>
+                <span className="font-semibold text-green-600">{alcoholStats.realShots}cl</span>
+              </div>
+              <div className="flex justify-between border-t pt-2">
+                <span className="font-medium">Alkohol-Bilanz:</span>
+                <span className={`font-bold ${alcoholStats.realShots > alcoholStats.aekShots ? 'text-green-600' : 'text-red-600'}`}>
+                  {alcoholStats.realShots > alcoholStats.aekShots ? '+' : ''}{alcoholStats.realShots - alcoholStats.aekShots}cl
+                </span>
+              </div>
+              <div className="text-xs text-text-muted">
+                {alcoholStats.realShots > alcoholStats.aekShots ? 'AEK verursacht mehr als getrunken' : 'AEK trinkt mehr als verursacht'}
+              </div>
+            </div>
+          </div>
+          <div className="modern-card border-l-4 border-red-400">
+            <h3 className="font-bold text-lg mb-4 text-red-600">🔴 Real Alkohol-Bilanz</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span>Getrunken (durch AEK Tore):</span>
+                <span className="font-semibold text-red-600">{alcoholStats.realShots}cl</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Verursacht (durch Real Tore):</span>
+                <span className="font-semibold text-green-600">{alcoholStats.aekShots}cl</span>
+              </div>
+              <div className="flex justify-between border-t pt-2">
+                <span className="font-medium">Alkohol-Bilanz:</span>
+                <span className={`font-bold ${alcoholStats.aekShots > alcoholStats.realShots ? 'text-green-600' : 'text-red-600'}`}>
+                  {alcoholStats.aekShots > alcoholStats.realShots ? '+' : ''}{alcoholStats.aekShots - alcoholStats.realShots}cl
+                </span>
+              </div>
+              <div className="text-xs text-text-muted">
+                {alcoholStats.aekShots > alcoholStats.realShots ? 'Real verursacht mehr als getrunken' : 'Real trinkt mehr als verursacht'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderCurrentView = () => {
     switch (selectedView) {
       case 'dashboard': return <EnhancedDashboard onNavigate={onNavigate} />;
       case 'players': return renderPlayers();
       case 'teams': return renderTeams();
       case 'trends': return renderTrends();
+      case 'alkohol': return renderAlkohol();
       case 'advanced': return <AdvancedAnalytics />;
       default: return renderOverview();
     }

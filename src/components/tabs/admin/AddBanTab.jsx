@@ -99,7 +99,7 @@ export default function AddBanTab() {
   const selectedBanType = BAN_TYPES.find(type => type.value === formData.type);
 
   return (
-    <div className="p-4">
+    <div className="p-4 pb-20">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-text-primary mb-2">
           Neue Sperre hinzufügen

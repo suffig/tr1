@@ -113,7 +113,7 @@ export default function AddTransactionTab() {
   const isFormValid = formData.team && formData.type && formData.amount && formData.date;
 
   return (
-    <div className="p-4">
+    <div className="p-4 pb-20">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-text-primary mb-2">
           Neue Transaktion hinzufügen

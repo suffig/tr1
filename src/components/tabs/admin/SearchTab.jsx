@@ -367,7 +367,7 @@ export default function SearchTab({ onNavigate }) {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 pb-20 space-y-4">
       {/* Header */}
       <div>
         <h3 className="text-lg font-semibold text-text-primary mb-1">🔍 Globale Suche</h3>
