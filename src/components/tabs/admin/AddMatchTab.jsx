@@ -138,7 +138,18 @@ export default function AddMatchTab() {
     }
   };
 
-  const isFormValid = formData.date; // Only date is required now
+  const isFormValid = () => {
+    // Basic requirements
+    if (!formData.date) return false;
+    
+    // No draws allowed - one team must win
+    if (formData.goalsa === formData.goalsb) return false;
+    
+    // SdS (Spieler des Spiels) must be selected
+    if (!formData.manofthematch || formData.manofthematch.trim() === '') return false;
+    
+    return true;
+  };
 
   // Helper functions for live goal scoring
   const getTeamPlayers = (teamName) => {
@@ -690,6 +701,31 @@ export default function AddMatchTab() {
                   </p>
                 </div>
 
+                {/* Validation Messages */}
+                {formData.goalsa === formData.goalsb && (formData.goalsa > 0 || formData.goalsb > 0) && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-center">
+                      <div className="text-red-600 mr-2">⚠️</div>
+                      <div>
+                        <h5 className="font-medium text-red-800">Unentschieden nicht erlaubt</h5>
+                        <p className="text-sm text-red-700">Ein Team muss gewinnen. Unentschieden sind in dieser App nicht möglich.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {!formData.manofthematch && (formData.goalsa > 0 || formData.goalsb > 0) && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div className="flex items-center">
+                      <div className="text-yellow-600 mr-2">⭐</div>
+                      <div>
+                        <h5 className="font-medium text-yellow-800">Spieler des Spiels erforderlich</h5>
+                        <p className="text-sm text-yellow-700">Bitte wählen Sie einen Spieler des Spiels aus, bevor Sie das Match speichern.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Buttons */}
                 <div className="flex gap-3 pt-4">
                   <button
@@ -702,7 +738,7 @@ export default function AddMatchTab() {
                   </button>
                   <button
                     type="submit"
-                    disabled={!isFormValid || loading}
+                    disabled={!isFormValid() || loading}
                     className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? (
@@ -727,10 +763,12 @@ export default function AddMatchTab() {
             <i className="fas fa-info-circle"></i>
           </div>
           <div>
-            <h4 className="font-semibold text-blue-800 mb-1">Hinweis</h4>
-            <p className="text-blue-700 text-sm">
-              Nach dem Hinzufügen können Sie das Spiel in der Spiele-Übersicht einsehen und bearbeiten.
-            </p>
+            <h4 className="font-semibold text-blue-800 mb-1">Wichtige Hinweise</h4>
+            <ul className="text-blue-700 text-sm space-y-1">
+              <li>• <strong>Kein Unentschieden:</strong> Ein Team muss immer gewinnen - Unentschieden sind nicht erlaubt</li>
+              <li>• <strong>Spieler des Spiels Pflicht:</strong> Für jedes Spiel muss ein Spieler des Spiels ausgewählt werden</li>
+              <li>• Nach dem Hinzufügen können Sie das Spiel in der Spiele-Übersicht einsehen und bearbeiten</li>
+            </ul>
           </div>
         </div>
       </div>

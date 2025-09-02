@@ -249,27 +249,181 @@ export default function StatsTab({ onNavigate }) {
     return <LoadingSpinner message="Lade Statistiken..." />;
   }
 
-  const renderOverview = () => (
-    <div className="space-y-6">
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="modern-card text-center">
-          <div className="text-2xl font-bold text-primary-green">{totalMatches}</div>
-          <div className="text-sm text-text-muted">Spiele</div>
+  const renderOverview = () => {
+    // Calculate enhanced statistics for the selected time period
+    const topScorer = playerStats.length > 0 ? playerStats[0] : null;
+    const topSdSPlayer = playerStats
+      .filter(p => p.sdsCount > 0)
+      .sort((a, b) => b.sdsCount - a.sdsCount)[0];
+    
+    // Calculate highest victory
+    const highestVictory = matches?.reduce((max, match) => {
+      const aekGoals = match.goalsa || 0;
+      const realGoals = match.goalsb || 0;
+      const goalDiff = Math.abs(aekGoals - realGoals);
+      return goalDiff > max.diff ? { diff: goalDiff, match } : max;
+    }, { diff: 0, match: null });
+    
+    // Calculate player with most goals in a single match
+    const mostGoalsInMatch = matches?.reduce((max, match) => {
+      const processGoalsList = (goalsList) => {
+        if (!goalsList) return [];
+        try {
+          return typeof goalsList === 'string' ? JSON.parse(goalsList) : goalsList;
+        } catch {
+          return [];
+        }
+      };
+      
+      const aekGoals = processGoalsList(match.goalslista);
+      const realGoals = processGoalsList(match.goalslistb);
+      
+      [...aekGoals, ...realGoals].forEach(goal => {
+        const player = typeof goal === 'object' ? goal.player : goal;
+        const count = typeof goal === 'object' ? goal.count : 1;
+        if (count > max.count) {
+          max = { player, count, match };
+        }
+      });
+      
+      return max;
+    }, { player: null, count: 0, match: null });
+
+    return (
+      <div className="space-y-6">
+        {/* Enhanced Quick Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="modern-card text-center">
+            <div className="text-2xl font-bold text-primary-green">{totalMatches}</div>
+            <div className="text-sm text-text-muted">Spiele</div>
+          </div>
+          <div className="modern-card text-center">
+            <div className="text-2xl font-bold text-primary-green">{advancedStats.totalGoals}</div>
+            <div className="text-sm text-text-muted">Tore</div>
+          </div>
+          <div className="modern-card text-center">
+            <div className="text-lg font-bold text-primary-green">
+              {topScorer ? topScorer.name : 'Keine Daten'}
+            </div>
+            <div className="text-sm text-text-muted">
+              🥇 Topscorer ({topScorer ? topScorer.goals : 0} Tore)
+            </div>
+          </div>
+          <div className="modern-card text-center">
+            <div className="text-lg font-bold text-primary-green">
+              {topSdSPlayer ? topSdSPlayer.name : 'Keine Daten'}
+            </div>
+            <div className="text-sm text-text-muted">
+              ⭐ Top SdS ({topSdSPlayer ? topSdSPlayer.sdsCount : 0}x)
+            </div>
+          </div>
         </div>
-        <div className="modern-card text-center">
-          <div className="text-2xl font-bold text-primary-green">{advancedStats.totalGoals}</div>
-          <div className="text-sm text-text-muted">Tore</div>
+
+        {/* New Enhanced Statistics Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="modern-card text-center">
+            <div className="text-xl font-bold text-accent-orange">
+              {highestVictory?.match ? 
+                `${Math.max(highestVictory.match.goalsa || 0, highestVictory.match.goalsb || 0)}:${Math.min(highestVictory.match.goalsa || 0, highestVictory.match.goalsb || 0)}` 
+                : '0:0'}
+            </div>
+            <div className="text-sm text-text-muted">🏆 Höchster Sieg</div>
+            {highestVictory?.match && (
+              <div className="text-xs text-text-muted mt-1">
+                {new Date(highestVictory.match.date).toLocaleDateString('de-DE')}
+              </div>
+            )}
+          </div>
+          <div className="modern-card text-center">
+            <div className="text-xl font-bold text-accent-blue">
+              {mostGoalsInMatch?.player || 'Keine Daten'}
+            </div>
+            <div className="text-sm text-text-muted">
+              ⚽ Meiste Tore ({mostGoalsInMatch?.count || 0} in einem Spiel)
+            </div>
+            {mostGoalsInMatch?.match && (
+              <div className="text-xs text-text-muted mt-1">
+                {new Date(mostGoalsInMatch.match.date).toLocaleDateString('de-DE')}
+              </div>
+            )}
+          </div>
+          <div className="modern-card text-center">
+            <div className="text-xl font-bold text-accent-red">
+              {(() => {
+                // Calculate most suspended player
+                const suspensionCounts = {};
+                bans?.forEach(ban => {
+                  const playerInfo = players?.find(p => p.id === ban.player_id);
+                  const playerName = playerInfo?.name || 'Unbekannt';
+                  suspensionCounts[playerName] = (suspensionCounts[playerName] || 0) + 1;
+                });
+                
+                const mostSuspended = Object.entries(suspensionCounts)
+                  .sort((a, b) => b[1] - a[1])[0];
+                
+                return mostSuspended ? mostSuspended[0] : 'Keine Daten';
+              })()}
+            </div>
+            <div className="text-sm text-text-muted">
+              🟥 Meiste Sperren ({(() => {
+                const suspensionCounts = {};
+                bans?.forEach(ban => {
+                  const playerInfo = players?.find(p => p.id === ban.player_id);
+                  const playerName = playerInfo?.name || 'Unbekannt';
+                  suspensionCounts[playerName] = (suspensionCounts[playerName] || 0) + 1;
+                });
+                
+                const mostSuspended = Object.entries(suspensionCounts)
+                  .sort((a, b) => b[1] - a[1])[0];
+                
+                return mostSuspended ? mostSuspended[1] : 0;
+              })()}x)
+            </div>
+          </div>
         </div>
-        <div className="modern-card text-center">
-          <div className="text-2xl font-bold text-primary-green">{totalPlayers}</div>
-          <div className="text-sm text-text-muted">Spieler</div>
+
+        {/* Additional Statistics */}
+        <div className="modern-card">
+          <h3 className="font-bold text-lg mb-4">📊 Erweiterte Statistiken</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-bg-secondary rounded-lg">
+              <div className="text-xl font-bold text-primary-green">
+                {(() => {
+                  // Calculate average suspension length
+                  const totalDays = bans?.reduce((sum, ban) => {
+                    const start = new Date(ban.start_date);
+                    const end = new Date(ban.end_date);
+                    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                    return sum + (days > 0 ? days : 0);
+                  }, 0) || 0;
+                  
+                  const avgDays = bans?.length > 0 ? (totalDays / bans.length).toFixed(1) : '0.0';
+                  return `${avgDays} Tage`;
+                })()}
+              </div>
+              <div className="text-sm text-text-muted">⌀ Sperrenlänge</div>
+            </div>
+            <div className="text-center p-3 bg-bg-secondary rounded-lg">
+              <div className="text-xl font-bold text-accent-orange">
+                {totalMatches > 0 ? ((aekWins + realWins) / totalMatches * 100).toFixed(1) : '0.0'}%
+              </div>
+              <div className="text-sm text-text-muted">Entscheidungsquote</div>
+              <div className="text-xs text-text-muted">(keine Unentschieden)</div>
+            </div>
+            <div className="text-center p-3 bg-bg-secondary rounded-lg">
+              <div className="text-xl font-bold text-accent-blue">
+                {playerStats.filter(p => p.goals > 0).length}
+              </div>
+              <div className="text-sm text-text-muted">Aktive Torschützen</div>
+            </div>
+            <div className="text-center p-3 bg-bg-secondary rounded-lg">
+              <div className="text-xl font-bold text-accent-red">
+                {bans?.length || 0}
+              </div>
+              <div className="text-sm text-text-muted">Gesamt Sperren</div>
+            </div>
+          </div>
         </div>
-        <div className="modern-card text-center">
-          <div className="text-2xl font-bold text-primary-green">{advancedStats.avgGoalsPerMatch}</div>
-          <div className="text-sm text-text-muted">⌀ Tore/Spiel</div>
-        </div>
-      </div>
 
       {/* Team Performance */}
       <div className="grid md:grid-cols-2 gap-6">
@@ -396,6 +550,7 @@ export default function StatsTab({ onNavigate }) {
       </div>
     </div>
   );
+};
 
   const renderPlayers = () => (
     <div className="modern-card">

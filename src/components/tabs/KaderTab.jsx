@@ -74,7 +74,7 @@ export default function KaderTab({ onNavigate }) { // eslint-disable-line no-unu
 
   const suggestTransfers = () => {
     if (!players || players.length < 4) {
-      alert('🔄 Nicht genügend Spieler für Transfer-Analyse');
+      toast.error('🔄 Nicht genügend Spieler für Transfer-Analyse');
       return;
     }
     
@@ -82,31 +82,79 @@ export default function KaderTab({ onNavigate }) { // eslint-disable-line no-unu
     const realPlayers = getTeamPlayers("Real");
     const suggestions = [];
     
-    // AI-powered transfer suggestions based on multiple factors
-    if (aekPlayers.length > realPlayers.length + 2) {
-      const leastValuable = aekPlayers.sort((a, b) => (a.value || 0) - (b.value || 0))[0];
-      suggestions.push(`🤖 KI empfiehlt: ${leastValuable.name} von AEK zu Real transferieren`);
-    } else if (realPlayers.length > aekPlayers.length + 2) {
-      const leastValuable = realPlayers.sort((a, b) => (a.value || 0) - (b.value || 0))[0];
-      suggestions.push(`🤖 KI empfiehlt: ${leastValuable.name} von Real zu AEK transferieren`);
-    }
-    
-    // AI suggestion for position coverage
-    const positions = ['TH', 'IV', 'ZM', 'ST'];
-    positions.forEach(pos => {
-      const aekCount = aekPlayers.filter(p => p.position === pos).length;
-      const realCount = realPlayers.filter(p => p.position === pos).length;
-      if (Math.abs(aekCount - realCount) > 1) {
-        const needMore = aekCount > realCount ? 'Real' : 'AEK';
-        suggestions.push(`🎯 KI-Analyse: ${needMore} benötigt mehr ${pos}-Spieler`);
+    // Analyze current team compositions for Transfermarkt suggestions
+    const currentPositions = [...aekPlayers, ...realPlayers].reduce((acc, player) => {
+      acc[player.position] = (acc[player.position] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Simulate realistic Transfermarkt.de player suggestions
+    const transfermarktSuggestions = [
+      { name: 'Pedri González', position: 'ZOM', age: 21, marketValue: 80.0, eafc25: 85, club: 'FC Barcelona', nationality: 'ESP' },
+      { name: 'Jamal Musiala', position: 'LF', age: 21, marketValue: 100.0, eafc25: 84, club: 'Bayern München', nationality: 'GER' },
+      { name: 'Eduardo Camavinga', position: 'ZDM', age: 22, marketValue: 90.0, eafc25: 83, club: 'Real Madrid', nationality: 'FRA' },
+      { name: 'Florian Wirtz', position: 'ZOM', age: 21, marketValue: 85.0, eafc25: 82, club: 'Bayer Leverkusen', nationality: 'GER' },
+      { name: 'Arda Güler', position: 'RV', age: 19, marketValue: 25.0, eafc25: 77, club: 'Real Madrid', nationality: 'TUR' },
+      { name: 'Jude Bellingham', position: 'ZM', age: 21, marketValue: 120.0, eafc25: 86, club: 'Real Madrid', nationality: 'ENG' },
+      { name: 'Gavi', position: 'ZM', age: 20, marketValue: 60.0, eafc25: 81, club: 'FC Barcelona', nationality: 'ESP' },
+      { name: 'Warren Zaïre-Emery', position: 'ZM', age: 18, marketValue: 40.0, eafc25: 78, club: 'PSG', nationality: 'FRA' }
+    ];
+
+    // Determine position needs
+    const positionNeeds = [];
+    const idealMinimum = { 'TH': 1, 'IV': 2, 'ZM': 2, 'ST': 2 };
+    Object.entries(idealMinimum).forEach(([pos, min]) => {
+      if ((currentPositions[pos] || 0) < min) {
+        positionNeeds.push(pos);
       }
     });
+
+    // If no specific needs, suggest based on team balance
+    if (positionNeeds.length === 0) {
+      if (aekPlayers.length > realPlayers.length + 1) positionNeeds.push('ZM', 'ST');
+      else if (realPlayers.length > aekPlayers.length + 1) positionNeeds.push('ZM', 'IV');
+      else positionNeeds.push('ZOM', 'LF'); // General offensive improvements
+    }
+
+    // Get relevant suggestions
+    const relevantSuggestions = transfermarktSuggestions
+      .filter(player => positionNeeds.includes(player.position) || positionNeeds.length === 0)
+      .slice(0, 3);
+
+    // Internal transfer suggestions
+    if (aekPlayers.length > realPlayers.length + 2) {
+      const leastValuable = aekPlayers.sort((a, b) => (a.value || 0) - (b.value || 0))[0];
+      suggestions.push(`🔄 Interner Transfer: ${leastValuable.name} von AEK zu Real`);
+    } else if (realPlayers.length > aekPlayers.length + 2) {
+      const leastValuable = realPlayers.sort((a, b) => (a.value || 0) - (b.value || 0))[0];
+      suggestions.push(`🔄 Interner Transfer: ${leastValuable.name} von Real zu AEK`);
+    }
+
+    // Transfermarkt.de suggestions
+    suggestions.push('🌐 TRANSFERMARKT.DE EMPFEHLUNGEN:');
+    relevantSuggestions.forEach((player, index) => {
+      suggestions.push(
+        `${index + 1}. ${player.name} (${player.age}J) - ${player.position}\n` +
+        `   💰 ${player.marketValue}M € | 🎮 EA FC 25: ${player.eafc25}\n` +
+        `   🏆 ${player.club} (${player.nationality})`
+      );
+    });
+
+    if (positionNeeds.length > 0) {
+      suggestions.push(`\n🎯 Positions-Bedarf: ${positionNeeds.join(', ')}`);
+    }
+
+    const avgValue = players.reduce((sum, p) => sum + (p.value || 0), 0) / players.length;
+    suggestions.push(`\n💡 Empfohlenes Budget: ~${(avgValue * 1.5).toFixed(0)}M € pro Transfer`);
     
-    if (suggestions.length === 0) {
-      suggestions.push('🤖 KI-Analyse: Teams sind optimal ausbalanciert!');
+    if (suggestions.length === 1) {
+      suggestions.push('🤖 Teams sind optimal ausbalanciert!');
     }
     
-    alert(`🤖 KI Transfer-Empfehlungen:\n\n${suggestions.join('\n')}`);
+    toast.success(
+      `🤖 KI Transfer-Empfehlungen:\n\n${suggestions.join('\n')}`,
+      { duration: 8000 }
+    );
   };
 
   const getTeamColor = (teamName) => {
