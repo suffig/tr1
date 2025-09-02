@@ -7,6 +7,10 @@ import { OfflineIndicator } from './hooks/useOfflineManager.jsx';
 import Login from './components/Login';
 import BottomNavigation from './components/BottomNavigation';
 import LoadingSpinner, { FullScreenLoader } from './components/LoadingSpinner';
+import GlobalSearch from './components/GlobalSearch';
+import QuickActions from './components/QuickActions';
+import SmartNotifications from './components/SmartNotifications';
+import PerformanceMonitor from './components/PerformanceMonitor';
 
 // Lazy load tab components for better performance
 const MatchesTab = lazy(() => import('./components/tabs/MatchesTab'));
@@ -21,6 +25,18 @@ function App() {
   const [activeTab, setActiveTab] = useState('matches');
   const [tabLoading, setTabLoading] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(true);
+
+  // Add this useEffect to handle hiding notifications when needed
+  useEffect(() => {
+    // Auto-hide notifications on admin tab
+    if (activeTab === 'admin') {
+      setShowNotifications(false);
+    } else {
+      setShowNotifications(true);
+    }
+  }, [activeTab]);
 
   // Check if we're in demo mode
   useEffect(() => {
@@ -38,14 +54,28 @@ function App() {
     return () => clearInterval(interval);
   }, [user]);
 
-  const handleTabChange = async (newTab) => {
-    if (newTab === activeTab) return;
+  const handleTabChange = async (newTab, options = {}) => {
+    if (newTab === activeTab && !options.force) return;
     
     setTabLoading(true);
     // Add small delay for better UX
     await new Promise(resolve => setTimeout(resolve, 200));
     setActiveTab(newTab);
     setTabLoading(false);
+
+    // Handle navigation options
+    if (options.action) {
+      // Pass action to the tab component somehow
+      setTimeout(() => {
+        if (options.action === 'add') {
+          // Trigger add action in the respective tab
+          const event = new CustomEvent('fifa-tracker-action', { 
+            detail: { tab: newTab, action: 'add', ...options } 
+          });
+          window.dispatchEvent(event);
+        }
+      }, 300);
+    }
   };
 
   // Enable touch gestures for mobile navigation
@@ -59,22 +89,64 @@ function App() {
     }
   };
 
+  const handleGlobalSearchNavigate = (tab, action) => {
+    handleTabChange(tab, action);
+    setShowGlobalSearch(false);
+  };
+
+  const handleQuickAction = (action) => {
+    switch (action) {
+      case 'global-search': {
+        setShowGlobalSearch(true);
+        break;
+      }
+      case 'formation-planner': {
+        // Trigger formation planner
+        const formationEvent = new CustomEvent('fifa-tracker-action', { 
+          detail: { action: 'formation-planner' } 
+        });
+        window.dispatchEvent(formationEvent);
+        break;
+      }
+      case 'team-balance': {
+        // Trigger team balance analysis
+        const balanceEvent = new CustomEvent('fifa-tracker-action', { 
+          detail: { action: 'team-balance' } 
+        });
+        window.dispatchEvent(balanceEvent);
+        break;
+      }
+      case 'create-backup': {
+        // Trigger backup creation
+        const backupEvent = new CustomEvent('fifa-tracker-action', { 
+          detail: { action: 'create-backup' } 
+        });
+        window.dispatchEvent(backupEvent);
+        break;
+      }
+      default:
+        console.log('Unknown quick action:', action);
+    }
+  };
+
   const renderTabContent = () => {
+    const props = { onNavigate: handleTabChange };
+    
     switch (activeTab) {
       case 'matches':
-        return <MatchesTab />;
+        return <MatchesTab {...props} />;
       case 'bans':
-        return <BansTab />;
+        return <BansTab {...props} />;
       case 'finanzen':
-        return <FinanzenTab />;
+        return <FinanzenTab {...props} />;
       case 'squad':
-        return <KaderTab />;
+        return <KaderTab {...props} />;
       case 'stats':
-        return <StatsTab />;
+        return <StatsTab {...props} />;
       case 'admin':
-        return <AdminTab onLogout={handleLogout} />;
+        return <AdminTab onLogout={handleLogout} {...props} />;
       default:
-        return <MatchesTab />;
+        return <MatchesTab {...props} />;
     }
   };
 
@@ -127,6 +199,20 @@ function App() {
             <span aria-hidden="true">⚠️</span>
             Demo-Modus aktiv - Supabase CDN blockiert
           </span>
+        </div>
+      )}
+
+      {/* Quick Actions Toolbar */}
+      <QuickActions 
+        activeTab={activeTab}
+        onNavigate={handleTabChange}
+        onAction={handleQuickAction}
+      />
+
+      {/* Smart Notifications */}
+      {showNotifications && (
+        <div className="px-4 py-2">
+          <SmartNotifications onNavigate={handleTabChange} />
         </div>
       )}
       
@@ -187,6 +273,17 @@ function App() {
           zIndex: 9999,
         }}
       />
+
+      {/* Global Search Modal */}
+      {showGlobalSearch && (
+        <GlobalSearch 
+          onNavigate={handleGlobalSearchNavigate}
+          onClose={() => setShowGlobalSearch(false)}
+        />
+      )}
+
+      {/* Performance Monitor */}
+      <PerformanceMonitor />
     </div>
   );
 }

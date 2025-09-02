@@ -69,8 +69,9 @@ export default function AddMatchTab() {
 
     try {
       // Convert new goal structure to format expected by business logic
-      const convertedGoalsA = [];
-      const convertedGoalsB = [];
+      // These variables are prepared for future use with business logic integration
+      // const convertedGoalsA = [];
+      // const convertedGoalsB = [];
       
 /*      // Convert player goals to array format for business logic
       formData.goalslista.forEach(scorer => {
