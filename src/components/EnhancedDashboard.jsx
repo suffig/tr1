@@ -208,12 +208,12 @@ export default function EnhancedDashboard({ onNavigate }) {
           onClick={() => onNavigate?.('squad')}
         />
         <MetricCard
-          icon="💰"
-          title="Netto"
-          value={`${insights.finances.net > 0 ? '+' : ''}${insights.finances.net}€`}
+          icon="⚽"
+          title="Tore"
+          value={insights.teamRecords.AEK.goals + insights.teamRecords.Real.goals}
           subtitle={selectedTimeframe === 'all' ? 'Gesamt' : 'Im Zeitraum'}
-          color={insights.finances.net >= 0 ? 'green' : 'red'}
-          onClick={() => onNavigate?.('finanzen')}
+          color="green"
+          onClick={() => onNavigate?.('matches')}
         />
         <MetricCard
           icon="🚫"

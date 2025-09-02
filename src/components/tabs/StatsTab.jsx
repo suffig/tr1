@@ -999,19 +999,21 @@ export default function StatsTab({ onNavigate }) {
       </div>
 
       {/* View Navigation */}
-      <div className="flex overflow-x-auto space-x-2 mb-6 pb-2">
+      <div className="icon-only-nav flex overflow-x-auto space-x-2 mb-6 pb-2">
         {views.map((view) => (
           <button
             key={view.id}
             onClick={() => setSelectedView(view.id)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+            className={`stats-nav-button flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
               selectedView === view.id
                 ? 'bg-primary-green text-white'
                 : 'bg-bg-secondary text-text-muted hover:bg-bg-tertiary'
             }`}
+            title={view.label}
+            aria-label={view.label}
           >
             <span>{view.icon}</span>
-            <span className="font-medium">{view.label}</span>
+            <span className="font-medium hidden sm:inline">{view.label}</span>
           </button>
         ))}
       </div>

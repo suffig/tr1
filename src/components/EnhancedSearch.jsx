@@ -6,7 +6,8 @@ export default function EnhancedSearch({
   filterOptions = [], 
   onResults,
   placeholder = "Suchen...",
-  showCount = true 
+  showCount = true,
+  searchExtractor // Custom function to extract searchable text from items
 }) {
   const [query, setQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState({});
@@ -22,6 +23,13 @@ export default function EnhancedSearch({
     if (query.trim()) {
       const searchTerm = query.toLowerCase().trim();
       filtered = filtered.filter(item => {
+        // Use custom search extractor if provided
+        if (searchExtractor) {
+          const extractedText = searchExtractor(item);
+          return extractedText && extractedText.toLowerCase().includes(searchTerm);
+        }
+        
+        // Default search through specified fields
         return searchFields.some(field => {
           const value = getNestedValue(item, field);
           return value && value.toString().toLowerCase().includes(searchTerm);
@@ -63,7 +71,7 @@ export default function EnhancedSearch({
     }
 
     return filtered;
-  }, [data, query, activeFilters, sortBy, sortOrder, searchFields, filterOptions]);
+  }, [data, query, activeFilters, sortBy, sortOrder, searchFields, filterOptions, searchExtractor]);
 
   // Update parent with results - use useCallback to prevent infinite loops
   useEffect(() => {
