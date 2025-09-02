@@ -1422,7 +1422,8 @@ button:hover, .btn:hover {
 }
 
 /* --- MODAL & SHEET STYLES --- */
-.modal {
+.modal,
+.modal-overlay {
   z-index: 110;
   background: rgba(0,0,0,0.6);
   backdrop-filter: blur(3px);
@@ -1433,7 +1434,7 @@ button:hover, .btn:hover {
   justify-content: center;
   transition: background 0.2s;
   padding: 1rem;
-  padding-bottom: 100px; /* Increased padding to prevent modals from overlapping bottom navbar */
+  padding-bottom: 120px; /* Increased padding to prevent modals from overlapping bottom navbar */
 }
 .modal-content {
   background: #111827; /* Even darker background for better contrast */

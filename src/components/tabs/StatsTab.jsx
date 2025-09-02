@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSupabaseQuery } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
 import AdvancedAnalytics from './AdvancedAnalytics';
@@ -241,6 +241,35 @@ const alcoholUtils = {
 
 export default function StatsTab({ onNavigate }) {
   const [selectedView, setSelectedView] = useState('dashboard');
+  // Load manager settings from localStorage and merge with defaults
+  const loadManagerSettings = () => {
+    try {
+      const savedManagers = localStorage.getItem('teamManagers');
+      if (savedManagers) {
+        const parsedManagers = JSON.parse(savedManagers);
+        return {
+          aekChef: { 
+            name: parsedManagers.aek?.name || 'Alexander', 
+            weight: parsedManagers.aek?.weight || 100, 
+            gender: 'male' 
+          },
+          realChef: { 
+            name: parsedManagers.real?.name || 'Philip', 
+            weight: parsedManagers.real?.weight || 105, 
+            gender: 'male' 
+          }
+        };
+      }
+    } catch (e) {
+      console.error('Error loading manager settings:', e);
+    }
+    // Return defaults if no saved settings or error
+    return {
+      aekChef: { name: 'Alexander', weight: 100, gender: 'male' },
+      realChef: { name: 'Philip', weight: 105, gender: 'male' }
+    };
+  };
+
   // Alcohol calculator state - moved from renderAlkohol function to component level
   const [calculatorValues, setCalculatorValues] = useState({
     aekPlayer: '',
@@ -248,10 +277,7 @@ export default function StatsTab({ onNavigate }) {
     aekGoals: 0,
     realGoals: 0,
     mode: 'manual', // 'manual' or 'automatic'
-    playerData: {
-      aekChef: { name: '', weight: 70, gender: 'male' },
-      realChef: { name: '', weight: 70, gender: 'male' }
-    },
+    playerData: loadManagerSettings(),
     gameDay: new Date().toISOString().split('T')[0],
     beerCount: 0
   });
@@ -260,6 +286,27 @@ export default function StatsTab({ onNavigate }) {
   const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
   const { data: sdsData, loading: sdsLoading } = useSupabaseQuery('spieler_des_spiels', '*');
   const { data: bans, loading: bansLoading } = useSupabaseQuery('bans', '*');
+  
+  // Listen for changes to manager settings in localStorage
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setCalculatorValues(prev => ({
+        ...prev,
+        playerData: loadManagerSettings()
+      }));
+    };
+
+    // Listen for localStorage changes (from other tabs/windows)
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also listen for custom events from the same window
+    window.addEventListener('managerSettingsChanged', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('managerSettingsChanged', handleStorageChange);
+    };
+  }, []);
   
   const loading = matchesLoading || playersLoading || sdsLoading || bansLoading;
 
@@ -1171,41 +1218,18 @@ export default function StatsTab({ onNavigate }) {
         stats.totalShots += Math.floor((aekGoals + realGoals) / 2) * 2; // 2cl per 2 goals
         stats.aekShots += Math.floor(realGoals / 2) * 2; // AEK drinks when Real scores every 2nd goal
         stats.realShots += Math.floor(aekGoals / 2) * 2; // Real drinks when AEK scores every 2nd goal
-
-        // Parse goalslists to track individual player alcohol caused
-        // Note: For individual tracking, we accumulate all goals and calculate 2cl per 2 goals total
-        if (match.goalslista) {
-          try {
-            const goals = typeof match.goalslista === 'string' ? JSON.parse(match.goalslista) : match.goalslista;
-            goals.forEach(goal => {
-              const player = typeof goal === 'object' ? goal.player : goal;
-              const count = typeof goal === 'object' ? goal.count : 1;
-              if (!stats.playerShots[player]) stats.playerShots[player] = { totalGoals: 0, alcoholCaused: 0 };
-              stats.playerShots[player].totalGoals += count;
-            });
-          } catch (e) {
-            // Ignore parsing errors
-          }
-        }
-
-        if (match.goalslistb) {
-          try {
-            const goals = typeof match.goalslistb === 'string' ? JSON.parse(match.goalslistb) : match.goalslistb;
-            goals.forEach(goal => {
-              const player = typeof goal === 'object' ? goal.player : goal;
-              const count = typeof goal === 'object' ? goal.count : 1;
-              if (!stats.playerShots[player]) stats.playerShots[player] = { totalGoals: 0, alcoholCaused: 0 };
-              stats.playerShots[player].totalGoals += count;
-            });
-          } catch (e) {
-            // Ignore parsing errors
-          }
-        }
       });
 
-      // Calculate alcohol caused by each player (2cl per 2 goals)
-      Object.keys(stats.playerShots).forEach(player => {
-        stats.playerShots[player].alcoholCaused = Math.floor(stats.playerShots[player].totalGoals / 2) * 2;
+      // Use goals from players table (like in stats) instead of parsing match goalslists
+      players?.forEach(player => {
+        if (player.goals > 0) {
+          if (!stats.playerShots[player.name]) {
+            stats.playerShots[player.name] = { totalGoals: 0, alcoholCaused: 0 };
+          }
+          stats.playerShots[player.name].totalGoals = player.goals;
+          // Calculate alcohol caused by each player (2cl per 2 goals)
+          stats.playerShots[player.name].alcoholCaused = Math.floor(player.goals / 2) * 2;
+        }
       });
 
       return stats;
@@ -1216,12 +1240,47 @@ export default function StatsTab({ onNavigate }) {
       .sort(([,a], [,b]) => b.alcoholCaused - a.alcoholCaused)
       .slice(0, 10);
 
+    // Helper function to get recent matches (last two days)
+    const getRecentMatches = () => {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      return matches?.filter(match => {
+        const matchDate = new Date(match.date);
+        const matchDateOnly = new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate());
+        return matchDateOnly >= yesterday && matchDateOnly <= today;
+      }) || [];
+    };
+
+    // Helper functions for automatic calculation of team-specific alcohol
+    const getAutomaticAekDrinks = () => {
+      if (calculatorValues.mode === 'automatic') {
+        const recentMatches = getRecentMatches();
+        const realGoals = recentMatches.reduce((total, match) => total + (match.goalsb || 0), 0);
+        return Math.floor(realGoals / 2) * 2;
+      }
+      return Math.floor(calculatorValues.realGoals / 2) * 2;
+    };
+
+    const getAutomaticRealDrinks = () => {
+      if (calculatorValues.mode === 'automatic') {
+        const recentMatches = getRecentMatches();
+        const aekGoals = recentMatches.reduce((total, match) => total + (match.goalsa || 0), 0);
+        return Math.floor(aekGoals / 2) * 2;
+      }
+      return Math.floor(calculatorValues.aekGoals / 2) * 2;
+    };
+
     const calculateMatchAlcohol = () => {
       if (calculatorValues.mode === 'automatic') {
-        // Calculate from all matches automatically
-        const totalGoals = matches?.reduce((total, match) => {
+        // Calculate from matches of last two days (current and previous day)
+        const recentMatches = getRecentMatches();
+        const totalGoals = recentMatches.reduce((total, match) => {
           return total + (match.goalsa || 0) + (match.goalsb || 0);
-        }, 0) || 0;
+        }, 0);
+        
         return Math.floor(totalGoals / 2) * 2;
       } else {
         // Manual calculation
@@ -1229,8 +1288,8 @@ export default function StatsTab({ onNavigate }) {
       }
     };
 
-    // Blood Alcohol Content calculation using Widmark formula
-    const calculateBloodAlcohol = (alcoholCl, playerData) => {
+    // Blood Alcohol Content calculation using Widmark formula with time decay
+    const calculateBloodAlcohol = (alcoholCl, playerData, drinkingTime = null) => {
       if (!playerData.weight || alcoholCl === 0) return '0.00';
       
       // Convert cl of 40% alcohol to grams of pure alcohol
@@ -1240,9 +1299,19 @@ export default function StatsTab({ onNavigate }) {
       const r = playerData.gender === 'female' ? 0.55 : 0.68;
       
       // Basic BAC calculation: alcohol (g) / (weight (kg) * r)
-      const bac = alcoholGrams / (playerData.weight * r);
+      let bac = alcoholGrams / (playerData.weight * r);
       
-      // Convert to per mille and account for typical drinking duration
+      // Apply time decay if drinking time is provided
+      if (drinkingTime) {
+        const now = new Date();
+        const timePassed = (now - new Date(drinkingTime)) / (1000 * 60 * 60); // hours
+        
+        // Alcohol elimination rate: approximately 0.15‰ per hour
+        const eliminationRate = 0.15;
+        bac = Math.max(0, bac - (timePassed * eliminationRate / 10)); // convert to decimal
+      }
+      
+      // Convert to per mille
       return (bac * 10).toFixed(2);
     };
 
@@ -1420,13 +1489,13 @@ export default function StatsTab({ onNavigate }) {
                     }))}
                     className="mr-2"
                   />
-                  <span className="text-sm">Automatisch (aus allen Spielen)</span>
+                  <span className="text-sm">Automatisch (letzten 2 Spieltage)</span>
                 </label>
               </div>
               <div className="text-xs text-text-muted mt-1">
                 {calculatorValues.mode === 'manual' 
                   ? 'Geben Sie Tore manuell ein' 
-                  : 'Berechnet automatisch aus allen gespeicherten Spielen'}
+                  : 'Berechnet automatisch aus Spielen der letzten zwei Tage (heute + gestern)'}
               </div>
             </div>
             
@@ -1468,9 +1537,20 @@ export default function StatsTab({ onNavigate }) {
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <h5 className="font-medium text-blue-800 mb-2">📊 Automatische Berechnung</h5>
                     <div className="text-sm text-blue-700 space-y-1">
-                      <div>Anzahl Spiele: {matches?.length || 0}</div>
-                      <div>Gesamt-Tore: {matches?.reduce((total, match) => total + (match.goalsa || 0) + (match.goalsb || 0), 0) || 0}</div>
-                      <div>Daraus resultierend: {calculateMatchAlcohol()}cl Schnaps</div>
+                      {(() => {
+                        const recentMatches = getRecentMatches();
+                        const totalGoals = recentMatches.reduce((total, match) => {
+                          return total + (match.goalsa || 0) + (match.goalsb || 0);
+                        }, 0);
+                        
+                        return (
+                          <>
+                            <div>Spiele (letzte 2 Tage): {recentMatches.length}</div>
+                            <div>Gesamt-Tore: {totalGoals}</div>
+                            <div>Daraus resultierend: {calculateMatchAlcohol()}cl Schnaps</div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
@@ -1490,28 +1570,20 @@ export default function StatsTab({ onNavigate }) {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="text-center p-3 bg-blue-50 rounded-lg">
                     <div className="text-lg font-bold text-blue-600">
-                      {calculatorValues.mode === 'automatic' 
-                        ? Math.floor((matches?.reduce((total, match) => total + (match.goalsb || 0), 0) || 0) / 2) * 2
-                        : Math.floor(calculatorValues.realGoals / 2) * 2}cl
+                      {getAutomaticAekDrinks()}cl
                     </div>
                     <div className="text-sm text-blue-700">AEK trinkt</div>
                     <div className="text-xs text-blue-700">
-                      {alcoholUtils.clToShots(calculatorValues.mode === 'automatic' 
-                        ? Math.floor((matches?.reduce((total, match) => total + (match.goalsb || 0), 0) || 0) / 2) * 2
-                        : Math.floor(calculatorValues.realGoals / 2) * 2)} Shots
+                      {alcoholUtils.clToShots(getAutomaticAekDrinks())} Shots
                     </div>
                   </div>
                   <div className="text-center p-3 bg-red-50 rounded-lg">
                     <div className="text-lg font-bold text-red-600">
-                      {calculatorValues.mode === 'automatic' 
-                        ? Math.floor((matches?.reduce((total, match) => total + (match.goalsa || 0), 0) || 0) / 2) * 2
-                        : Math.floor(calculatorValues.aekGoals / 2) * 2}cl
+                      {getAutomaticRealDrinks()}cl
                     </div>
                     <div className="text-sm text-red-700">Real trinkt</div>
                     <div className="text-xs text-red-700">
-                      {alcoholUtils.clToShots(calculatorValues.mode === 'automatic' 
-                        ? Math.floor((matches?.reduce((total, match) => total + (match.goalsa || 0), 0) || 0) / 2) * 2
-                        : Math.floor(calculatorValues.aekGoals / 2) * 2)} Shots
+                      {alcoholUtils.clToShots(getAutomaticRealDrinks())} Shots
                     </div>
                   </div>
                 </div>
@@ -1691,24 +1763,38 @@ export default function StatsTab({ onNavigate }) {
                   <div className="space-y-3">
                     <div className="p-3 border border-blue-200 rounded-lg">
                       <div className="text-sm font-medium text-blue-600">
-                        {calculatorValues.playerData.aekChef.name || 'Chef AEK'} trinkt: {calculatorValues.realGoals * 2}cl
+                        {calculatorValues.playerData.aekChef.name || 'Chef AEK'} trinkt: {getAutomaticAekDrinks()}cl
                       </div>
                       <div className="text-xs text-text-muted mt-1">
-                        BAK: ≈ {calculateBloodAlcohol(calculatorValues.realGoals * 2, calculatorValues.playerData.aekChef)}‰
+                        BAK: ≈ {(() => {
+                          if (calculatorValues.mode === 'automatic') {
+                            const recentMatches = getRecentMatches();
+                            const latestMatch = recentMatches.length > 0 ? recentMatches[recentMatches.length - 1] : null;
+                            return calculateBloodAlcohol(getAutomaticAekDrinks(), calculatorValues.playerData.aekChef, latestMatch?.date);
+                          }
+                          return calculateBloodAlcohol(calculatorValues.realGoals * 2, calculatorValues.playerData.aekChef);
+                        })()}‰
                       </div>
                     </div>
                     <div className="p-3 border border-red-200 rounded-lg">
                       <div className="text-sm font-medium text-red-600">
-                        {calculatorValues.playerData.realChef.name || 'Chef Real'} trinkt: {calculatorValues.aekGoals * 2}cl
+                        {calculatorValues.playerData.realChef.name || 'Chef Real'} trinkt: {getAutomaticRealDrinks()}cl
                       </div>
                       <div className="text-xs text-text-muted mt-1">
-                        BAK: ≈ {calculateBloodAlcohol(calculatorValues.aekGoals * 2, calculatorValues.playerData.realChef)}‰
+                        BAK: ≈ {(() => {
+                          if (calculatorValues.mode === 'automatic') {
+                            const recentMatches = getRecentMatches();
+                            const latestMatch = recentMatches.length > 0 ? recentMatches[recentMatches.length - 1] : null;
+                            return calculateBloodAlcohol(getAutomaticRealDrinks(), calculatorValues.playerData.realChef, latestMatch?.date);
+                          }
+                          return calculateBloodAlcohol(calculatorValues.aekGoals * 2, calculatorValues.playerData.realChef);
+                        })()}‰
                       </div>
                     </div>
                   </div>
                   <div className="text-xs text-text-muted mt-3">
-                    <strong>Hinweis:</strong> BAK-Berechnung ist eine Näherung (Widmark-Formel). 
-                    Exakte Werte können abweichen.
+                    <strong>Hinweis:</strong> BAK-Berechnung ist eine Näherung (Widmark-Formel) mit Alkoholabbau (~0.15‰/h). 
+                    Exakte Werte können abweichen. Automatischer Modus berücksichtigt Zeit seit letztem Spiel.
                   </div>
                 </div>
               </div>

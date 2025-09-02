@@ -5,6 +5,7 @@ import AddPlayerTab from './admin/AddPlayerTab';
 import AddTransactionTab from './admin/AddTransactionTab';
 import DeleteTab from './admin/DeleteTab';
 import SearchTab from './admin/SearchTab';
+import TeamSettingsTab from './admin/TeamSettingsTab';
 
 export default function AdminTab({ onLogout, onNavigate }) {
   const [activeSubTab, setActiveSubTab] = useState('search');
@@ -15,6 +16,7 @@ export default function AdminTab({ onLogout, onNavigate }) {
     { id: 'bans', label: 'Sperren hinzufügen', icon: 'fas fa-ban' },
     { id: 'players', label: 'Spieler hinzufügen', icon: 'fas fa-users' },
     { id: 'transactions', label: 'Transaktionen hinzufügen', icon: 'fas fa-euro-sign' },
+    { id: 'settings', label: 'Team-Einstellungen', icon: 'fas fa-cog' },
     { id: 'delete', label: 'Daten löschen', icon: 'fas fa-trash' },
   ];
 
@@ -30,6 +32,8 @@ export default function AdminTab({ onLogout, onNavigate }) {
         return <AddPlayerTab />;
       case 'transactions':
         return <AddTransactionTab />;
+      case 'settings':
+        return <TeamSettingsTab />;
       case 'delete':
         return <DeleteTab />;
       default:
