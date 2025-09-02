@@ -10,7 +10,7 @@ export default function AdminTab() {
   const subTabs = [
     { id: 'matches', label: 'Spiele hinzufügen', icon: 'fas fa-futbol' },
     { id: 'bans', label: 'Sperren hinzufügen', icon: 'fas fa-ban' },
-    { id: 'players', label: 'Spieler hinzufügen', icon: 'fas fa-user-plus' },
+    { id: 'players', label: 'Spieler hinzufügen', icon: '👥' },
     { id: 'transactions', label: 'Transaktionen hinzufügen', icon: 'fas fa-euro-sign' },
   ];
 

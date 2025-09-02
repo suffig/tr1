@@ -13,8 +13,8 @@ const TRANSACTION_TYPES = [
 ];
 
 const TEAMS = [
-  { value: 'AEK', label: 'AEK Athen', color: 'blue' },
-  { value: 'Real', label: 'Real Madrid', color: 'red' },
+  { value: 'AEK', label: '🔵 AEK Athen', color: 'blue' },
+  { value: 'Real', label: '🔴 Real Madrid', color: 'red' },
 ];
 
 export default function AddTransactionTab() {

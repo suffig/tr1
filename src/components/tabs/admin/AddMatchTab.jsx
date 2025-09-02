@@ -72,7 +72,7 @@ export default function AddMatchTab() {
       const convertedGoalsA = [];
       const convertedGoalsB = [];
       
-      // Convert player goals to array format for business logic
+/*      // Convert player goals to array format for business logic
       formData.goalslista.forEach(scorer => {
         for (let i = 0; i < scorer.count; i++) {
           convertedGoalsA.push(scorer.player);
@@ -84,7 +84,7 @@ export default function AddMatchTab() {
           convertedGoalsB.push(scorer.player);
         }
       });
-
+*/
       // Use the comprehensive business logic
       const result = await MatchBusinessLogic.submitMatch({
         date: formData.date,
@@ -92,8 +92,10 @@ export default function AddMatchTab() {
         teamb: formData.teamb.trim(),
         goalsa: formData.goalsa,
         goalsb: formData.goalsb,
-        goalslista: convertedGoalsA,
-        goalslistb: convertedGoalsB,
+        //goalslista: convertedGoalsA,
+        //goalslistb: convertedGoalsB,
+		goalslista: formData.goalslista,        // [{player, count}, ...]
+		goalslistb: formData.goalslistb,
         ownGoalsA: formData.ownGoalsA,
         ownGoalsB: formData.ownGoalsB,
         yellowa: parseInt(formData.yellowa) || 0,

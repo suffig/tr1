@@ -12,8 +12,8 @@ const POSITIONS = [
 ];
 
 const TEAMS = [
-  { value: 'AEK', label: 'AEK Athen', color: 'blue' },
-  { value: 'Real', label: 'Real Madrid', color: 'red' },
+  { value: 'AEK', label: '🔵 AEK Athen', color: 'blue' },
+  { value: 'Real', label: '🔴 Real Madrid', color: 'red' },
   { value: 'Ehemalige', label: 'Ehemalige', color: 'gray' },
 ];
 
@@ -25,7 +25,7 @@ export default function AddPlayerTab() {
     position: '',
     goals: 0,
     value: 0,
-    status: 'active'
+    //status: 'active'
   });
   const [loading, setLoading] = useState(false);
 
@@ -53,7 +53,7 @@ export default function AddPlayerTab() {
         position: formData.position.trim().toUpperCase(),
         goals: parseInt(formData.goals) || 0,
         value: parseFloat(formData.value) || 0,
-        status: formData.status || 'active'
+        //status: formData.status || 'active'
       });
 
       if (result.error) {
@@ -67,7 +67,7 @@ export default function AddPlayerTab() {
         position: '',
         goals: 0,
         value: 0,
-        status: 'active'
+        //status: 'active'
       });
       setShowModal(false);
       
@@ -190,22 +190,6 @@ export default function AddPlayerTab() {
                   </select>
                 </div>
 
-                {/* Goals */}
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-2">
-                    Anzahl Tore
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.goals}
-                    onChange={(e) => handleInputChange('goals', e.target.value)}
-                    className="form-input"
-                    placeholder="0"
-                    disabled={loading}
-                  />
-                </div>
-
                 {/* Market Value */}
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-2">
@@ -225,7 +209,23 @@ export default function AddPlayerTab() {
                     Marktwert in Millionen Euro (z.B. 1.5 für 1.5M €)
                   </p>
                 </div>
-
+				
+				{/* Goals */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Anzahl Tore
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.goals}
+                    onChange={(e) => handleInputChange('goals', e.target.value)}
+                    className="form-input"
+                    placeholder="0"
+                    disabled={loading}
+                  />
+                </div>
+				
                 {/* Buttons */}
                 <div className="flex gap-3 pt-4">
                   <button
