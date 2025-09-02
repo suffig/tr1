@@ -178,6 +178,52 @@ class StatsCalculator {
 
     return monthlyStats;
   }
+
+  // Head-to-head statistics with biggest wins for each team
+  calculateHeadToHead() {
+    const h2h = {
+      totalMatches: this.matches.length,
+      aekWins: 0,
+      realWins: 0,
+      aekGoals: 0,
+      realGoals: 0,
+      biggestAekWin: { diff: 0, score: '', date: '', opponent: 'Real Madrid' },
+      biggestRealWin: { diff: 0, score: '', date: '', opponent: 'AEK Athen' }
+    };
+
+    this.matches.forEach(match => {
+      const aekGoals = match.goalsa || 0;
+      const realGoals = match.goalsb || 0;
+      const diff = Math.abs(aekGoals - realGoals);
+
+      h2h.aekGoals += aekGoals;
+      h2h.realGoals += realGoals;
+
+      if (aekGoals > realGoals) {
+        h2h.aekWins++;
+        if (diff > h2h.biggestAekWin.diff) {
+          h2h.biggestAekWin = {
+            diff,
+            score: `${aekGoals}:${realGoals}`,
+            date: match.date || '',
+            opponent: 'Real Madrid'
+          };
+        }
+      } else if (realGoals > aekGoals) {
+        h2h.realWins++;
+        if (diff > h2h.biggestRealWin.diff) {
+          h2h.biggestRealWin = {
+            diff,
+            score: `${realGoals}:${aekGoals}`,
+            date: match.date || '',
+            opponent: 'AEK Athen'
+          };
+        }
+      }
+    });
+
+    return h2h;
+  }
 }
 
 export default function StatsTab({ onNavigate }) {
@@ -199,6 +245,7 @@ export default function StatsTab({ onNavigate }) {
   const playerStats = stats.calculatePlayerStats();
   const advancedStats = stats.calculateAdvancedStats();
   const performanceTrends = stats.calculatePerformanceTrends();
+  const headToHead = stats.calculateHeadToHead();
 
   // Basic data calculations
   const totalMatches = matches?.length || 0;
@@ -319,18 +366,29 @@ export default function StatsTab({ onNavigate }) {
           </div>
         </div>
 
-        {/* New Enhanced Statistics Row */}
+        {/* New Enhanced Statistics Row - Team-specific highest wins */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="modern-card text-center">
-            <div className="text-xl font-bold text-accent-orange">
-              {highestVictory?.match ? 
-                `${Math.max(highestVictory.match.goalsa || 0, highestVictory.match.goalsb || 0)}:${Math.min(highestVictory.match.goalsa || 0, highestVictory.match.goalsb || 0)}` 
-                : '0:0'}
+            <div className="text-xl font-bold text-blue-600">
+              {headToHead.biggestAekWin.diff > 0 ? headToHead.biggestAekWin.score : '–'}
             </div>
-            <div className="text-sm text-text-muted">🏆 Höchster Sieg</div>
-            {highestVictory?.match && (
+            <div className="text-sm text-text-muted">🔵 Größter AEK Sieg</div>
+            {headToHead.biggestAekWin.diff > 0 && (
               <div className="text-xs text-text-muted mt-1">
-                {new Date(highestVictory.match.date).toLocaleDateString('de-DE')}
+                vs {headToHead.biggestAekWin.opponent}<br/>
+                {new Date(headToHead.biggestAekWin.date).toLocaleDateString('de-DE')}
+              </div>
+            )}
+          </div>
+          <div className="modern-card text-center">
+            <div className="text-xl font-bold text-red-600">
+              {headToHead.biggestRealWin.diff > 0 ? headToHead.biggestRealWin.score : '–'}
+            </div>
+            <div className="text-sm text-text-muted">🔴 Größter Real Sieg</div>
+            {headToHead.biggestRealWin.diff > 0 && (
+              <div className="text-xs text-text-muted mt-1">
+                vs {headToHead.biggestRealWin.opponent}<br/>
+                {new Date(headToHead.biggestRealWin.date).toLocaleDateString('de-DE')}
               </div>
             )}
           </div>
@@ -729,6 +787,82 @@ export default function StatsTab({ onNavigate }) {
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Head-to-Head Statistics */}
+      <div className="modern-card">
+        <h3 className="font-bold text-lg mb-4">⚔️ Head-to-Head Bilanz</h3>
+        <div className="mb-4 text-sm text-text-muted">
+          Direkter Vergleich zwischen AEK Athen und Real Madrid über alle Spiele.
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">{headToHead.aekWins}</div>
+            <div className="text-sm text-blue-700">AEK Siege</div>
+            <div className="text-xs text-text-muted mt-1">
+              {headToHead.totalMatches > 0 ? `${((headToHead.aekWins / headToHead.totalMatches) * 100).toFixed(1)}%` : '0%'}
+            </div>
+          </div>
+          <div className="text-center p-4 bg-red-50 rounded-lg">
+            <div className="text-2xl font-bold text-red-600">{headToHead.realWins}</div>
+            <div className="text-sm text-red-700">Real Siege</div>
+            <div className="text-xs text-text-muted mt-1">
+              {headToHead.totalMatches > 0 ? `${((headToHead.realWins / headToHead.totalMatches) * 100).toFixed(1)}%` : '0%'}
+            </div>
+          </div>
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-600">
+              {headToHead.totalMatches - headToHead.aekWins - headToHead.realWins}
+            </div>
+            <div className="text-sm text-gray-700">Unentschieden</div>
+            <div className="text-xs text-text-muted mt-1">
+              {headToHead.totalMatches > 0 ? `${(((headToHead.totalMatches - headToHead.aekWins - headToHead.realWins) / headToHead.totalMatches) * 100).toFixed(1)}%` : '0%'}
+            </div>
+          </div>
+          <div className="text-center p-4 bg-green-50 rounded-lg">
+            <div className="text-2xl font-bold text-green-600">{headToHead.aekGoals + headToHead.realGoals}</div>
+            <div className="text-sm text-green-700">Tore gesamt</div>
+            <div className="text-xs text-text-muted mt-1">
+              {headToHead.totalMatches > 0 ? `⌀ ${((headToHead.aekGoals + headToHead.realGoals) / headToHead.totalMatches).toFixed(1)} pro Spiel` : '⌀ 0 pro Spiel'}
+            </div>
+          </div>
+        </div>
+
+        {/* Biggest Wins Details */}
+        <div className="mt-6 grid md:grid-cols-2 gap-4">
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-semibold text-blue-800 mb-2">🔵 Größter AEK Sieg</h4>
+            {headToHead.biggestAekWin.diff > 0 ? (
+              <div>
+                <div className="text-2xl font-bold text-blue-600 mb-1">{headToHead.biggestAekWin.score}</div>
+                <div className="text-sm text-blue-700">
+                  Unterschied: {headToHead.biggestAekWin.diff} Tore
+                </div>
+                <div className="text-xs text-text-muted">
+                  {new Date(headToHead.biggestAekWin.date).toLocaleDateString('de-DE')}
+                </div>
+              </div>
+            ) : (
+              <div className="text-gray-500">Noch kein Sieg verzeichnet</div>
+            )}
+          </div>
+          <div className="p-4 bg-red-50 rounded-lg">
+            <h4 className="font-semibold text-red-800 mb-2">🔴 Größter Real Sieg</h4>
+            {headToHead.biggestRealWin.diff > 0 ? (
+              <div>
+                <div className="text-2xl font-bold text-red-600 mb-1">{headToHead.biggestRealWin.score}</div>
+                <div className="text-sm text-red-700">
+                  Unterschied: {headToHead.biggestRealWin.diff} Tore
+                </div>
+                <div className="text-xs text-text-muted">
+                  {new Date(headToHead.biggestRealWin.date).toLocaleDateString('de-DE')}
+                </div>
+              </div>
+            ) : (
+              <div className="text-gray-500">Noch kein Sieg verzeichnet</div>
+            )}
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 export default function AITab({ onNavigate }) { // eslint-disable-line no-unused-vars
   const [selectedAnalysis, setSelectedAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState('AEK');
 
   // Fetch data for AI analysis
   const { data: players } = useSupabaseQuery('players', '*');
@@ -72,25 +73,43 @@ export default function AITab({ onNavigate }) { // eslint-disable-line no-unused
       const realWins = recentMatches.filter(m => (m.goalsb || 0) > (m.goalsa || 0)).length;
       const draws = recentMatches.length - aekWins - realWins;
 
+      // Team-specific goals and performance
+      const teamGoals = selectedTeam === 'AEK' 
+        ? recentMatches.reduce((sum, m) => sum + (m.goalsa || 0), 0)
+        : recentMatches.reduce((sum, m) => sum + (m.goalsb || 0), 0);
+      
+      const opponentGoals = selectedTeam === 'AEK'
+        ? recentMatches.reduce((sum, m) => sum + (m.goalsb || 0), 0)
+        : recentMatches.reduce((sum, m) => sum + (m.goalsa || 0), 0);
+
+      const teamWins = selectedTeam === 'AEK' ? aekWins : realWins;
+      const teamWinRate = ((teamWins / recentMatches.length) * 100).toFixed(1);
+
       const analysis = {
-        title: '🤖 KI Team-Performance Analyse',
+        title: `🤖 KI Team-Performance Analyse für ${selectedTeam === 'AEK' ? 'AEK Athen' : 'Real Madrid'}`,
         data: `
-📊 Analyse der letzten ${recentMatches.length} Spiele:
+📊 Analyse der letzten ${recentMatches.length} Spiele für ${selectedTeam === 'AEK' ? 'AEK Athen' : 'Real Madrid'}:
 
-🟦 AEK Performance:
-• Siege: ${aekWins} (${((aekWins/recentMatches.length)*100).toFixed(1)}%)
-• Trend: ${aekWins > realWins ? 'Steigend 📈' : aekWins === realWins ? 'Stabil ↔️' : 'Fallend 📉'}
+🎯 ${selectedTeam} Performance:
+• Siege: ${teamWins} (${teamWinRate}%)
+• Erzielte Tore: ${teamGoals} (⌀ ${(teamGoals/recentMatches.length).toFixed(1)} pro Spiel)
+• Gegentore: ${opponentGoals} (⌀ ${(opponentGoals/recentMatches.length).toFixed(1)} pro Spiel)
+• Tor-Differenz: ${teamGoals > opponentGoals ? '+' : ''}${teamGoals - opponentGoals}
 
-🟥 Real Performance:
-• Siege: ${realWins} (${((realWins/recentMatches.length)*100).toFixed(1)}%)
-• Trend: ${realWins > aekWins ? 'Steigend 📈' : realWins === aekWins ? 'Stabil ↔️' : 'Fallend 📉'}
+📈 Form-Trend:
+${teamWins > (recentMatches.length - teamWins - draws) ? 'Steigend 📈 - Starke Phase!' : 
+  teamWins === (recentMatches.length - teamWins - draws) ? 'Stabil ↔️ - Ausgeglichene Leistung' : 
+  'Fallend 📉 - Verbesserung nötig'}
 
-⚪ Unentschieden: ${draws}
+🎯 KI-Empfehlung für ${selectedTeam}:
+${teamWinRate >= 70 ? `Exzellente Form! ${selectedTeam} sollte die Taktik beibehalten und Erfolg stabilisieren.` :
+  teamWinRate >= 50 ? `Solide Leistung. ${selectedTeam} kann mit kleinen Anpassungen noch besser werden.` :
+  `Schwächephase. ${selectedTeam} sollte Taktik überdenken und Spieler motivieren.`}
 
-🎯 KI-Empfehlung:
-${aekWins > realWins ? 'AEK zeigt starke Form - weiter so!' : 
-  realWins > aekWins ? 'Real dominiert - AEK sollte Taktik überdenken' :
-  'Ausgeglichene Teams - spannende Zukunft!'}
+💡 Taktische Empfehlungen:
+• ${teamGoals < opponentGoals ? 'Offensive verstärken - mehr Kreativität im Angriff' : 'Defensive stabilisieren - weniger Gegentore zulassen'}
+• ${teamWinRate < 50 ? 'Mentaltraining für mehr Siegeswillen' : 'Konstanz halten und Erfolg ausbauen'}
+• Spielerrotation ${teamWinRate > 60 ? 'beibehalten' : 'überdenken'}
         `
       };
 
@@ -113,25 +132,58 @@ ${aekWins > realWins ? 'AEK zeigt starke Form - weiter so!' :
         return;
       }
 
-      const sortedPlayers = [...players].sort((a, b) => (b.value || 0) - (a.value || 0));
-      const topPlayer = sortedPlayers[0];
-      const avgValue = players.reduce((sum, p) => sum + (p.value || 0), 0) / players.length;
-      const undervalued = players.filter(p => (p.value || 0) < avgValue * 0.5);
+      // Filter players by selected team
+      const teamPlayers = players.filter(p => p.team === selectedTeam);
+      const otherTeamPlayers = players.filter(p => p.team !== selectedTeam && p.team !== 'Ehemalige');
+      
+      if (teamPlayers.length === 0) {
+        toast.error(`Keine Spielerdaten für ${selectedTeam} verfügbar`);
+        return;
+      }
+
+      const sortedTeamPlayers = [...teamPlayers].sort((a, b) => (b.value || 0) - (a.value || 0));
+      const topPlayer = sortedTeamPlayers[0];
+      const avgTeamValue = teamPlayers.reduce((sum, p) => sum + (p.value || 0), 0) / teamPlayers.length;
+      const totalTeamValue = teamPlayers.reduce((sum, p) => sum + (p.value || 0), 0);
+      
+      // Compare with other team
+      const otherTeamValue = otherTeamPlayers.reduce((sum, p) => sum + (p.value || 0), 0);
+      const otherTeamName = selectedTeam === 'AEK' ? 'Real Madrid' : 'AEK Athen';
+
+      const undervalued = teamPlayers.filter(p => (p.value || 0) < avgTeamValue * 0.7);
+      const overvalued = teamPlayers.filter(p => (p.value || 0) > avgTeamValue * 1.5);
 
       const analysis = {
-        title: '🤖 KI Spieler-Bewertung',
+        title: `🤖 KI Spieler-Bewertung für ${selectedTeam === 'AEK' ? 'AEK Athen' : 'Real Madrid'}`,
         data: `
-💎 Top-Spieler: ${topPlayer.name} (${topPlayer.value}M €)
-📊 Durchschnittswert: ${avgValue.toFixed(1)}M €
-👥 Gesamt Spieler: ${players.length}
+💎 Top-Spieler: ${topPlayer.name} (${topPlayer.value || 0}M €)
+📊 Durchschnittswert: ${avgTeamValue.toFixed(1)}M €
+💰 Gesamtwert Kader: ${totalTeamValue.toFixed(1)}M €
+👥 Spieler im Team: ${teamPlayers.length}
 
-🔍 Unterbewertete Talente (< ${(avgValue * 0.5).toFixed(1)}M €):
-${undervalued.slice(0, 5).map(p => `• ${p.name} - ${p.value}M € (${p.position})`).join('\n')}
+⚖️ Vergleich mit ${otherTeamName}:
+• ${selectedTeam} Kaderwert: ${totalTeamValue.toFixed(1)}M €
+• ${otherTeamName} Kaderwert: ${otherTeamValue.toFixed(1)}M €
+• Differenz: ${totalTeamValue > otherTeamValue ? '+' : ''}${(totalTeamValue - otherTeamValue).toFixed(1)}M €
 
-🎯 KI-Empfehlung:
-${undervalued.length > 0 ? 
-  `Investition in ${undervalued[0].name} könnte sich lohnen!` :
-  'Portfolio ist gut ausbalanciert.'}
+🔍 Unterbewertete Talente (< ${(avgTeamValue * 0.7).toFixed(1)}M €):
+${undervalued.length > 0 
+  ? undervalued.slice(0, 3).map(p => `• ${p.name} - ${p.value || 0}M € (${p.position || 'Unbekannt'})`).join('\n')
+  : '• Keine unterbewerteten Spieler gefunden'}
+
+💸 Überbewertete Spieler (> ${(avgTeamValue * 1.5).toFixed(1)}M €):
+${overvalued.length > 0 
+  ? overvalued.slice(0, 2).map(p => `• ${p.name} - ${p.value || 0}M € (Verkaufskandidat?)`).join('\n')
+  : '• Keine überbewerteten Spieler'}
+
+🎯 KI-Empfehlung für ${selectedTeam}:
+${totalTeamValue > otherTeamValue 
+  ? `Starker Kader! Fokus auf Qualität und taktische Entwicklung.`
+  : `Investition nötig. Unterbewertete Talente fördern oder neue Spieler verpflichten.`}
+
+💡 Transferstrategie:
+• ${undervalued.length > 0 ? `Talente wie ${undervalued[0].name} fördern` : 'Keine internen Talente - externe Verstärkung suchen'}
+• ${overvalued.length > 0 ? `Verkauf von ${overvalued[0].name} erwägen für Budget` : 'Kader gut ausbalanciert'}
         `
       };
 
@@ -305,35 +357,73 @@ Idealer Neuzugang: ${relevantSuggestions[0]?.name || 'Siehe Empfehlungen'}
     try {
       await new Promise(resolve => setTimeout(resolve, 2200));
       
+      // Get team-specific players
+      const teamPlayers = players?.filter(p => p.team === selectedTeam) || [];
+      
+      if (teamPlayers.length === 0) {
+        toast.error(`Keine Spieler für ${selectedTeam} verfügbar`);
+        return;
+      }
+
+      // Analyze available positions
+      const positionCount = teamPlayers.reduce((acc, player) => {
+        acc[player.position] = (acc[player.position] || 0) + 1;
+        return acc;
+      }, {});
+
+      // Determine best formation based on available players
+      const hasEnoughDefenders = (positionCount['IV'] || 0) >= 2 && (positionCount['LV'] || 0) >= 1 && (positionCount['RV'] || 0) >= 1;
+      const hasStrongMidfield = (positionCount['ZM'] || 0) >= 2;
+      const hasMultipleStrikers = (positionCount['ST'] || 0) >= 2;
+
+      let recommendedFormation = '4-3-3';
+      let formationReason = 'Ausgewogene Formation';
+      
+      if (hasMultipleStrikers && hasEnoughDefenders) {
+        recommendedFormation = '4-4-2';
+        formationReason = 'Nutzt verfügbare Stürmer optimal';
+      } else if (!hasStrongMidfield) {
+        recommendedFormation = '3-5-2';
+        formationReason = 'Verstärkt schwaches Mittelfeld';
+      }
+
+      // Find best players for key positions
+      const topGoalkeeper = teamPlayers.filter(p => p.position === 'TH').sort((a, b) => (b.value || 0) - (a.value || 0))[0];
+      const topMidfielder = teamPlayers.filter(p => p.position === 'ZM' || p.position === 'ZOM').sort((a, b) => (b.value || 0) - (a.value || 0))[0];
+      const topStriker = teamPlayers.filter(p => p.position === 'ST' || p.position === 'LF' || p.position === 'RF').sort((a, b) => (b.value || 0) - (a.value || 0))[0];
+
       const analysis = {
-        title: '⚽ KI Aufstellungs-Optimierer',
+        title: `⚽ KI Aufstellungs-Optimierer für ${selectedTeam === 'AEK' ? 'AEK Athen' : 'Real Madrid'}`,
         data: `
-🤖 Optimale Formation basierend auf verfügbaren Spielern:
+🤖 Optimale Formation für ${selectedTeam} basierend auf ${teamPlayers.length} verfügbaren Spielern:
 
-🏆 Empfohlene Formation: 4-3-3
+🏆 Empfohlene Formation: ${recommendedFormation}
+📝 Grund: ${formationReason}
 
-📋 Aufstellung:
-         TH
-    LV - IV - IV - RV
-      ZDM - ZM - ZOM
-    LF - ST - RF
+📊 Kader-Analyse:
+• Torhüter: ${positionCount['TH'] || 0}
+• Verteidiger: ${(positionCount['IV'] || 0) + (positionCount['LV'] || 0) + (positionCount['RV'] || 0)}
+• Mittelfeld: ${(positionCount['ZM'] || 0) + (positionCount['ZDM'] || 0) + (positionCount['ZOM'] || 0)}
+• Angriff: ${(positionCount['ST'] || 0) + (positionCount['LF'] || 0) + (positionCount['RF'] || 0)}
 
-🎯 Stärken dieser Formation:
-• Ausgewogene Defensive
-• Starkes Mittelfeld
-• Flexible Offensive
+⭐ Schlüsselspieler:
+${topGoalkeeper ? `• Tor: ${topGoalkeeper.name} (${topGoalkeeper.value || 0}M €)` : '• Tor: Kein Torhüter verfügbar'}
+${topMidfielder ? `• Mittelfeld: ${topMidfielder.name} (${topMidfielder.value || 0}M €)` : '• Mittelfeld: Kein Mittelfeldspieler verfügbar'}
+${topStriker ? `• Angriff: ${topStriker.name} (${topStriker.value || 0}M €)` : '• Angriff: Kein Angreifer verfügbar'}
 
-💡 KI-Tipps:
-• ZM als Spielmacher einsetzen
-• LF/RF für Breite sorgen lassen
-• ZDM als Absicherung
+💡 KI-Tipps für ${selectedTeam}:
+• ${topMidfielder ? `${topMidfielder.name} als Spielmacher einsetzen` : 'Kreativen Mittelfeldspieler verpflichten'}
+• ${hasEnoughDefenders ? 'Defensive ist gut besetzt' : 'Verteidigung verstärken'}
+• ${positionCount['ST'] >= 2 ? 'Sturm-Rotation nutzen' : 'Angriff durch Flügelspieler verstärken'}
 
-⚡ Alternative: 4-4-2 für mehr Defensive
+⚡ Alternative Formationen:
+• ${recommendedFormation !== '4-3-3' ? '4-3-3: Mehr Offensive' : '4-4-2: Mehr Defensive'}
+• ${recommendedFormation !== '3-5-2' ? '3-5-2: Mittelfeld-Dominanz' : '4-5-1: Defensive Stabilität'}
         `
       };
 
       setSelectedAnalysis(analysis);
-      toast.success('⚽ Formation optimiert!');
+      toast.success(`⚽ Formation für ${selectedTeam} optimiert!`);
     } catch (error) {
       toast.error('Fehler bei der Formations-Optimierung');
     } finally {
@@ -439,6 +529,41 @@ ${netResult >= 0 ?
         </h2>
         <p className="text-text-muted">
           Intelligente Analysen und Vorhersagen für dein Team
+        </p>
+      </div>
+
+      {/* Team Selection */}
+      <div className="mb-6 modern-card">
+        <h3 className="font-semibold text-text-primary mb-3 flex items-center">
+          <span className="mr-2">🎯</span>
+          Team für KI-Analyse auswählen
+        </h3>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setSelectedTeam('AEK')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              selectedTeam === 'AEK'
+                ? 'bg-blue-500 text-white shadow-md'
+                : 'bg-bg-secondary text-text-primary hover:bg-blue-100 border border-border-light'
+            }`}
+          >
+            <span className="text-lg">🔵</span>
+            AEK Athen
+          </button>
+          <button
+            onClick={() => setSelectedTeam('Real')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              selectedTeam === 'Real'
+                ? 'bg-red-500 text-white shadow-md'
+                : 'bg-bg-secondary text-text-primary hover:bg-red-100 border border-border-light'
+            }`}
+          >
+            <span className="text-lg">🔴</span>
+            Real Madrid
+          </button>
+        </div>
+        <p className="text-sm text-text-muted mt-2">
+          Die KI-Analysen werden speziell für das ausgewählte Team angepasst.
         </p>
       </div>
 
