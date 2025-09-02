@@ -70,10 +70,11 @@ class StatsCalculator {
       
       return {
         ...player,
-        goals: matchGoals,
+        // Use database goals instead of calculated match goals
+        goals: player.goals || 0,
         matchesPlayed,
         sdsCount,
-        goalsPerGame: matchesPlayed > 0 ? (matchGoals / matchesPlayed).toFixed(2) : '0.00',
+        goalsPerGame: matchesPlayed > 0 ? ((player.goals || 0) / matchesPlayed).toFixed(2) : '0.00',
         totalBans: playerBans.length,
         disciplinaryScore: this.calculateDisciplinaryScore(playerBans)
       };
@@ -420,7 +421,9 @@ export default function StatsTab() {
                 <td className="py-2 font-medium">{player.name}</td>
                 <td className="py-2">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    player.team === 'AEK' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'
+                    player.team === 'AEK' ? 'bg-blue-100 text-blue-800' : 
+                    player.team === 'Ehemalige' ? 'bg-gray-100 text-gray-800' :
+                    'bg-red-100 text-red-800'
                   }`}>
                     {player.team}
                   </span>
@@ -496,18 +499,176 @@ export default function StatsTab() {
       {/* Advanced Team Stats */}
       <div className="modern-card">
         <h3 className="font-bold text-lg mb-4">📈 Erweiterte Statistiken</h3>
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="mb-4 text-sm text-text-muted">
+          Diese Statistiken bieten tiefere Einblicke in die Team-Performance und wichtige Kennzahlen.
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-bg-secondary rounded-lg">
             <div className="text-2xl font-bold text-primary-green">{advancedStats.highestScoringMatch}</div>
-            <div className="text-sm text-text-muted">Tore in einem Spiel</div>
+            <div className="text-sm text-text-muted">Höchste Toranzahl</div>
+            <div className="text-xs text-text-muted mt-1">in einem einzelnen Spiel</div>
           </div>
           <div className="text-center p-4 bg-bg-secondary rounded-lg">
             <div className="text-2xl font-bold text-primary-green">{formatPlayerValue(totalMarketValue)}</div>
             <div className="text-sm text-text-muted">Gesamtmarktwert</div>
+            <div className="text-xs text-text-muted mt-1">aller aktiven Spieler</div>
           </div>
           <div className="text-center p-4 bg-bg-secondary rounded-lg">
-            <div className="text-2xl font-bold text-primary-green">{Math.abs(aekWins - realWins)}</div>
+            <div className="text-2xl font-bold text-accent-orange">{Math.abs(aekWins - realWins)}</div>
             <div className="text-sm text-text-muted">Siegesdifferenz</div>
+            <div className="text-xs text-text-muted mt-1">zwischen den Teams</div>
+          </div>
+          <div className="text-center p-4 bg-bg-secondary rounded-lg">
+            <div className="text-2xl font-bold text-accent-blue">
+              {totalMatches > 0 ? (((aekPlayers.length + realPlayers.length) * (totalMatches / 2)).toFixed(0)) : 0}
+            </div>
+            <div className="text-sm text-text-muted">Geschätzte Spielminuten</div>
+            <div className="text-xs text-text-muted mt-1">pro Spieler (⌀ 45min)</div>
+          </div>
+        </div>
+        
+        {/* Performance Analysis */}
+        <div className="mt-6 grid md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <h4 className="font-semibold text-text-primary">🎯 Offensiv-Performance</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Durchschnittliche Tore pro Spiel:</span>
+                <span className="font-medium">
+                  {totalMatches > 0 ? ((advancedStats.aekTotalGoals + advancedStats.realTotalGoals) / totalMatches).toFixed(1) : '0.0'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Torreichstes Team:</span>
+                <span className="font-medium">
+                  {advancedStats.aekTotalGoals >= advancedStats.realTotalGoals ? 'AEK Athen' : 'Real Madrid'}
+                  ({Math.max(advancedStats.aekTotalGoals, advancedStats.realTotalGoals)} Tore)
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Aktivster Torschütze:</span>
+                <span className="font-medium">
+                  {playerStats.length > 0 ? `${playerStats[0].name} (${playerStats[0].goals} Tore)` : 'Keine Daten'}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <h4 className="font-semibold text-text-primary">⚖️ Team-Balance</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Kader-Unterschied:</span>
+                <span className="font-medium">
+                  {Math.abs(aekPlayers.length - realPlayers.length)} Spieler
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Marktwert-Verhältnis:</span>
+                <span className="font-medium">
+                  {aekPlayers.reduce((sum, p) => sum + (p.value || 0), 0) > realPlayers.reduce((sum, p) => sum + (p.value || 0), 0) ? 'AEK führt' : 'Real führt'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Dominanteres Team:</span>
+                <span className="font-medium">
+                  {aekWins > realWins ? 'AEK Athen' : realWins > aekWins ? 'Real Madrid' : 'Ausgeglichen'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* New Advanced Analytics */}
+      <div className="modern-card">
+        <h3 className="font-bold text-lg mb-4">🔬 Detailanalyse</h3>
+        <div className="mb-4 text-sm text-text-muted">
+          Erweiterte Metriken für eine tiefgreifende Team-Analyse.
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="space-y-3">
+            <h4 className="font-semibold text-blue-600">💰 Wirtschaftliche Effizienz</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>⌀ Marktwert AEK:</span>
+                <span className="font-medium">
+                  {aekPlayers.length > 0 ? `${(aekPlayers.reduce((sum, p) => sum + (p.value || 0), 0) / aekPlayers.length).toFixed(1)}M €` : '0M €'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>⌀ Marktwert Real:</span>
+                <span className="font-medium">
+                  {realPlayers.length > 0 ? `${(realPlayers.reduce((sum, p) => sum + (p.value || 0), 0) / realPlayers.length).toFixed(1)}M €` : '0M €'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tore pro 1M € (AEK):</span>
+                <span className="font-medium">
+                  {aekPlayers.reduce((sum, p) => sum + (p.value || 0), 0) > 0 ? 
+                    (advancedStats.aekTotalGoals / aekPlayers.reduce((sum, p) => sum + (p.value || 0), 0)).toFixed(2) : '0.00'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tore pro 1M € (Real):</span>
+                <span className="font-medium">
+                  {realPlayers.reduce((sum, p) => sum + (p.value || 0), 0) > 0 ? 
+                    (advancedStats.realTotalGoals / realPlayers.reduce((sum, p) => sum + (p.value || 0), 0)).toFixed(2) : '0.00'}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <h4 className="font-semibold text-red-600">🎲 Spielstatistiken</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Spiele gespielt:</span>
+                <span className="font-medium">{totalMatches}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Unentschieden:</span>
+                <span className="font-medium">{totalMatches - aekWins - realWins}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>⌀ Spieldauer:</span>
+                <span className="font-medium">~90 Minuten</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Längste Serie:</span>
+                <span className="font-medium">
+                  {aekWins >= realWins ? 'AEK' : 'Real'} ({Math.max(aekWins, realWins)} Siege)
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <h4 className="font-semibold text-purple-600">🏆 Erfolgs-Metriken</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Aktivste Spieler:</span>
+                <span className="font-medium">{aekPlayers.length + realPlayers.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Top-Performer:</span>
+                <span className="font-medium">
+                  {playerStats.filter(p => p.sdsCount > 0).length} Spieler
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Konsistenz AEK:</span>
+                <span className="font-medium">
+                  {totalMatches > 0 ? `${((aekWins / totalMatches) * 100).toFixed(0)}% Erfolg` : '0% Erfolg'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Konsistenz Real:</span>
+                <span className="font-medium">
+                  {totalMatches > 0 ? `${((realWins / totalMatches) * 100).toFixed(0)}% Erfolg` : '0% Erfolg'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

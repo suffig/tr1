@@ -10,6 +10,7 @@ export default function KaderTab() {
   const [openPanel, setOpenPanel] = useState(null);
   const [showExportImport, setShowExportImport] = useState(false);
   const [showFormationVisualizer, setShowFormationVisualizer] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState(null);
   
   const { data: players, loading, error, refetch } = useSupabaseQuery('players', '*');
   const { insert, update, remove } = useSupabaseMutation('players');
@@ -123,14 +124,17 @@ export default function KaderTab() {
 
   // Minimal CRUD functions without changing the design
   const handleEditPlayer = async (player) => {
-    const newName = prompt('Spielername:', player.name);
-    if (!newName || newName === player.name) return;
-    
+    setEditingPlayer(player);
+  };
+  
+  const handleSavePlayer = async (playerData) => {
     try {
-      await update({ name: newName }, player.id);
+      await update(playerData, editingPlayer.id);
+      toast.success(`Spieler ${playerData.name} erfolgreich aktualisiert`);
+      setEditingPlayer(null);
       refetch();
     } catch (error) {
-      alert('Fehler beim Aktualisieren des Spielers: ' + error.message);
+      toast.error('Fehler beim Aktualisieren des Spielers: ' + error.message);
     }
   };
 
@@ -402,6 +406,133 @@ export default function KaderTab() {
           onClose={() => setShowFormationVisualizer(false)}
         />
       )}
+      
+      {/* Player Edit Modal */}
+      {editingPlayer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-text-primary">Spieler bearbeiten</h3>
+                <button
+                  onClick={() => setEditingPlayer(null)}
+                  className="text-text-muted hover:text-text-primary"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              
+              <PlayerForm
+                player={editingPlayer}
+                onSave={handleSavePlayer}
+                onCancel={() => setEditingPlayer(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// Player form component for editing
+function PlayerForm({ player, onSave, onCancel }) {
+  const [formData, setFormData] = useState({
+    name: player.name || '',
+    position: player.position || '',
+    value: player.value || 0,
+    team: player.team || ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.position || !formData.team) {
+      toast.error('Bitte alle Pflichtfelder ausfüllen');
+      return;
+    }
+    onSave(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-text-primary mb-1">
+          Name *
+        </label>
+        <input
+          type="text"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          className="w-full px-3 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+          placeholder="Spielername"
+          required
+        />
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-text-primary mb-1">
+          Position *
+        </label>
+        <select
+          value={formData.position}
+          onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+          className="w-full px-3 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+          required
+        >
+          <option value="">Position wählen</option>
+          {POSITIONS.map(pos => (
+            <option key={pos} value={pos}>{pos}</option>
+          ))}
+        </select>
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-text-primary mb-1">
+          Team *
+        </label>
+        <select
+          value={formData.team}
+          onChange={(e) => setFormData({ ...formData, team: e.target.value })}
+          className="w-full px-3 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+          required
+        >
+          <option value="">Team wählen</option>
+          <option value="AEK">AEK Athen</option>
+          <option value="Real">Real Madrid</option>
+          <option value="Ehemalige">Ehemalige</option>
+        </select>
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-text-primary mb-1">
+          Marktwert (in Millionen €)
+        </label>
+        <input
+          type="number"
+          min="0"
+          step="0.1"
+          value={formData.value}
+          onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
+          className="w-full px-3 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+          placeholder="0.0"
+        />
+      </div>
+      
+      <div className="flex space-x-3 pt-4">
+        <button
+          type="submit"
+          className="flex-1 bg-primary-green text-white py-2 px-4 rounded-lg hover:bg-primary-green/90 transition-colors"
+        >
+          Speichern
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 bg-bg-secondary text-text-muted py-2 px-4 rounded-lg hover:bg-bg-tertiary transition-colors"
+        >
+          Abbrechen
+        </button>
+      </div>
+    </form>
   );
 }

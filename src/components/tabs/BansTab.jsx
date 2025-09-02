@@ -123,9 +123,12 @@ export default function BansTab() {
                       <span className={`inline-block px-2 py-1 rounded text-xs font-medium border ${getBanTypeColor(ban.type)}`}>
                         {ban.type}
                       </span>
+                      <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                        Gesamt: {ban.totalgames || 0} Spiele
+                      </span>
                       {(ban.totalgames - ban.matchesserved) > 0 ? (
                         <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                          {ban.totalgames - ban.matchesserved} Spiel{(ban.totalgames - ban.matchesserved) !== 1 ? 'e' : ''} verbleibend
+                          Verbleibend: {ban.totalgames - ban.matchesserved} Spiel{(ban.totalgames - ban.matchesserved) !== 1 ? 'e' : ''}
                         </span>
                       ) : (
                         <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
