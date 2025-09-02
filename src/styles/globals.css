@@ -162,4 +162,22 @@
       @apply max-h-[75vh] text-xs p-4;
     }
   }
+  
+  /* Enhanced touch targets for mobile */
+  .touch-target {
+    @apply min-h-[56px] min-w-[56px];
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Better touch feedback */
+  .touch-target:active {
+    @apply scale-95;
+    transition: transform 0.1s ease;
+  }
+  
+  /* iOS safe area support */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
 }
