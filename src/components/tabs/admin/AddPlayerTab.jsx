@@ -53,8 +53,7 @@ export default function AddPlayerTab() {
         position: formData.position.trim().toUpperCase(),
         goals: parseInt(formData.goals) || 0,
         value: parseFloat(formData.value) || 0,
-        status: formData.status || 'active',
-        created_at: new Date().toISOString()
+        status: formData.status || 'active'
       });
 
       if (result.error) {

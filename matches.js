@@ -563,12 +563,22 @@ function matchHtml(match, nr) {
     function goalsHtml(goals) {
         if (!goals || !goals.length) return `<span class="text-gray-600 text-sm italic">Keine Torschützen</span>`;
         
-        // Aggregate goal counts per player (like before)
+        // Aggregate goal counts per player (handle both old string array and new object format)
         const goalCounts = {};
         goals.forEach(g => {
-            const playerName = typeof g === 'string' ? g : g.player;
-            if (playerName) {
-                goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+            if (typeof g === 'string') {
+                // Old string format: ["Player1", "Player1", "Player2"]
+                const playerName = g;
+                if (playerName) {
+                    goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
+                }
+            } else if (typeof g === 'object' && g.player) {
+                // New object format: [{"count": 2, "player": "Player1"}]
+                const playerName = g.player;
+                const count = g.count || 1;
+                if (playerName) {
+                    goalCounts[playerName] = (goalCounts[playerName] || 0) + count;
+                }
             }
         });
         
@@ -1560,8 +1570,8 @@ async function submitMatchForm(event, id) {
         teamb,
         goalsa,
         goalsb,
-        goalslista,
-        goalslistb,
+        goalslista: JSON.stringify(goalslista),
+        goalslistb: JSON.stringify(goalslistb),
         yellowa,
         reda,
         yellowb,

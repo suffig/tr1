@@ -403,6 +403,34 @@ class DataManager {
             }
         }
 
+        // Process matches to parse JSON goal lists
+        if (data.matches) {
+            data.matches = data.matches.map(match => {
+                try {
+                    // Parse goalslista if it's a string
+                    if (typeof match.goalslista === 'string') {
+                        match.goalslista = JSON.parse(match.goalslista);
+                    }
+                    // Parse goalslistb if it's a string
+                    if (typeof match.goalslistb === 'string') {
+                        match.goalslistb = JSON.parse(match.goalslistb);
+                    }
+                    // Ensure arrays exist
+                    if (!Array.isArray(match.goalslista)) {
+                        match.goalslista = [];
+                    }
+                    if (!Array.isArray(match.goalslistb)) {
+                        match.goalslistb = [];
+                    }
+                } catch (error) {
+                    console.warn('Error parsing goals for match', match.id, error);
+                    match.goalslista = [];
+                    match.goalslistb = [];
+                }
+                return match;
+            });
+        }
+
         return data;
     }
 

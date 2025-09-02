@@ -24,16 +24,30 @@ export default function FinancialAnalytics() {
 
     const now = new Date();
     const filteredTransactions = transactions.filter(transaction => {
-      if (timeRange === 'all') return true;
-      const transactionDate = new Date(transaction.date);
-      const daysAgo = Math.floor((now - transactionDate) / (1000 * 60 * 60 * 24));
-      
-      switch (timeRange) {
-        case '30d': return daysAgo <= 30;
-        case '90d': return daysAgo <= 90;
-        case '1y': return daysAgo <= 365;
-        default: return true;
+      // Filter by time range
+      if (timeRange !== 'all') {
+        const transactionDate = new Date(transaction.date);
+        const daysAgo = Math.floor((now - transactionDate) / (1000 * 60 * 60 * 24));
+        
+        switch (timeRange) {
+          case '30d': 
+            if (daysAgo > 30) return false;
+            break;
+          case '90d': 
+            if (daysAgo > 90) return false;
+            break;
+          case '1y': 
+            if (daysAgo > 365) return false;
+            break;
+        }
       }
+      
+      // Filter by team
+      if (selectedTeam !== 'both') {
+        if (transaction.team !== selectedTeam) return false;
+      }
+      
+      return true;
     });
 
     return {
@@ -44,7 +58,7 @@ export default function FinancialAnalytics() {
       efficiency: calculateFinancialEfficiency(filteredTransactions, matches),
       risks: calculateFinancialRisks(finances, players)
     };
-  }, [finances, transactions, matches, players, timeRange]);
+  }, [finances, transactions, matches, players, timeRange, selectedTeam]);
 
   if (loading) {
     return <LoadingSpinner message="Lade Finanzanalysen..." />;
