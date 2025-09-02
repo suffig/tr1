@@ -247,6 +247,7 @@ export default function StatsTab({ onNavigate }) {
     realPlayer: '',
     aekGoals: 0,
     realGoals: 0,
+    mode: 'manual', // 'manual' or 'automatic'
     playerData: {
       aekChef: { name: '', weight: 70, gender: 'male' },
       realChef: { name: '', weight: 70, gender: 'male' }
@@ -1166,20 +1167,21 @@ export default function StatsTab({ onNavigate }) {
         const aekGoals = match.goalsa || 0;
         const realGoals = match.goalsb || 0;
 
-        // Each goal scored means 2cl for opponent
-        stats.totalShots += (aekGoals + realGoals) * 2; // 2cl per goal
-        stats.aekShots += realGoals * 2; // AEK drinks when Real scores
-        stats.realShots += aekGoals * 2; // Real drinks when AEK scores
+        // Each second goal means 2cl for opponent (2cl per 2 goals)
+        stats.totalShots += Math.floor((aekGoals + realGoals) / 2) * 2; // 2cl per 2 goals
+        stats.aekShots += Math.floor(realGoals / 2) * 2; // AEK drinks when Real scores every 2nd goal
+        stats.realShots += Math.floor(aekGoals / 2) * 2; // Real drinks when AEK scores every 2nd goal
 
         // Parse goalslists to track individual player alcohol caused
+        // Note: For individual tracking, we accumulate all goals and calculate 2cl per 2 goals total
         if (match.goalslista) {
           try {
             const goals = typeof match.goalslista === 'string' ? JSON.parse(match.goalslista) : match.goalslista;
             goals.forEach(goal => {
               const player = typeof goal === 'object' ? goal.player : goal;
               const count = typeof goal === 'object' ? goal.count : 1;
-              if (!stats.playerShots[player]) stats.playerShots[player] = 0;
-              stats.playerShots[player] += count * 2; // 2cl per goal for opponent
+              if (!stats.playerShots[player]) stats.playerShots[player] = { totalGoals: 0, alcoholCaused: 0 };
+              stats.playerShots[player].totalGoals += count;
             });
           } catch (e) {
             // Ignore parsing errors
@@ -1192,8 +1194,8 @@ export default function StatsTab({ onNavigate }) {
             goals.forEach(goal => {
               const player = typeof goal === 'object' ? goal.player : goal;
               const count = typeof goal === 'object' ? goal.count : 1;
-              if (!stats.playerShots[player]) stats.playerShots[player] = 0;
-              stats.playerShots[player] += count * 2; // 2cl per goal for opponent
+              if (!stats.playerShots[player]) stats.playerShots[player] = { totalGoals: 0, alcoholCaused: 0 };
+              stats.playerShots[player].totalGoals += count;
             });
           } catch (e) {
             // Ignore parsing errors
@@ -1201,16 +1203,30 @@ export default function StatsTab({ onNavigate }) {
         }
       });
 
+      // Calculate alcohol caused by each player (2cl per 2 goals)
+      Object.keys(stats.playerShots).forEach(player => {
+        stats.playerShots[player].alcoholCaused = Math.floor(stats.playerShots[player].totalGoals / 2) * 2;
+      });
+
       return stats;
     };
 
     const alcoholStats = calculateAlcoholStats();
     const topAlcoholCausers = Object.entries(alcoholStats.playerShots)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([,a], [,b]) => b.alcoholCaused - a.alcoholCaused)
       .slice(0, 10);
 
     const calculateMatchAlcohol = () => {
-      return (calculatorValues.aekGoals + calculatorValues.realGoals) * 2;
+      if (calculatorValues.mode === 'automatic') {
+        // Calculate from all matches automatically
+        const totalGoals = matches?.reduce((total, match) => {
+          return total + (match.goalsa || 0) + (match.goalsb || 0);
+        }, 0) || 0;
+        return Math.floor(totalGoals / 2) * 2;
+      } else {
+        // Manual calculation
+        return Math.floor((calculatorValues.aekGoals + calculatorValues.realGoals) / 2) * 2;
+      }
     };
 
     // Blood Alcohol Content calculation using Widmark formula
@@ -1273,7 +1289,7 @@ export default function StatsTab({ onNavigate }) {
             Spieler, die mit ihren Toren am meisten Alkohol für den Gegner verursacht haben
           </div>
           <div className="space-y-3">
-            {topAlcoholCausers.map(([player, shots], index) => (
+            {topAlcoholCausers.map(([player, data], index) => (
               <div key={player} className="flex items-center justify-between py-2 border-b border-border-light last:border-b-0">
                 <div className="flex items-center space-x-3">
                   <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
@@ -1287,13 +1303,14 @@ export default function StatsTab({ onNavigate }) {
                   <div>
                     <div className="font-medium">{player}</div>
                     <div className="text-sm text-text-muted space-x-2">
-                      <span>≈ {alcoholUtils.clToLiters(shots)}L</span>
-                      <span>≈ {alcoholUtils.clToShots(shots)} Shots</span>
+                      <span>{data.totalGoals} Tore</span>
+                      <span>≈ {alcoholUtils.clToLiters(data.alcoholCaused)}L</span>
+                      <span>≈ {alcoholUtils.clToShots(data.alcoholCaused)} Shots</span>
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-bold text-primary-green">{shots}cl</div>
+                  <div className="text-lg font-bold text-primary-green">{data.alcoholCaused}cl</div>
                   <div className="text-sm text-text-muted">verursacht</div>
                 </div>
               </div>
@@ -1372,8 +1389,50 @@ export default function StatsTab({ onNavigate }) {
           {/* Basic Game Calculator */}
           <div className="mb-6">
             <h4 className="font-semibold mb-3">⚽ Spiel-Rechner</h4>
+            
+            {/* Mode Toggle */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <label className="block text-sm font-medium mb-2">Berechnungsmodus</label>
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="calculatorMode"
+                    value="manual"
+                    checked={calculatorValues.mode === 'manual'}
+                    onChange={(e) => setCalculatorValues(prev => ({
+                      ...prev,
+                      mode: e.target.value
+                    }))}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Manuell</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="calculatorMode"
+                    value="automatic"
+                    checked={calculatorValues.mode === 'automatic'}
+                    onChange={(e) => setCalculatorValues(prev => ({
+                      ...prev,
+                      mode: e.target.value
+                    }))}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Automatisch (aus allen Spielen)</span>
+                </label>
+              </div>
+              <div className="text-xs text-text-muted mt-1">
+                {calculatorValues.mode === 'manual' 
+                  ? 'Geben Sie Tore manuell ein' 
+                  : 'Berechnet automatisch aus allen gespeicherten Spielen'}
+              </div>
+            </div>
+            
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
+              <div className="space-y-4">{calculatorValues.mode === 'manual' && (
+                <>
                 <div>
                   <label className="block text-sm font-medium mb-2">AEK Tore</label>
                   <input
@@ -1402,6 +1461,19 @@ export default function StatsTab({ onNavigate }) {
                     className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                   />
                 </div>
+                </>
+                )}
+                
+                {calculatorValues.mode === 'automatic' && (
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h5 className="font-medium text-blue-800 mb-2">📊 Automatische Berechnung</h5>
+                    <div className="text-sm text-blue-700 space-y-1">
+                      <div>Anzahl Spiele: {matches?.length || 0}</div>
+                      <div>Gesamt-Tore: {matches?.reduce((total, match) => total + (match.goalsa || 0) + (match.goalsb || 0), 0) || 0}</div>
+                      <div>Daraus resultierend: {calculateMatchAlcohol()}cl Schnaps</div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="space-y-4">
                 <div className="p-4 bg-bg-secondary rounded-lg">
@@ -1417,14 +1489,30 @@ export default function StatsTab({ onNavigate }) {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-lg font-bold text-blue-600">{calculatorValues.realGoals * 2}cl</div>
+                    <div className="text-lg font-bold text-blue-600">
+                      {calculatorValues.mode === 'automatic' 
+                        ? Math.floor((matches?.reduce((total, match) => total + (match.goalsb || 0), 0) || 0) / 2) * 2
+                        : Math.floor(calculatorValues.realGoals / 2) * 2}cl
+                    </div>
                     <div className="text-sm text-blue-700">AEK trinkt</div>
-                    <div className="text-xs text-blue-700">{alcoholUtils.clToShots(calculatorValues.realGoals * 2)} Shots</div>
+                    <div className="text-xs text-blue-700">
+                      {alcoholUtils.clToShots(calculatorValues.mode === 'automatic' 
+                        ? Math.floor((matches?.reduce((total, match) => total + (match.goalsb || 0), 0) || 0) / 2) * 2
+                        : Math.floor(calculatorValues.realGoals / 2) * 2)} Shots
+                    </div>
                   </div>
                   <div className="text-center p-3 bg-red-50 rounded-lg">
-                    <div className="text-lg font-bold text-red-600">{calculatorValues.aekGoals * 2}cl</div>
+                    <div className="text-lg font-bold text-red-600">
+                      {calculatorValues.mode === 'automatic' 
+                        ? Math.floor((matches?.reduce((total, match) => total + (match.goalsa || 0), 0) || 0) / 2) * 2
+                        : Math.floor(calculatorValues.aekGoals / 2) * 2}cl
+                    </div>
                     <div className="text-sm text-red-700">Real trinkt</div>
-                    <div className="text-xs text-red-700">{alcoholUtils.clToShots(calculatorValues.aekGoals * 2)} Shots</div>
+                    <div className="text-xs text-red-700">
+                      {alcoholUtils.clToShots(calculatorValues.mode === 'automatic' 
+                        ? Math.floor((matches?.reduce((total, match) => total + (match.goalsa || 0), 0) || 0) / 2) * 2
+                        : Math.floor(calculatorValues.aekGoals / 2) * 2)} Shots
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1629,7 +1717,7 @@ export default function StatsTab({ onNavigate }) {
 
           <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="text-sm text-yellow-800">
-              <strong>Regeln:</strong> Für jedes geschossene Tor muss der Gegner 2cl Schnaps trinken. 
+              <strong>Regeln:</strong> Für jedes zweite Tor muss der Gegner 2cl Schnaps (40%) trinken. 
               0,5L Bier (5% Alkohol) entspricht 2,5cl reinem Alkohol.
             </div>
           </div>

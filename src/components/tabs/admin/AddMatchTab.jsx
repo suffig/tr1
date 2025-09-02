@@ -268,7 +268,7 @@ export default function AddMatchTab() {
       {/* Match Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-2 sm:p-4">
-          <div className="bg-bg-secondary rounded-lg w-full max-w-lg modal-content">
+          <div className="bg-bg-secondary rounded-lg w-full max-w-lg modal-content match-modal-content">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold text-text-primary">Neues Spiel</h3>

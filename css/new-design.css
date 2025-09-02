@@ -580,8 +580,9 @@ body {
     .modal-content {
       margin: 0.5rem;
       padding: 1rem;
-      max-height: calc(100vh - 80px); /* Account for bottom nav */
+      max-height: calc(100vh - 60px); /* More space for content, reduced nav space */
       border-radius: 16px;
+      overflow-y: auto; /* Ensure scrollable content */
     }
     
     /* Improved form elements */
@@ -902,7 +903,7 @@ body {
   padding: 2rem;
   max-width: 500px;
   width: 100%;
-  max-height: calc(100vh - 120px); /* Account for bottom nav (80px) + padding (40px) */
+  max-height: calc(100vh - 100px); /* Reduce space needed for nav */
   overflow-y: auto;
   position: relative;
   box-shadow: var(--shadow-xl);
@@ -911,20 +912,20 @@ body {
 
 /* Special styling for match form modal to ensure better fit */
 .modal-content.match-modal-content {
-  max-height: calc(100vh - 100px); /* Slightly more space for match form */
+  max-height: calc(100vh - 80px); /* More space for match form content */
   padding: 1.5rem; /* Reduce padding to fit more content */
 }
 
 /* Ensure modal is scrollable and buttons are accessible on mobile */
 @media (max-height: 700px) {
   .modal-content {
-    max-height: calc(100vh - 80px);
+    max-height: calc(100vh - 60px); /* More space for small screens */
     padding: 1rem;
   }
   
   .modal-content.match-modal-content {
-    max-height: calc(100vh - 60px);
-    padding: 1rem;
+    max-height: calc(100vh - 40px); /* Maximum space for match form */
+    padding: 0.75rem;
   }
 }
 
