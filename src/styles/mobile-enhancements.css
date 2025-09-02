@@ -12,6 +12,36 @@ button {
   user-select: none;
 }
 
+/* Enhanced mobile navigation - icon-only buttons */
+@media (max-width: 640px) {
+  /* Stats navigation - ensure proper spacing for icon-only buttons */
+  .stats-nav-button {
+    min-width: 48px;
+    padding: 0.75rem;
+    justify-content: center;
+  }
+  
+  /* Search navigation - icon-only layout */
+  .search-nav-button {
+    min-width: 48px; 
+    padding: 0.75rem;
+    justify-content: center;
+  }
+  
+  /* Better spacing for icon-only navigation */
+  .icon-only-nav {
+    gap: 0.5rem;
+  }
+  
+  .icon-only-nav button {
+    min-width: 48px;
+    padding: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 /* Improved touch feedback */
 .btn:active,
 button:active {

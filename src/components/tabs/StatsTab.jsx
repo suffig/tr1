@@ -1009,9 +1009,11 @@ export default function StatsTab({ onNavigate }) {
                 ? 'bg-primary-green text-white'
                 : 'bg-bg-secondary text-text-muted hover:bg-bg-tertiary'
             }`}
+            title={view.label}
+            aria-label={view.label}
           >
             <span>{view.icon}</span>
-            <span className="font-medium">{view.label}</span>
+            <span className="font-medium hidden sm:inline">{view.label}</span>
           </button>
         ))}
       </div>

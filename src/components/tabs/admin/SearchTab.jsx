@@ -249,9 +249,11 @@ export default function SearchTab() {
                 ? 'bg-primary-green text-white'
                 : 'bg-bg-secondary text-text-muted hover:bg-bg-tertiary'
             }`}
+            title={type.label}
+            aria-label={type.label}
           >
             <i className={type.icon}></i>
-            <span className="font-medium">{type.label}</span>
+            <span className="font-medium hidden sm:inline">{type.label}</span>
             <span className="text-xs opacity-75">({type.data.length})</span>
           </button>
         ))}
