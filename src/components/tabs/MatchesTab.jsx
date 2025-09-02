@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useSupabaseQuery } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
+import EnhancedSearch from '../EnhancedSearch';
 
-export default function MatchesTab() {
+export default function MatchesTab({ onNavigate }) { // eslint-disable-line no-unused-vars
   const [expandedMatches, setExpandedMatches] = useState(new Set());
   const [showAll, setShowAll] = useState(false);
   const [dateFilter, setDateFilter] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
   
   // Calculate date 4 weeks ago
   const fourWeeksAgo = new Date();
@@ -19,17 +21,18 @@ export default function MatchesTab() {
   );
   const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
 
-  // Filter matches based on current settings
+  // Filter matches based on current settings and search results
   const getFilteredMatches = () => {
     if (!allMatches) return [];
     
-    let filtered = allMatches;
+    // Use search results if available, otherwise use all matches
+    let filtered = searchResults.length > 0 ? searchResults : allMatches;
     
-    // Apply date filter if set
+    // Apply date filter if set (in addition to search)
     if (dateFilter) {
       filtered = filtered.filter(match => match.date === dateFilter);
-    } else if (!showAll) {
-      // Show only last 4 weeks if not showing all and no specific date filter
+    } else if (!showAll && searchResults.length === 0) {
+      // Show only last 4 weeks if not showing all and no search active
       filtered = filtered.filter(match => match.date >= fourWeeksAgoString);
     }
     
@@ -148,6 +151,47 @@ export default function MatchesTab() {
           {matches?.length || 0} Spiele gefunden, gruppiert nach Datum
         </p>
       </div>
+
+      {/* Enhanced Search */}
+      <EnhancedSearch
+        data={allMatches || []}
+        searchFields={['date', 'goalsa', 'goalsb', 'sds']}
+        filterOptions={[
+          {
+            key: 'period',
+            label: 'Zeitraum',
+            options: [
+              { value: 'recent', label: 'Letzte 4 Wochen' },
+              { value: 'all', label: 'Alle Zeit' }
+            ],
+            filterFn: (match, value) => {
+              if (value === 'recent') {
+                return match.date >= fourWeeksAgoString;
+              }
+              return true;
+            }
+          },
+          {
+            key: 'result',
+            label: 'Ergebnis',
+            options: [
+              { value: 'aek-win', label: 'AEK Sieg' },
+              { value: 'real-win', label: 'Real Sieg' },
+              { value: 'draw', label: 'Unentschieden' }
+            ],
+            filterFn: (match, value) => {
+              const aekGoals = match.goalsa || 0;
+              const realGoals = match.goalsb || 0;
+              if (value === 'aek-win') return aekGoals > realGoals;
+              if (value === 'real-win') return realGoals > aekGoals;
+              if (value === 'draw') return aekGoals === realGoals;
+              return true;
+            }
+          }
+        ]}
+        onResults={setSearchResults}
+        placeholder="Spiele durchsuchen..."
+      />
 
       {/* Filter Controls */}
       <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">

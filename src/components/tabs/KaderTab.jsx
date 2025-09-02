@@ -3,14 +3,16 @@ import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
 import ExportImportManager from '../ExportImportManager';
 import FormationVisualizerModal from '../FormationVisualizerModal';
+import EnhancedSearch from '../EnhancedSearch';
 import { POSITIONS } from '../../utils/errorHandling';
 import toast from 'react-hot-toast';
 
-export default function KaderTab() {
+export default function KaderTab({ onNavigate }) { // eslint-disable-line no-unused-vars
   const [openPanel, setOpenPanel] = useState(null);
   const [showExportImport, setShowExportImport] = useState(false);
   const [showFormationVisualizer, setShowFormationVisualizer] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
   
   const { data: players, loading, error, refetch } = useSupabaseQuery('players', '*');
   const { update } = useSupabaseMutation('players');
@@ -29,8 +31,9 @@ export default function KaderTab() {
   };
 
   const getTeamPlayers = (teamName) => {
-    if (!players) return [];
-    return players
+    // Use search results if available, otherwise use all players
+    const playersToUse = searchResults.length > 0 ? searchResults : (players || []);
+    return playersToUse
       .filter(p => p.team === teamName)
       .sort((a, b) => (POSITION_ORDER[a.position] || 99) - (POSITION_ORDER[b.position] || 99));
   };
@@ -190,6 +193,49 @@ export default function KaderTab() {
           {players?.length || 0} Spieler insgesamt
         </p>
       </div>
+
+      {/* Enhanced Search */}
+      <EnhancedSearch
+        data={players || []}
+        searchFields={['name', 'team', 'position', 'value']}
+        filterOptions={[
+          {
+            key: 'team',
+            label: 'Team',
+            options: [
+              { value: 'AEK', label: 'AEK' },
+              { value: 'Real', label: 'Real' },
+              { value: 'Ehemalige', label: 'Ehemalige' }
+            ]
+          },
+          {
+            key: 'position',
+            label: 'Position',
+            options: Object.keys(POSITION_ORDER).map(pos => ({ 
+              value: pos, 
+              label: pos 
+            }))
+          },
+          {
+            key: 'value',
+            label: 'Marktwert',
+            options: [
+              { value: 'low', label: 'Unter 10M €' },
+              { value: 'medium', label: '10-50M €' },
+              { value: 'high', label: 'Über 50M €' }
+            ],
+            filterFn: (player, value) => {
+              const playerValue = player.value || 0;
+              if (value === 'low') return playerValue < 10;
+              if (value === 'medium') return playerValue >= 10 && playerValue <= 50;
+              if (value === 'high') return playerValue > 50;
+              return true;
+            }
+          }
+        ]}
+        onResults={setSearchResults}
+        placeholder="Spieler durchsuchen..."
+      />
 
       {/* Enhanced Quick Actions Panel */}
       <div className="modern-card mb-6">

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSupabaseQuery } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
 import AdvancedAnalytics from './AdvancedAnalytics';
+import EnhancedDashboard from '../EnhancedDashboard';
 
 // Enhanced Statistics Calculator Class (ported from vanilla JS)
 class StatsCalculator {
@@ -179,8 +180,8 @@ class StatsCalculator {
   }
 }
 
-export default function StatsTab() {
-  const [selectedView, setSelectedView] = useState('overview');
+export default function StatsTab({ onNavigate }) {
+  const [selectedView, setSelectedView] = useState('dashboard');
   
   const { data: matches, loading: matchesLoading } = useSupabaseQuery('matches', '*');
   const { data: players, loading: playersLoading } = useSupabaseQuery('players', '*');
@@ -236,6 +237,7 @@ export default function StatsTab() {
   };
 
   const views = [
+    { id: 'dashboard', label: 'Dashboard', icon: '🎯' },
     { id: 'overview', label: 'Übersicht', icon: '📊' },
     { id: 'players', label: 'Spieler', icon: '👥' },
     { id: 'teams', label: 'Teams', icon: '🏆' },
@@ -699,6 +701,7 @@ export default function StatsTab() {
 
   const renderCurrentView = () => {
     switch (selectedView) {
+      case 'dashboard': return <EnhancedDashboard onNavigate={onNavigate} />;
       case 'players': return renderPlayers();
       case 'teams': return renderTeams();
       case 'trends': return renderTrends();
