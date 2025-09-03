@@ -1209,7 +1209,7 @@ export default function StatsTab({ onNavigate }) {
   );
 
   const renderAlkohol = () => {
-    // Calculate alcohol statistics
+    // Calculate alcohol statistics with cumulative daily calculation
     const calculateAlcoholStats = () => {
       const stats = {
         totalShots: 0,
@@ -1218,14 +1218,57 @@ export default function StatsTab({ onNavigate }) {
         playerShots: {}
       };
 
-      matches?.forEach(match => {
-        const aekGoals = match.goalsa || 0;
-        const realGoals = match.goalsb || 0;
+      // Sort matches by date to process chronologically
+      const sortedMatches = matches?.slice().sort((a, b) => {
+        const dateA = new Date(a.date || 0);
+        const dateB = new Date(b.date || 0);
+        return dateA - dateB;
+      }) || [];
 
-        // Each second goal means 2cl for opponent (2cl per 2 goals)
-        stats.totalShots += Math.floor((aekGoals + realGoals) / 2) * 2; // 2cl per 2 goals
-        stats.aekShots += Math.floor(realGoals / 2) * 2; // AEK drinks when Real scores every 2nd goal
-        stats.realShots += Math.floor(aekGoals / 2) * 2; // Real drinks when AEK scores every 2nd goal
+      // Group matches by day and calculate cumulative shots per day
+      const matchesByDay = {};
+      sortedMatches.forEach(match => {
+        const matchDate = new Date(match.date || 0);
+        const dayKey = matchDate.toDateString();
+        
+        if (!matchesByDay[dayKey]) {
+          matchesByDay[dayKey] = [];
+        }
+        matchesByDay[dayKey].push(match);
+      });
+
+      // Calculate shots per day with cumulative logic
+      Object.keys(matchesByDay).forEach(dayKey => {
+        const dayMatches = matchesByDay[dayKey];
+        let cumulativeAekGoals = 0;
+        let cumulativeRealGoals = 0;
+        let aekShotsGiven = 0;
+        let realShotsGiven = 0;
+
+        dayMatches.forEach(match => {
+          const aekGoals = match.goalsa || 0;
+          const realGoals = match.goalsb || 0;
+          
+          cumulativeAekGoals += aekGoals;
+          cumulativeRealGoals += realGoals;
+
+          // Calculate shots based on cumulative goals from beginning of day
+          // Every 2 goals scored means 1 shot (2cl) for the opposing team
+          const newAekShots = Math.floor(cumulativeRealGoals / 2);
+          const newRealShots = Math.floor(cumulativeAekGoals / 2);
+
+          // Only add the difference (new shots since last match)
+          const aekShotsToAdd = (newAekShots - aekShotsGiven) * 2; // 2cl per shot
+          const realShotsToAdd = (newRealShots - realShotsGiven) * 2; // 2cl per shot
+
+          stats.aekShots += aekShotsToAdd;
+          stats.realShots += realShotsToAdd;
+          stats.totalShots += aekShotsToAdd + realShotsToAdd;
+
+          // Update counters
+          aekShotsGiven = newAekShots;
+          realShotsGiven = newRealShots;
+        });
       });
 
       // Use goals from players table (like in stats) instead of parsing match goalslists
@@ -1301,13 +1344,14 @@ export default function StatsTab({ onNavigate }) {
       if (!playerData.weight || (alcoholCl === 0 && beerCount === 0)) return '0.00';
       
       // Convert cl of 40% alcohol to grams of pure alcohol
-      let alcoholGrams = (alcoholCl * 10) * 0.4; // 1cl = 10ml, 40% alcohol content
+      // 1cl = 10ml, 40% alcohol content, density of alcohol ≈ 0.8g/ml
+      let alcoholGrams = (alcoholCl * 10) * 0.4 * 0.8; // Corrected: include alcohol density
       
-      // Add beer alcohol: 0.5L beer = 500ml * 0.05 (5%) = 25ml pure alcohol = 2.5cl
-      alcoholGrams += (beerCount * 0.5 * 1000 * 0.05) / 10; // Convert to grams
+      // Add beer alcohol: 0.5L beer = 500ml * 0.05 (5%) = 25ml pure alcohol, density 0.8g/ml
+      alcoholGrams += (beerCount * 0.5 * 1000 * 0.05 * 0.8) / 1000; // Convert to grams
       
-      // Widmark factors (typical values)
-      const r = playerData.gender === 'female' ? 0.55 : 0.68;
+      // Corrected Widmark factors (standard clinical values)
+      const r = playerData.gender === 'female' ? 0.60 : 0.70;
       
       // Basic BAC calculation: alcohol (g) / (weight (kg) * r)
       let bac = alcoholGrams / (playerData.weight * r);
@@ -1319,11 +1363,11 @@ export default function StatsTab({ onNavigate }) {
         
         // Alcohol elimination rate: approximately 0.15‰ per hour
         const eliminationRate = 0.15;
-        bac = Math.max(0, bac - (timePassed * eliminationRate / 10)); // convert to decimal
+        bac = Math.max(0, bac - (timePassed * eliminationRate / 1000)); // Convert properly to decimal
       }
       
-      // Convert to per mille
-      return (bac * 10).toFixed(2);
+      // Convert to per mille (multiply by 1000)
+      return (bac * 1000).toFixed(2);
     };
 
     return (
