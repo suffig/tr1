@@ -3,6 +3,8 @@ import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { dataManager } from './dataManager.js';
 import { isDatabaseAvailable } from './connectionMonitor.js';
 import { ErrorHandler } from './utils.js';
+import PlayerDetailModal from './playerDetailModal.js';
+import FIFADataService from './fifaDataService.js';
 
 let aekAthen = [];
 let realMadrid = [];
@@ -381,20 +383,29 @@ function renderPlayerList(containerId, arr, team) {
             : (player.value ? parseFloat(player.value) : 0);
 
         const d = document.createElement("div");
-        d.className = "modern-card";
+        d.className = "modern-card fifa-enhanced";
         d.innerHTML = `
             <div class="card-header">
                 <div class="flex items-center gap-3">
                     <span class="${getPositionBadgeClass(player.position)}">${player.position || 'N/A'}</span>
                     <h3 class="card-title">${player.name}</h3>
+                    <span class="fifa-indicator" title="Click for FIFA stats">🎮</span>
                 </div>
                 <div class="text-xl font-bold text-green-600">${marktwert}M €</div>
             </div>
             <div class="card-content">
                 <p class="text-sm text-gray-500">Team: ${team === 'AEK' ? 'AEK Athen' : team === 'Real' ? 'Real Madrid' : 'Ehemalige'}</p>
                 <p class="text-sm text-gray-500">Marktwert: ${marktwert}M €</p>
+                <p class="text-xs text-blue-400 fifa-hint">
+                    <i class="fas fa-info-circle"></i>
+                    Click to view FIFA statistics
+                </p>
             </div>
             <div class="card-actions">
+                <button class="btn btn-primary btn-sm fifa-btn">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>FIFA Stats</span>
+                </button>
                 <button class="btn btn-secondary btn-sm edit-btn">
                     <i class="fas fa-edit"></i>
                     <span>Bearbeiten</span>
@@ -405,8 +416,24 @@ function renderPlayerList(containerId, arr, team) {
                 </button>
             </div>
         `;
-        d.querySelector('.edit-btn').onclick = () => openPlayerForm(team, player.id);
-        d.querySelector('.move-btn').onclick = () => movePlayerWithTransaction(player.id, "Ehemalige");
+        
+        // Add click handler for FIFA stats (both card and button)
+        const showFIFAStats = () => window.playerDetailModal.show(player);
+        d.querySelector('.fifa-btn').onclick = (e) => {
+            e.stopPropagation();
+            showFIFAStats();
+        };
+        d.querySelector('.card-header').onclick = showFIFAStats;
+        d.querySelector('.card-content').onclick = showFIFAStats;
+        
+        d.querySelector('.edit-btn').onclick = (e) => {
+            e.stopPropagation();
+            openPlayerForm(team, player.id);
+        };
+        d.querySelector('.move-btn').onclick = (e) => {
+            e.stopPropagation();
+            movePlayerWithTransaction(player.id, "Ehemalige");
+        };
         c.appendChild(d);
     });
 }
@@ -427,20 +454,29 @@ function renderEhemaligeList(containerId = "ehemalige-players") {
             : (player.value ? parseFloat(player.value) : 0);
 
         const d = document.createElement("div");
-        d.className = "modern-card";
+        d.className = "modern-card fifa-enhanced";
         d.innerHTML = `
             <div class="card-header">
                 <div class="flex items-center gap-3">
                     <span class="${getPositionBadgeClass(player.position)}">${player.position || 'N/A'}</span>
                     <h3 class="card-title">${player.name}</h3>
+                    <span class="fifa-indicator" title="Click for FIFA stats">🎮</span>
                 </div>
                 <div class="text-xl font-bold text-gray-600">${marktwert ? marktwert + 'M €' : 'N/A'}</div>
             </div>
             <div class="card-content">
                 <p class="text-sm text-gray-500">Status: Ehemaliger Spieler</p>
                 <p class="text-sm text-gray-500">Marktwert: ${marktwert ? marktwert + 'M €' : 'Nicht bewertet'}</p>
+                <p class="text-xs text-blue-400 fifa-hint">
+                    <i class="fas fa-info-circle"></i>
+                    Click to view FIFA statistics
+                </p>
             </div>
             <div class="card-actions">
+                <button class="btn btn-primary btn-sm fifa-btn">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>FIFA Stats</span>
+                </button>
                 <button class="btn btn-secondary btn-sm edit-btn">
                     <i class="fas fa-edit"></i>
                     <span>Bearbeiten</span>
@@ -459,10 +495,32 @@ function renderEhemaligeList(containerId = "ehemalige-players") {
                 </button>
             </div>
         `;
-        d.querySelector('.edit-btn').onclick = () => openPlayerForm('Ehemalige', player.id);
-        d.querySelector('.delete-btn').onclick = () => deletePlayerDb(player.id);
-        d.querySelector('.move-aek-btn').onclick = () => movePlayerWithTransaction(player.id, 'AEK');
-        d.querySelector('.move-real-btn').onclick = () => movePlayerWithTransaction(player.id, 'Real');
+        
+        // Add click handler for FIFA stats (both card and button)
+        const showFIFAStats = () => window.playerDetailModal.show(player);
+        d.querySelector('.fifa-btn').onclick = (e) => {
+            e.stopPropagation();
+            showFIFAStats();
+        };
+        d.querySelector('.card-header').onclick = showFIFAStats;
+        d.querySelector('.card-content').onclick = showFIFAStats;
+        
+        d.querySelector('.edit-btn').onclick = (e) => {
+            e.stopPropagation();
+            openPlayerForm('Ehemalige', player.id);
+        };
+        d.querySelector('.delete-btn').onclick = (e) => {
+            e.stopPropagation();
+            deletePlayerDb(player.id);
+        };
+        d.querySelector('.move-aek-btn').onclick = (e) => {
+            e.stopPropagation();
+            movePlayerWithTransaction(player.id, 'AEK');
+        };
+        d.querySelector('.move-real-btn').onclick = (e) => {
+            e.stopPropagation();
+            movePlayerWithTransaction(player.id, 'Real');
+        };
         c.appendChild(d);
     });
 }
