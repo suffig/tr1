@@ -360,6 +360,10 @@ class DataManager {
         return this.select('players', '*', { eq: { team } });
     }
 
+    async getAllPlayers() {
+        return this.select('players', '*');
+    }
+
     async getAllMatches() {
         return this.select('matches', '*', { order: { column: 'id', ascending: false } });
     }
