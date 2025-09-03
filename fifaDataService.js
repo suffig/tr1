@@ -2,7 +2,10 @@
  * FIFA Database Service
  * Provides integration with FIFA player statistics and ratings
  * Based on FIFA/SoFIFA data structure
+ * Enhanced with real SoFIFA integration
  */
+
+import SofifaIntegration from './src/utils/sofifaIntegration.js';
 
 export class FIFADataService {
     
@@ -171,6 +174,59 @@ export class FIFADataService {
             sofifaUrl: "https://sofifa.com/player/252371/jude-bellingham/250001/"
         },
 
+        "Vinicius Jr.": {
+            overall: 89,
+            potential: 93,
+            positions: ["LW", "LM"],
+            age: 23,
+            height: 176,
+            weight: 73,
+            foot: "Right",
+            pace: 95,
+            shooting: 83,
+            passing: 78,
+            dribbling: 92,
+            defending: 29,
+            physical: 68,
+            skills: {
+                crossing: 81,
+                finishing: 83,
+                headingAccuracy: 62,
+                shortPassing: 80,
+                volleys: 78,
+                curve: 81,
+                fkAccuracy: 76,
+                longPassing: 76,
+                ballControl: 93,
+                acceleration: 97,
+                sprintSpeed: 93,
+                agility: 94,
+                reactions: 90,
+                balance: 82,
+                shotPower: 82,
+                jumping: 69,
+                stamina: 83,
+                strength: 53,
+                longShots: 79,
+                aggression: 56,
+                interceptions: 25,
+                positioning: 85,
+                vision: 79,
+                penalties: 75,
+                composure: 78
+            },
+            workrates: "High/Low",
+            weakFoot: 2,
+            skillMoves: 5,
+            nationality: "Brazil",
+            club: "Real Madrid",
+            value: "€120M",
+            wage: "€200K",
+            contract: "2027",
+            sofifaId: 238794,
+            sofifaUrl: "https://sofifa.com/player/238794/vinicius-junior/250001/"
+        },
+
         // AEK Athens players (using more modest ratings)
         "Sergio Araújo": {
             overall: 72,
@@ -276,50 +332,251 @@ export class FIFADataService {
             contract: "2024",
             sofifaId: 199014,
             sofifaUrl: "https://sofifa.com/player/199014/nordin-amrabat/250001/"
+        },
+
+        "Levi García": {
+            overall: 73,
+            potential: 76,
+            positions: ["LW", "RW", "ST"],
+            age: 26,
+            height: 175,
+            weight: 70,
+            foot: "Left",
+            pace: 82,
+            shooting: 71,
+            passing: 68,
+            dribbling: 77,
+            defending: 35,
+            physical: 72,
+            skills: {
+                crossing: 70,
+                finishing: 73,
+                headingAccuracy: 65,
+                shortPassing: 70,
+                volleys: 68,
+                curve: 72,
+                fkAccuracy: 67,
+                longPassing: 66,
+                ballControl: 78,
+                acceleration: 84,
+                sprintSpeed: 80,
+                agility: 81,
+                reactions: 75,
+                balance: 78,
+                shotPower: 74,
+                jumping: 68,
+                stamina: 76,
+                strength: 67,
+                longShots: 69,
+                aggression: 64,
+                interceptions: 30,
+                positioning: 74,
+                vision: 67,
+                penalties: 68,
+                composure: 72
+            },
+            workrates: "High/Medium",
+            weakFoot: 3,
+            skillMoves: 4,
+            nationality: "Trinidad and Tobago",
+            club: "AEK Athens",
+            value: "€4.5M",
+            wage: "€12K",
+            contract: "2025",
+            sofifaId: 236772,
+            sofifaUrl: "https://sofifa.com/player/236772/levi-garcia/250001/"
         }
     };
 
     /**
-     * Search for a player in the FIFA database
+     * Search for a player in the FIFA database with SoFIFA integration
      * @param {string} playerName - Name of the player to search for
+     * @param {Object} options - Search options
+     * @param {boolean} options.useLiveData - Whether to attempt SoFIFA fetch
+     * @param {boolean} options.fallbackToMock - Whether to fallback to mock data
      * @returns {Object|null} FIFA player data or null if not found
      */
-    static async getPlayerData(playerName) {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+    static async getPlayerData(playerName, options = { useLiveData: true, fallbackToMock: true }) {
+        console.log(`🔍 Searching for player: ${playerName}`);
         
-        // Try exact match first
-        if (this.fifaDatabase[playerName]) {
-            return {
-                ...this.fifaDatabase[playerName],
-                searchName: playerName,
-                found: true
-            };
+        // Validate input
+        if (!playerName || typeof playerName !== 'string' || playerName.trim().length === 0) {
+            console.warn('⚠️ Invalid player name provided');
+            return this.generateDefaultPlayerData('Unknown Player');
         }
 
-        // Try fuzzy matching (case insensitive, partial matches)
-        const searchTerms = playerName.toLowerCase().split(' ');
-        for (const [dbName, data] of Object.entries(this.fifaDatabase)) {
-            const dbNameLower = dbName.toLowerCase();
-            const dbTerms = dbNameLower.split(' ');
-            
-            // Check if all search terms are found in database name
-            const allTermsFound = searchTerms.every(term => 
-                dbTerms.some(dbTerm => dbTerm.includes(term) || term.includes(dbTerm))
-            );
-            
-            if (allTermsFound) {
-                return {
-                    ...data,
-                    searchName: playerName,
-                    suggestedName: dbName,
-                    found: true
+        const cleanPlayerName = playerName.trim();
+        
+        // Try exact match first in mock database
+        let mockData = null;
+        if (this.fifaDatabase[cleanPlayerName]) {
+            mockData = {
+                ...this.fifaDatabase[cleanPlayerName],
+                searchName: cleanPlayerName,
+                found: true,
+                source: 'mock_database'
+            };
+            console.log(`✅ Found exact match in database: ${cleanPlayerName}`);
+        }
+
+        // Try fuzzy matching if no exact match
+        if (!mockData) {
+            const fuzzyMatch = this.performFuzzyMatch(cleanPlayerName);
+            if (fuzzyMatch) {
+                mockData = {
+                    ...fuzzyMatch.data,
+                    searchName: cleanPlayerName,
+                    suggestedName: fuzzyMatch.name,
+                    found: true,
+                    source: 'mock_database_fuzzy'
                 };
+                console.log(`✅ Found fuzzy match: ${cleanPlayerName} -> ${fuzzyMatch.name}`);
             }
         }
 
-        // Return a default structure for unknown players
-        return this.generateDefaultPlayerData(playerName);
+        // If we have mock data and should attempt live fetch
+        if (mockData && options.useLiveData && mockData.sofifaUrl) {
+            try {
+                console.log('🌐 Attempting to fetch live data from SoFIFA...');
+                const liveData = await SofifaIntegration.fetchPlayerData(mockData.sofifaUrl, mockData.sofifaId);
+                
+                if (liveData) {
+                    // Merge live data with mock data (live data takes precedence)
+                    const enhancedData = {
+                        ...mockData,
+                        ...liveData,
+                        searchName: cleanPlayerName,
+                        found: true,
+                        source: 'sofifa_enhanced',
+                        lastUpdated: new Date().toISOString(),
+                        mockDataAvailable: true
+                    };
+                    
+                    console.log(`✅ Enhanced with live SoFIFA data for: ${cleanPlayerName}`);
+                    return enhancedData;
+                } else {
+                    console.log('⚠️ Live data fetch failed, using mock data');
+                    mockData.source = 'mock_fallback';
+                    mockData.sofifaAttempted = true;
+                    mockData.sofifaFetchTime = new Date().toISOString();
+                }
+            } catch (error) {
+                console.error('❌ Error fetching live data:', error.message);
+                if (mockData) {
+                    mockData.source = 'mock_error_fallback';
+                    mockData.fetchError = error.message;
+                }
+            }
+        }
+
+        // Return mock data if available
+        if (mockData) {
+            return mockData;
+        }
+
+        // If no mock data found and fallback is enabled, generate default
+        if (options.fallbackToMock) {
+            console.log(`🔄 Generating default data for unknown player: ${cleanPlayerName}`);
+            return this.generateDefaultPlayerData(cleanPlayerName);
+        }
+
+        // No data found
+        console.log(`❌ No data found for player: ${cleanPlayerName}`);
+        return null;
+    }
+
+    /**
+     * Perform fuzzy matching against the database
+     * @param {string} playerName - Name to search for
+     * @returns {Object|null} Match result or null
+     */
+    static performFuzzyMatch(playerName) {
+        const searchTerms = playerName.toLowerCase().split(' ');
+        
+        for (const [dbName, data] of Object.entries(this.fifaDatabase)) {
+            // Normalize the database name (remove accents, special characters)
+            const dbNameNormalized = this.normalizeString(dbName.toLowerCase());
+            const dbTerms = dbNameNormalized.split(' ');
+            
+            // Check if all search terms are found in database name
+            const allTermsFound = searchTerms.every(term => {
+                const normalizedTerm = this.normalizeString(term);
+                return dbTerms.some(dbTerm => 
+                    dbTerm.includes(normalizedTerm) || 
+                    normalizedTerm.includes(dbTerm) ||
+                    this.calculateSimilarity(normalizedTerm, dbTerm) > 0.7
+                );
+            });
+            
+            if (allTermsFound) {
+                return { name: dbName, data };
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalize string by removing accents and special characters
+     * @param {string} str - String to normalize
+     * @returns {string} Normalized string
+     */
+    static normalizeString(str) {
+        return str
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Remove accents
+            .replace(/[^\w\s]/g, '') // Remove special characters
+            .toLowerCase();
+    }
+
+    /**
+     * Calculate string similarity using simple algorithm
+     * @param {string} str1 - First string
+     * @param {string} str2 - Second string
+     * @returns {number} Similarity score (0-1)
+     */
+    static calculateSimilarity(str1, str2) {
+        const longer = str1.length > str2.length ? str1 : str2;
+        const shorter = str1.length > str2.length ? str2 : str1;
+        
+        if (longer.length === 0) return 1.0;
+        
+        const editDistance = this.levenshteinDistance(longer, shorter);
+        return (longer.length - editDistance) / longer.length;
+    }
+
+    /**
+     * Calculate Levenshtein distance between two strings
+     * @param {string} str1 - First string
+     * @param {string} str2 - Second string  
+     * @returns {number} Edit distance
+     */
+    static levenshteinDistance(str1, str2) {
+        const matrix = [];
+        
+        for (let i = 0; i <= str2.length; i++) {
+            matrix[i] = [i];
+        }
+        
+        for (let j = 0; j <= str1.length; j++) {
+            matrix[0][j] = j;
+        }
+        
+        for (let i = 1; i <= str2.length; i++) {
+            for (let j = 1; j <= str1.length; j++) {
+                if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j] + 1
+                    );
+                }
+            }
+        }
+        
+        return matrix[str2.length][str1.length];
     }
 
     /**
@@ -428,11 +685,11 @@ export class FIFADataService {
      * @returns {string} CSS color class
      */
     static getPlayerCardColor(overall) {
-        if (overall >= 90) return 'fifa-card-icon'; // Icon/Legend
-        if (overall >= 85) return 'fifa-card-gold'; // Gold
-        if (overall >= 80) return 'fifa-card-silver'; // Silver
-        if (overall >= 75) return 'fifa-card-bronze'; // Bronze
-        return 'fifa-card-common'; // Common
+        if (overall >= 90) return 'fifa-card-icon bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-purple-500/30'; // Icon/Legend
+        if (overall >= 85) return 'fifa-card-gold bg-gradient-to-br from-yellow-400 to-yellow-500 text-yellow-900 shadow-yellow-500/30'; // Gold
+        if (overall >= 80) return 'fifa-card-silver bg-gradient-to-br from-gray-400 to-gray-500 text-gray-900 shadow-gray-500/30'; // Silver
+        if (overall >= 75) return 'fifa-card-bronze bg-gradient-to-br from-orange-400 to-orange-500 text-orange-900 shadow-orange-500/30'; // Bronze
+        return 'fifa-card-common bg-gradient-to-br from-gray-600 to-gray-700 text-white shadow-gray-600/30'; // Common
     }
 
     /**
@@ -448,6 +705,62 @@ export class FIFADataService {
         else if (overall >= 75) indicator = '🥉'; // Bronze
         
         return `${overall} ${indicator}`;
+    }
+
+    /**
+     * Get FIFA rating color for display
+     * @param {number} rating - The rating value
+     * @returns {string} Tailwind color class
+     */
+    static getRatingColor(rating) {
+        if (rating >= 85) return 'text-green-400';
+        if (rating >= 75) return 'text-yellow-400';
+        if (rating >= 65) return 'text-orange-400';
+        return 'text-red-400';
+    }
+
+    /**
+     * Test SoFIFA connectivity
+     * @returns {Promise<Object>} Test results
+     */
+    static async testSofifaConnectivity() {
+        console.log('🧪 Testing SoFIFA connectivity...');
+        
+        const testPlayer = Object.entries(this.fifaDatabase)
+            .find(([name, data]) => data.sofifaUrl);
+
+        if (!testPlayer) {
+            return {
+                success: false,
+                error: 'No players with SoFIFA URLs available for testing'
+            };
+        }
+
+        const [playerName, playerData] = testPlayer;
+        
+        try {
+            const startTime = Date.now();
+            const result = await SofifaIntegration.fetchPlayerData(
+                playerData.sofifaUrl, 
+                playerData.sofifaId
+            );
+            const endTime = Date.now();
+
+            return {
+                success: !!result,
+                testPlayer: playerName,
+                responseTime: `${endTime - startTime}ms`,
+                result: result,
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            return {
+                success: false,
+                testPlayer: playerName,
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
     }
 }
 

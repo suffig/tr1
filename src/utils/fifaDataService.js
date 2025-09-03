@@ -2,7 +2,10 @@
  * FIFA Database Service for React Application
  * Provides integration with FIFA player statistics and ratings
  * Based on FIFA/SoFIFA data structure
+ * Enhanced with real SoFIFA integration
  */
+
+import SofifaIntegration from './sofifaIntegration.js';
 
 export class FIFADataService {
     
@@ -386,46 +389,194 @@ export class FIFADataService {
     };
 
     /**
-     * Search for a player in the FIFA database
+     * Search for a player in the FIFA database with SoFIFA integration
      * @param {string} playerName - Name of the player to search for
+     * @param {Object} options - Search options
+     * @param {boolean} options.useLiveData - Whether to attempt SoFIFA fetch
+     * @param {boolean} options.fallbackToMock - Whether to fallback to mock data
      * @returns {Object|null} FIFA player data or null if not found
      */
-    static async getPlayerData(playerName) {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 800));
+    static async getPlayerData(playerName, options = { useLiveData: true, fallbackToMock: true }) {
+        console.log(`🔍 Searching for player: ${playerName}`);
         
-        // Try exact match first
-        if (this.fifaDatabase[playerName]) {
-            return {
-                ...this.fifaDatabase[playerName],
-                searchName: playerName,
-                found: true
-            };
+        // Validate input
+        if (!playerName || typeof playerName !== 'string' || playerName.trim().length === 0) {
+            console.warn('⚠️ Invalid player name provided');
+            return this.generateDefaultPlayerData('Unknown Player');
         }
 
-        // Try fuzzy matching (case insensitive, partial matches)
-        const searchTerms = playerName.toLowerCase().split(' ');
-        for (const [dbName, data] of Object.entries(this.fifaDatabase)) {
-            const dbNameLower = dbName.toLowerCase();
-            const dbTerms = dbNameLower.split(' ');
-            
-            // Check if all search terms are found in database name
-            const allTermsFound = searchTerms.every(term => 
-                dbTerms.some(dbTerm => dbTerm.includes(term) || term.includes(dbTerm))
-            );
-            
-            if (allTermsFound) {
-                return {
-                    ...data,
-                    searchName: playerName,
-                    suggestedName: dbName,
-                    found: true
+        const cleanPlayerName = playerName.trim();
+        
+        // Try exact match first in mock database
+        let mockData = null;
+        if (this.fifaDatabase[cleanPlayerName]) {
+            mockData = {
+                ...this.fifaDatabase[cleanPlayerName],
+                searchName: cleanPlayerName,
+                found: true,
+                source: 'mock_database'
+            };
+            console.log(`✅ Found exact match in database: ${cleanPlayerName}`);
+        }
+
+        // Try fuzzy matching if no exact match
+        if (!mockData) {
+            const fuzzyMatch = this.performFuzzyMatch(cleanPlayerName);
+            if (fuzzyMatch) {
+                mockData = {
+                    ...fuzzyMatch.data,
+                    searchName: cleanPlayerName,
+                    suggestedName: fuzzyMatch.name,
+                    found: true,
+                    source: 'mock_database_fuzzy'
                 };
+                console.log(`✅ Found fuzzy match: ${cleanPlayerName} -> ${fuzzyMatch.name}`);
             }
         }
 
-        // Return a default structure for unknown players
-        return this.generateDefaultPlayerData(playerName);
+        // If we have mock data and should attempt live fetch
+        if (mockData && options.useLiveData && mockData.sofifaUrl) {
+            try {
+                console.log('🌐 Attempting to fetch live data from SoFIFA...');
+                const liveData = await SofifaIntegration.fetchPlayerData(mockData.sofifaUrl, mockData.sofifaId);
+                
+                if (liveData) {
+                    // Merge live data with mock data (live data takes precedence)
+                    const enhancedData = {
+                        ...mockData,
+                        ...liveData,
+                        searchName: cleanPlayerName,
+                        found: true,
+                        source: 'sofifa_enhanced',
+                        lastUpdated: new Date().toISOString(),
+                        mockDataAvailable: true
+                    };
+                    
+                    console.log(`✅ Enhanced with live SoFIFA data for: ${cleanPlayerName}`);
+                    return enhancedData;
+                } else {
+                    console.log('⚠️ Live data fetch failed, using mock data');
+                    mockData.source = 'mock_fallback';
+                    mockData.sofifaAttempted = true;
+                    mockData.sofifaFetchTime = new Date().toISOString();
+                }
+            } catch (error) {
+                console.error('❌ Error fetching live data:', error.message);
+                if (mockData) {
+                    mockData.source = 'mock_error_fallback';
+                    mockData.fetchError = error.message;
+                }
+            }
+        }
+
+        // Return mock data if available
+        if (mockData) {
+            return mockData;
+        }
+
+        // If no mock data found and fallback is enabled, generate default
+        if (options.fallbackToMock) {
+            console.log(`🔄 Generating default data for unknown player: ${cleanPlayerName}`);
+            return this.generateDefaultPlayerData(cleanPlayerName);
+        }
+
+        // No data found
+        console.log(`❌ No data found for player: ${cleanPlayerName}`);
+        return null;
+    }
+
+    /**
+     * Perform fuzzy matching against the database
+     * @param {string} playerName - Name to search for
+     * @returns {Object|null} Match result or null
+     */
+    static performFuzzyMatch(playerName) {
+        const searchTerms = playerName.toLowerCase().split(' ');
+        
+        for (const [dbName, data] of Object.entries(this.fifaDatabase)) {
+            // Normalize the database name (remove accents, special characters)
+            const dbNameNormalized = this.normalizeString(dbName.toLowerCase());
+            const dbTerms = dbNameNormalized.split(' ');
+            
+            // Check if all search terms are found in database name
+            const allTermsFound = searchTerms.every(term => {
+                const normalizedTerm = this.normalizeString(term);
+                return dbTerms.some(dbTerm => 
+                    dbTerm.includes(normalizedTerm) || 
+                    normalizedTerm.includes(dbTerm) ||
+                    this.calculateSimilarity(normalizedTerm, dbTerm) > 0.7
+                );
+            });
+            
+            if (allTermsFound) {
+                return { name: dbName, data };
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalize string by removing accents and special characters
+     * @param {string} str - String to normalize
+     * @returns {string} Normalized string
+     */
+    static normalizeString(str) {
+        return str
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Remove accents
+            .replace(/[^\w\s]/g, '') // Remove special characters
+            .toLowerCase();
+    }
+
+    /**
+     * Calculate string similarity using simple algorithm
+     * @param {string} str1 - First string
+     * @param {string} str2 - Second string
+     * @returns {number} Similarity score (0-1)
+     */
+    static calculateSimilarity(str1, str2) {
+        const longer = str1.length > str2.length ? str1 : str2;
+        const shorter = str1.length > str2.length ? str2 : str1;
+        
+        if (longer.length === 0) return 1.0;
+        
+        const editDistance = this.levenshteinDistance(longer, shorter);
+        return (longer.length - editDistance) / longer.length;
+    }
+
+    /**
+     * Calculate Levenshtein distance between two strings
+     * @param {string} str1 - First string
+     * @param {string} str2 - Second string  
+     * @returns {number} Edit distance
+     */
+    static levenshteinDistance(str1, str2) {
+        const matrix = [];
+        
+        for (let i = 0; i <= str2.length; i++) {
+            matrix[i] = [i];
+        }
+        
+        for (let j = 0; j <= str1.length; j++) {
+            matrix[0][j] = j;
+        }
+        
+        for (let i = 1; i <= str2.length; i++) {
+            for (let j = 1; j <= str1.length; j++) {
+                if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j] + 1
+                    );
+                }
+            }
+        }
+        
+        return matrix[str2.length][str1.length];
     }
 
     /**
@@ -566,6 +717,184 @@ export class FIFADataService {
         if (rating >= 75) return 'text-yellow-400';
         if (rating >= 65) return 'text-orange-400';
         return 'text-red-400';
+    }
+
+    /**
+     * Batch fetch multiple players with SoFIFA integration
+     * @param {Array<string>} playerNames - Array of player names
+     * @param {Object} options - Fetch options
+     * @returns {Promise<Array<Object>>} Array of player data
+     */
+    static async batchGetPlayerData(playerNames, options = {}) {
+        console.log(`📦 Batch fetching ${playerNames.length} players...`);
+        
+        const results = [];
+        const batchSize = options.batchSize || 3; // Limit concurrent requests
+        
+        for (let i = 0; i < playerNames.length; i += batchSize) {
+            const batch = playerNames.slice(i, i + batchSize);
+            const batchPromises = batch.map(name => 
+                this.getPlayerData(name, options).catch(error => ({
+                    searchName: name,
+                    error: error.message,
+                    found: false
+                }))
+            );
+            
+            const batchResults = await Promise.all(batchPromises);
+            results.push(...batchResults);
+            
+            // Small delay between batches to be respectful
+            if (i + batchSize < playerNames.length) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+        
+        console.log(`✅ Batch fetch complete: ${results.length} players processed`);
+        return results;
+    }
+
+    /**
+     * Search for players by club
+     * @param {string} clubName - Name of the club
+     * @param {boolean} useLiveData - Whether to fetch live data
+     * @returns {Promise<Array<Object>>} Array of players from the club
+     */
+    static async getPlayersByClub(clubName, useLiveData = false) {
+        console.log(`🏟️ Searching for players from club: ${clubName}`);
+        
+        const clubPlayers = Object.entries(this.fifaDatabase)
+            .filter(([name, data]) => 
+                data.club && data.club.toLowerCase().includes(clubName.toLowerCase())
+            )
+            .map(([name, data]) => ({ name, ...data }));
+
+        if (useLiveData) {
+            const playerNames = clubPlayers.map(p => p.name);
+            return await this.batchGetPlayerData(playerNames, { useLiveData: true });
+        }
+
+        return clubPlayers.map(player => ({
+            ...player,
+            searchName: player.name,
+            found: true,
+            source: 'mock_database'
+        }));
+    }
+
+    /**
+     * Get SoFIFA integration statistics
+     * @returns {Object} Integration stats
+     */
+    static getSofifaStats() {
+        const cacheStats = SofifaIntegration.getCacheStats();
+        const totalPlayers = Object.keys(this.fifaDatabase).length;
+        const playersWithSofifaUrls = Object.values(this.fifaDatabase)
+            .filter(player => player.sofifaUrl).length;
+
+        return {
+            cache: cacheStats,
+            database: {
+                totalPlayers,
+                playersWithSofifaUrls,
+                sofifaUrlCoverage: `${((playersWithSofifaUrls / totalPlayers) * 100).toFixed(1)}%`
+            },
+            integration: {
+                status: 'active',
+                lastCheck: new Date().toISOString()
+            }
+        };
+    }
+
+    /**
+     * Validate SoFIFA URLs in the database
+     * @returns {Object} Validation results
+     */
+    static validateSofifaUrls() {
+        console.log('🔍 Validating SoFIFA URLs in database...');
+        
+        const results = {
+            valid: [],
+            invalid: [],
+            missing: []
+        };
+
+        Object.entries(this.fifaDatabase).forEach(([name, data]) => {
+            if (!data.sofifaUrl) {
+                results.missing.push(name);
+            } else if (this.isValidSofifaUrl(data.sofifaUrl)) {
+                results.valid.push({ name, url: data.sofifaUrl, id: data.sofifaId });
+            } else {
+                results.invalid.push({ name, url: data.sofifaUrl });
+            }
+        });
+
+        console.log(`✅ URL validation complete: ${results.valid.length} valid, ${results.invalid.length} invalid, ${results.missing.length} missing`);
+        return results;
+    }
+
+    /**
+     * Validate a SoFIFA URL format
+     * @param {string} url - URL to validate
+     * @returns {boolean} True if valid
+     */
+    static isValidSofifaUrl(url) {
+        if (typeof url !== 'string') return false;
+        
+        const sofifaPattern = /^https:\/\/sofifa\.com\/player\/\d+\/[^\/]+\/\d+\/?$/;
+        return sofifaPattern.test(url);
+    }
+
+    /**
+     * Clear all caches
+     */
+    static clearAllCaches() {
+        SofifaIntegration.clearCache();
+        console.log('🗑️ All FIFA service caches cleared');
+    }
+
+    /**
+     * Test SoFIFA connectivity
+     * @returns {Promise<Object>} Test results
+     */
+    static async testSofifaConnectivity() {
+        console.log('🧪 Testing SoFIFA connectivity...');
+        
+        const testPlayer = Object.entries(this.fifaDatabase)
+            .find(([name, data]) => data.sofifaUrl);
+
+        if (!testPlayer) {
+            return {
+                success: false,
+                error: 'No players with SoFIFA URLs available for testing'
+            };
+        }
+
+        const [playerName, playerData] = testPlayer;
+        
+        try {
+            const startTime = Date.now();
+            const result = await SofifaIntegration.fetchPlayerData(
+                playerData.sofifaUrl, 
+                playerData.sofifaId
+            );
+            const endTime = Date.now();
+
+            return {
+                success: !!result,
+                testPlayer: playerName,
+                responseTime: `${endTime - startTime}ms`,
+                result: result,
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            return {
+                success: false,
+                testPlayer: playerName,
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
     }
 }
 
