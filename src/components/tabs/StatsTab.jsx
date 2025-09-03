@@ -1349,7 +1349,7 @@ export default function StatsTab({ onNavigate }) {
       let alcoholGrams = (alcoholCl * 10) * 0.4 * 0.789;
       
       // Add beer alcohol: 0.5L beer = 500ml * 0.05 (5%) = 25ml pure alcohol, density 0.789g/ml
-      alcoholGrams += (beerCount * 0.5 * 1000 * 0.05 * 0.789) / 1000; // Convert to grams
+      alcoholGrams += (beerCount * 0.5 * 1000 * 0.05 * 0.789); // Already in grams
       
       // Widmark factors (standard clinical values)
       const r = playerData.gender === 'female' ? 0.60 : 0.70;
