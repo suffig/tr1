@@ -212,6 +212,7 @@ export default function AddTransactionTab() {
                     step="0.01"
                     value={formData.amount}
                     onChange={(e) => handleInputChange('amount', e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     className="form-input"
                     placeholder="0.00"
                     required

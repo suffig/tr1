@@ -544,6 +544,7 @@ export default function AddMatchTab() {
                             min="0"
                             value={formData.yellowa}
                             onChange={(e) => handleInputChange('yellowa', e.target.value)}
+                            onFocus={(e) => e.target.select()}
                             className="form-input"
                             disabled={loading}
                           />
@@ -557,6 +558,7 @@ export default function AddMatchTab() {
                             min="0"
                             value={formData.reda}
                             onChange={(e) => handleInputChange('reda', e.target.value)}
+                            onFocus={(e) => e.target.select()}
                             className="form-input"
                             disabled={loading}
                           />
@@ -575,6 +577,7 @@ export default function AddMatchTab() {
                             min="0"
                             value={formData.yellowb}
                             onChange={(e) => handleInputChange('yellowb', e.target.value)}
+                            onFocus={(e) => e.target.select()}
                             className="form-input"
                             disabled={loading}
                           />
@@ -588,6 +591,7 @@ export default function AddMatchTab() {
                             min="0"
                             value={formData.redb}
                             onChange={(e) => handleInputChange('redb', e.target.value)}
+                            onFocus={(e) => e.target.select()}
                             className="form-input"
                             disabled={loading}
                           />

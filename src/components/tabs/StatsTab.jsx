@@ -1581,6 +1581,7 @@ export default function StatsTab({ onNavigate }) {
                       ...prev,
                       aekGoals: parseInt(e.target.value) || 0
                     }))}
+                    onFocus={(e) => e.target.select()}
                     className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                   />
                 </div>
@@ -1595,6 +1596,7 @@ export default function StatsTab({ onNavigate }) {
                       ...prev,
                       realGoals: parseInt(e.target.value) || 0
                     }))}
+                    onFocus={(e) => e.target.select()}
                     className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                   />
                 </div>
@@ -1694,6 +1696,7 @@ export default function StatsTab({ onNavigate }) {
                               aek: parseInt(e.target.value) || 0
                             }
                           }))}
+                          onFocus={(e) => e.target.select()}
                           className="flex-1 px-2 py-1 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                           style={{ fontSize: '16px' }} // Prevent iPhone zoom
                         />
@@ -1727,6 +1730,7 @@ export default function StatsTab({ onNavigate }) {
                               real: parseInt(e.target.value) || 0
                             }
                           }))}
+                          onFocus={(e) => e.target.select()}
                           className="flex-1 px-2 py-1 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                           style={{ fontSize: '16px' }} // Prevent iPhone zoom
                         />
@@ -1818,6 +1822,7 @@ export default function StatsTab({ onNavigate }) {
                             aekChef: { ...prev.playerData.aekChef, weight: parseInt(e.target.value) || 70 }
                           }
                         }))}
+                        onFocus={(e) => e.target.select()}
                         className="px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                         style={{ fontSize: '16px' }} // Prevent iPhone zoom
                       />
@@ -1869,6 +1874,7 @@ export default function StatsTab({ onNavigate }) {
                             realChef: { ...prev.playerData.realChef, weight: parseInt(e.target.value) || 70 }
                           }
                         }))}
+                        onFocus={(e) => e.target.select()}
                         className="px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                         style={{ fontSize: '16px' }} // Prevent iPhone zoom
                       />
