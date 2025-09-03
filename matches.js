@@ -1627,6 +1627,21 @@ async function submitMatchForm(event, id) {
 
     await decrementBansAfterMatch();
 
+    // Update alcohol calculator with shots from this match
+    try {
+        if (typeof window !== 'undefined' && window.updateAlcoholCalculatorFromMatch) {
+            window.updateAlcoholCalculatorFromMatch({
+                id: matchId,
+                goalsa: goalsa,
+                goalsb: goalsb,
+                date: date
+            });
+        }
+    } catch (alcoholError) {
+        // Don't fail the match creation if alcohol calculator update fails
+        console.warn('Failed to update alcohol calculator:', alcoholError);
+    }
+
     // Transaktionen buchen (Preisgelder & SdS Bonus, inkl. Finanzen update)
     const now = new Date().toISOString().slice(0,10);
 
