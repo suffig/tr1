@@ -1352,6 +1352,8 @@ export default function StatsTab({ onNavigate }) {
       const r = playerData.gender === 'female' ? 0.60 : 0.70;
       
       // Widmark formula: BAC = A / (r × m) where A=alcohol in grams, r=distribution factor, m=weight in kg
+      // The result is in g/kg, which needs to be converted to ‰ (mg/g)
+      // 1 g/kg = 1000 mg/kg = 1000 mg per 1000g = 1 mg/g = 1‰
       let bac = alcoholGrams / (playerData.weight * r);
       
       // Apply time decay if drinking time is provided
@@ -1360,12 +1362,11 @@ export default function StatsTab({ onNavigate }) {
         const timePassed = (now - new Date(drinkingTime)) / (1000 * 60 * 60); // hours
         
         // Alcohol elimination rate: approximately 0.15‰ per hour
-        const eliminationRate = 0.15 / 1000; // Convert ‰ to decimal
-        bac = Math.max(0, bac - (timePassed * eliminationRate));
+        bac = Math.max(0, bac - (timePassed * 0.15));
       }
       
-      // Convert to per mille (multiply by 1000)
-      return (bac * 1000).toFixed(2);
+      // The result is already in promille (‰), so no additional conversion needed
+      return bac.toFixed(2);
     };
 
     // Get BAK level warning and color coding
