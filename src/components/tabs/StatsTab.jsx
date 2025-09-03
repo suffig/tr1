@@ -10,7 +10,8 @@ import {
   loadCalculatorValues, 
   updateCalculatorValues, 
   setDrinkingStartTime,
-  getHoursSinceDrinkingStarted 
+  getHoursSinceDrinkingStarted,
+  updateCumulativeShotsFromMatches
 } from '../../utils/alcoholCalculatorPersistence';
 
 // Enhanced Statistics Calculator Class (ported from vanilla JS)
@@ -321,6 +322,26 @@ export default function StatsTab({ onNavigate }) {
       return updated;
     });
   };
+
+  // Effect to update cumulative shots when matches are loaded
+  useEffect(() => {
+    if (matches && matches.length > 0) {
+      // Check if we need to update cumulative shots
+      const latestMatch = matches.reduce((latest, match) => {
+        return (!latest || match.id > latest.id) ? match : latest;
+      }, null);
+      
+      // Update cumulative shots if there's a new match or no cumulative data
+      if (latestMatch && 
+          (!calculatorValues.cumulativeShots.lastMatchId || 
+           calculatorValues.cumulativeShots.lastMatchId < latestMatch.id ||
+           calculatorValues.cumulativeShots.total === 0)) {
+        
+        const updatedValues = updateCumulativeShotsFromMatches(matches, calculatorValues);
+        setCalculatorValues(updatedValues);
+      }
+    }
+  }, [matches]); // Depend on matches array
   
   const loading = matchesLoading || playersLoading || sdsLoading || bansLoading;
 
@@ -1218,7 +1239,7 @@ export default function StatsTab({ onNavigate }) {
   );
 
   const renderAlkohol = () => {
-    // Calculate alcohol statistics with cumulative daily calculation
+    // Calculate alcohol statistics using persistent cumulative values and match calculation fallback
     const calculateAlcoholStats = () => {
       const stats = {
         totalShots: 0,
@@ -1227,58 +1248,67 @@ export default function StatsTab({ onNavigate }) {
         playerShots: {}
       };
 
-      // Sort matches by date to process chronologically
-      const sortedMatches = matches?.slice().sort((a, b) => {
-        const dateA = new Date(a.date || 0);
-        const dateB = new Date(b.date || 0);
-        return dateA - dateB;
-      }) || [];
+      // Use persistent cumulative shots if available, otherwise calculate from matches
+      if (calculatorValues.cumulativeShots && calculatorValues.cumulativeShots.total > 0) {
+        // Use the persistent cumulative values
+        stats.totalShots = calculatorValues.cumulativeShots.total;
+        stats.aekShots = calculatorValues.cumulativeShots.aek;
+        stats.realShots = calculatorValues.cumulativeShots.real;
+      } else {
+        // Fallback: Calculate from matches using the original logic
+        // Sort matches by date to process chronologically
+        const sortedMatches = matches?.slice().sort((a, b) => {
+          const dateA = new Date(a.date || 0);
+          const dateB = new Date(b.date || 0);
+          return dateA - dateB;
+        }) || [];
 
-      // Group matches by day and calculate cumulative shots per day
-      const matchesByDay = {};
-      sortedMatches.forEach(match => {
-        const matchDate = new Date(match.date || 0);
-        const dayKey = matchDate.toDateString();
-        
-        if (!matchesByDay[dayKey]) {
-          matchesByDay[dayKey] = [];
-        }
-        matchesByDay[dayKey].push(match);
-      });
-
-      // Calculate shots per day with cumulative logic
-      Object.keys(matchesByDay).forEach(dayKey => {
-        const dayMatches = matchesByDay[dayKey];
-        let cumulativeAekGoals = 0;
-        let cumulativeRealGoals = 0;
-        let aekShotsGiven = 0;
-        let realShotsGiven = 0;
-
-        dayMatches.forEach(match => {
-          const aekGoals = match.goalsa || 0;
-          const realGoals = match.goalsb || 0;
+        // Group matches by day and calculate cumulative shots per day
+        const matchesByDay = {};
+        sortedMatches.forEach(match => {
+          const matchDate = new Date(match.date || 0);
+          const dayKey = matchDate.toDateString();
           
-          cumulativeAekGoals += aekGoals;
-          cumulativeRealGoals += realGoals;
-
-          // Calculate shots based on cumulative goals from beginning of day
-          // Every 2 goals scored means 1 shot (2cl) for the opposing team
-          const newAekShots = Math.floor(cumulativeRealGoals / 2);
-          const newRealShots = Math.floor(cumulativeAekGoals / 2);
-
-          // Only add the difference (new shots since last match)
-          const aekShotsToAdd = (newAekShots - aekShotsGiven) * 2; // 2cl per shot
-          const realShotsToAdd = (newRealShots - realShotsGiven) * 2; // 2cl per shot
-
-          stats.aekShots += aekShotsToAdd;
-          stats.realShots += realShotsToAdd;
-          stats.totalShots += aekShotsToAdd + realShotsToAdd;
-
-          // Update counters
-          aekShotsGiven = newAekShots;
-          realShotsGiven = newRealShots;
+          if (!matchesByDay[dayKey]) {
+            matchesByDay[dayKey] = [];
+          }
+          matchesByDay[dayKey].push(match);
         });
-      });
+
+        // Calculate shots per day with cumulative logic
+        Object.keys(matchesByDay).forEach(dayKey => {
+          const dayMatches = matchesByDay[dayKey];
+          let cumulativeAekGoals = 0;
+          let cumulativeRealGoals = 0;
+          let aekShotsGiven = 0;
+          let realShotsGiven = 0;
+
+          dayMatches.forEach(match => {
+            const aekGoals = match.goalsa || 0;
+            const realGoals = match.goalsb || 0;
+            
+            cumulativeAekGoals += aekGoals;
+            cumulativeRealGoals += realGoals;
+
+            // Calculate shots based on cumulative goals from beginning of day
+            // Every 2 goals scored means 1 shot (2cl) for the opposing team
+            const newAekShots = Math.floor(cumulativeRealGoals / 2);
+            const newRealShots = Math.floor(cumulativeAekGoals / 2);
+
+            // Only add the difference (new shots since last match)
+            const aekShotsToAdd = (newAekShots - aekShotsGiven) * 2; // 2cl per shot
+            const realShotsToAdd = (newRealShots - realShotsGiven) * 2; // 2cl per shot
+
+            stats.aekShots += aekShotsToAdd;
+            stats.realShots += realShotsToAdd;
+            stats.totalShots += aekShotsToAdd + realShotsToAdd;
+
+            // Update counters
+            aekShotsGiven = newAekShots;
+            realShotsGiven = newRealShots;
+          });
+        });
+      }
 
       // Use goals from players table (like in stats) instead of parsing match goalslists
       players?.forEach(player => {
@@ -1529,6 +1559,52 @@ export default function StatsTab({ onNavigate }) {
           <h3 className="font-bold text-lg mb-4">🧮 Erweiterte Alkohol-Rechner</h3>
           <div className="text-sm text-text-muted mb-6">
             Berechne Alkoholkonsum für Spiele und Spieltage inklusive Bier-Konsum und Blutalkohol
+          </div>
+
+          {/* Cumulative Shots Status */}
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-semibold text-blue-800 mb-3">📊 Automatische Schnaps-Verfolgung</h4>
+            <div className="text-sm text-blue-700 mb-3">
+              Shots werden automatisch bei jedem neuen Spiel hinzugefügt und permanent gespeichert.
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="text-center p-2 bg-white rounded border border-blue-200">
+                <div className="text-lg font-bold text-blue-600">{calculatorValues.cumulativeShots.total}cl</div>
+                <div className="text-xs text-blue-700">Gesamt Schnaps</div>
+              </div>
+              <div className="text-center p-2 bg-white rounded border border-blue-200">
+                <div className="text-lg font-bold text-blue-600">{calculatorValues.cumulativeShots.aek}cl</div>
+                <div className="text-xs text-blue-700">AEK getrunken</div>
+              </div>
+              <div className="text-center p-2 bg-white rounded border border-blue-200">
+                <div className="text-lg font-bold text-red-600">{calculatorValues.cumulativeShots.real}cl</div>
+                <div className="text-xs text-red-700">Real getrunken</div>
+              </div>
+              <div className="text-center p-2 bg-white rounded border border-blue-200">
+                <div className="text-xs font-bold text-gray-600">
+                  {calculatorValues.cumulativeShots.lastUpdated ? 
+                    new Date(calculatorValues.cumulativeShots.lastUpdated).toLocaleDateString('de-DE') : 
+                    'Noch nicht aktualisiert'
+                  }
+                </div>
+                <div className="text-xs text-gray-600">Letzte Aktualisierung</div>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-blue-600">
+              💡 Diese Werte werden automatisch aktualisiert, wenn neue Spiele hinzugefügt werden. 
+              Letztes verarbeitetes Spiel: Match ID {calculatorValues.cumulativeShots.lastMatchId || 'Keins'}
+            </div>
+            <div className="mt-3 flex justify-center">
+              <button
+                onClick={() => {
+                  const updated = updateCumulativeShotsFromMatches(matches, calculatorValues);
+                  setCalculatorValues(updated);
+                }}
+                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                🔄 Shots neu berechnen
+              </button>
+            </div>
           </div>
           
           {/* Basic Game Calculator */}

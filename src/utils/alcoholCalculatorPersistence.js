@@ -20,6 +20,14 @@ const getDefaultValues = () => ({
     aek: 0,
     real: 0
   },
+  // Cumulative shots from all matches (automatically updated)
+  cumulativeShots: {
+    aek: 0,      // Total cl of shots AEK has drunk from Real goals
+    real: 0,     // Total cl of shots Real has drunk from AEK goals
+    total: 0,    // Total cl of shots from all matches
+    lastMatchId: null, // Track last processed match to avoid duplicates
+    lastUpdated: null  // When cumulative shots were last updated
+  },
   // Timestamp tracking for time-based calculations
   lastUpdated: new Date().toISOString(),
   drinkingStartTime: null, // When drinking started for time decay calculations
@@ -53,6 +61,10 @@ export const loadCalculatorValues = () => {
       beerCount: {
         ...defaults.beerCount,
         ...(parsed.beerCount || {})
+      },
+      cumulativeShots: {
+        ...defaults.cumulativeShots,
+        ...(parsed.cumulativeShots || {})
       }
     };
 
@@ -104,11 +116,18 @@ export const updateCalculatorValues = (updates, currentValues) => {
     lastUpdated: new Date().toISOString()
   };
   
-  // Handle nested beerCount updates
+  // Handle nested updates
   if (updates.beerCount) {
     updated.beerCount = {
       ...currentValues.beerCount,
       ...updates.beerCount
+    };
+  }
+  
+  if (updates.cumulativeShots) {
+    updated.cumulativeShots = {
+      ...currentValues.cumulativeShots,
+      ...updates.cumulativeShots
     };
   }
   
@@ -186,3 +205,153 @@ export const wasUpdatedToday = (values) => {
     return false;
   }
 };
+
+/**
+ * Update cumulative shots from all matches in the database
+ * This function should be called whenever a new match is added
+ * @param {Array} matches - Array of all matches from the database
+ * @param {Object} currentValues - Current calculator values
+ * @returns {Object} Updated calculator values with new cumulative shots
+ */
+export const updateCumulativeShotsFromMatches = (matches, currentValues = null) => {
+  try {
+    const values = currentValues || loadCalculatorValues();
+    
+    if (!matches || !Array.isArray(matches)) {
+      console.warn('Invalid matches array provided to updateCumulativeShotsFromMatches');
+      return values;
+    }
+    
+    // Calculate cumulative shots from all matches
+    let aekTotalShots = 0; // Shots AEK has drunk (from Real goals)
+    let realTotalShots = 0; // Shots Real has drunk (from AEK goals)
+    
+    // Sort matches by date to process chronologically
+    const sortedMatches = matches.slice().sort((a, b) => {
+      const dateA = new Date(a.date || 0);
+      const dateB = new Date(b.date || 0);
+      return dateA - dateB;
+    });
+    
+    // Group matches by day and calculate cumulative shots per day
+    const matchesByDay = {};
+    sortedMatches.forEach(match => {
+      const matchDate = new Date(match.date || 0);
+      const dayKey = matchDate.toDateString();
+      
+      if (!matchesByDay[dayKey]) {
+        matchesByDay[dayKey] = [];
+      }
+      matchesByDay[dayKey].push(match);
+    });
+    
+    // Calculate shots per day with cumulative logic
+    Object.keys(matchesByDay).forEach(dayKey => {
+      const dayMatches = matchesByDay[dayKey];
+      let cumulativeAekGoals = 0;
+      let cumulativeRealGoals = 0;
+      let aekShotsGiven = 0;
+      let realShotsGiven = 0;
+      
+      dayMatches.forEach(match => {
+        const aekGoals = match.goalsa || 0;
+        const realGoals = match.goalsb || 0;
+        
+        cumulativeAekGoals += aekGoals;
+        cumulativeRealGoals += realGoals;
+        
+        // Calculate shots based on cumulative goals from beginning of day
+        // Every 2 goals scored means 1 shot (2cl) for the opposing team
+        const newAekShots = Math.floor(cumulativeRealGoals / 2);
+        const newRealShots = Math.floor(cumulativeAekGoals / 2);
+        
+        // Only add the difference (new shots since last match)
+        const aekShotsToAdd = (newAekShots - aekShotsGiven) * 2; // 2cl per shot
+        const realShotsToAdd = (newRealShots - realShotsGiven) * 2; // 2cl per shot
+        
+        aekTotalShots += aekShotsToAdd;
+        realTotalShots += realShotsToAdd;
+        
+        // Update counters
+        aekShotsGiven = newAekShots;
+        realShotsGiven = newRealShots;
+      });
+    });
+    
+    // Get the latest match ID for tracking
+    const latestMatch = sortedMatches.length > 0 ? sortedMatches[sortedMatches.length - 1] : null;
+    const latestMatchId = latestMatch ? latestMatch.id : null;
+    
+    // Update cumulative shots
+    const updatedValues = updateCalculatorValues({
+      cumulativeShots: {
+        aek: aekTotalShots,
+        real: realTotalShots,
+        total: aekTotalShots + realTotalShots,
+        lastMatchId: latestMatchId,
+        lastUpdated: new Date().toISOString()
+      }
+    }, values);
+    
+    return updatedValues;
+  } catch (error) {
+    console.error('Error updating cumulative shots from matches:', error);
+    return currentValues || loadCalculatorValues();
+  }
+};
+
+/**
+ * Update shots when a single new match is added
+ * This is optimized for single match updates to avoid recalculating everything
+ * @param {Object} newMatch - The newly added match
+ * @param {Object} currentValues - Current calculator values
+ * @returns {Object} Updated calculator values
+ */
+export const addShotsFromNewMatch = (newMatch, currentValues = null) => {
+  try {
+    const values = currentValues || loadCalculatorValues();
+    
+    if (!newMatch || typeof newMatch !== 'object') {
+      console.warn('Invalid match object provided to addShotsFromNewMatch');
+      return values;
+    }
+    
+    const aekGoals = newMatch.goalsa || 0;
+    const realGoals = newMatch.goalsb || 0;
+    
+    // Calculate shots from this match
+    // Every 2 goals means 2cl (1 shot) for the opposing team
+    const aekShotsFromThisMatch = Math.floor(realGoals / 2) * 2; // AEK drinks from Real goals
+    const realShotsFromThisMatch = Math.floor(aekGoals / 2) * 2; // Real drinks from AEK goals
+    
+    // Add to cumulative totals
+    const updatedValues = updateCalculatorValues({
+      cumulativeShots: {
+        aek: values.cumulativeShots.aek + aekShotsFromThisMatch,
+        real: values.cumulativeShots.real + realShotsFromThisMatch,
+        total: values.cumulativeShots.total + aekShotsFromThisMatch + realShotsFromThisMatch,
+        lastMatchId: newMatch.id,
+        lastUpdated: new Date().toISOString()
+      }
+    }, values);
+    
+    return updatedValues;
+  } catch (error) {
+    console.error('Error adding shots from new match:', error);
+    return currentValues || loadCalculatorValues();
+  }
+};
+
+/**
+ * Global function to update alcohol calculator from vanilla JS
+ * Exposed to window for compatibility with older parts of the app
+ */
+if (typeof window !== 'undefined') {
+  window.updateAlcoholCalculatorFromMatch = (matchData) => {
+    try {
+      addShotsFromNewMatch(matchData);
+    } catch (error) {
+      console.warn('Failed to update alcohol calculator from match:', error);
+    }
+  };
+}

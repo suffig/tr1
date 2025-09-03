@@ -1,5 +1,6 @@
 // Match Business Logic - Enhanced from tracker_full_v1
 import { supabaseDb } from './supabase';
+import { addShotsFromNewMatch } from './alcoholCalculatorPersistence';
 
 export class MatchBusinessLogic {
   /**
@@ -127,6 +128,19 @@ export class MatchBusinessLogic {
 
       // 7. Decrement bans after match
       await this.decrementBansAfterMatch();
+
+      // 8. Update alcohol calculator with shots from this match
+      try {
+        addShotsFromNewMatch({
+          id: matchId,
+          goalsa: parseInt(goalsa) || 0,
+          goalsb: parseInt(goalsb) || 0,
+          date
+        });
+      } catch (alcoholError) {
+        // Don't fail the match creation if alcohol calculator update fails
+        console.warn('Failed to update alcohol calculator:', alcoholError);
+      }
 
       return { success: true, matchId, message: `Match ${teama} vs ${teamb} (${goalsa}:${goalsb}) erfolgreich hinzugefügt` };
 
