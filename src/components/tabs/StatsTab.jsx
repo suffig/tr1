@@ -282,7 +282,10 @@ export default function StatsTab({ onNavigate }) {
     mode: 'manual', // 'manual' or 'automatic'
     playerData: loadManagerSettings(),
     gameDay: new Date().toISOString().split('T')[0],
-    beerCount: 0
+    beerCount: {
+      aek: 0,
+      real: 0
+    }
   });
   
   const { data: matches, loading: matchesLoading } = useSupabaseQuery('matches', '*');
@@ -1675,32 +1678,91 @@ export default function StatsTab({ onNavigate }) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Bier-Anzahl (0,5L je)</label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="number"
-                      min="0"
-                      max="20"
-                      value={calculatorValues.beerCount}
-                      onChange={(e) => setCalculatorValues(prev => ({
-                        ...prev,
-                        beerCount: parseInt(e.target.value) || 0
-                      }))}
-                      className="flex-1 px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
-                      style={{ fontSize: '16px' }} // Prevent iPhone zoom
-                    />
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                      <label className="block text-xs text-blue-600 mb-1">🔵 AEK Bier</label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="20"
+                          value={calculatorValues.beerCount.aek}
+                          onChange={(e) => setCalculatorValues(prev => ({
+                            ...prev,
+                            beerCount: {
+                              ...prev.beerCount,
+                              aek: parseInt(e.target.value) || 0
+                            }
+                          }))}
+                          className="flex-1 px-2 py-1 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                          style={{ fontSize: '16px' }} // Prevent iPhone zoom
+                        />
+                        <button
+                          onClick={() => setCalculatorValues(prev => ({
+                            ...prev,
+                            beerCount: {
+                              ...prev.beerCount,
+                              aek: prev.beerCount.aek + 1
+                            }
+                          }))}
+                          className="beer-counter-button px-2 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                          title="0,5L Bier (5% Alkohol) für AEK hinzufügen"
+                        >
+                          🍺 +0,5L
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-red-600 mb-1">🔴 Real Bier</label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="20"
+                          value={calculatorValues.beerCount.real}
+                          onChange={(e) => setCalculatorValues(prev => ({
+                            ...prev,
+                            beerCount: {
+                              ...prev.beerCount,
+                              real: parseInt(e.target.value) || 0
+                            }
+                          }))}
+                          className="flex-1 px-2 py-1 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                          style={{ fontSize: '16px' }} // Prevent iPhone zoom
+                        />
+                        <button
+                          onClick={() => setCalculatorValues(prev => ({
+                            ...prev,
+                            beerCount: {
+                              ...prev.beerCount,
+                              real: prev.beerCount.real + 1
+                            }
+                          }))}
+                          className="beer-counter-button px-2 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
+                          title="0,5L Bier (5% Alkohol) für Real hinzufügen"
+                        >
+                          🍺 +0,5L
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-center mb-2">
                     <button
                       onClick={() => setCalculatorValues(prev => ({
                         ...prev,
-                        beerCount: prev.beerCount + 1
+                        beerCount: {
+                          aek: prev.beerCount.aek + 1,
+                          real: prev.beerCount.real + 1
+                        }
                       }))}
-                      className="beer-counter-button px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
-                      title="0,5L Bier (5% Alkohol) hinzufügen"
+                      className="beer-counter-button px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm"
+                      title="0,5L Bier (5% Alkohol) für beide Teams hinzufügen"
                     >
-                      🍺 +0,5L
+                      🍺🍺 Beide +0,5L
                     </button>
                   </div>
                   <div className="text-xs text-text-muted mt-1">
-                    Gesamt: {(calculatorValues.beerCount * 0.5).toFixed(1)}L Bier (5% Alkohol)
+                    AEK: {(calculatorValues.beerCount.aek * 0.5).toFixed(1)}L | Real: {(calculatorValues.beerCount.real * 0.5).toFixed(1)}L Bier (5% Alkohol)
                   </div>
                 </div>
               </div>
@@ -1709,9 +1771,10 @@ export default function StatsTab({ onNavigate }) {
                   <h5 className="font-medium mb-2">Spieltag-Alkohol</h5>
                   <div className="text-sm space-y-1">
                     <div>Schnaps: {calculateMatchAlcohol()}cl (40% Alkohol)</div>
-                    <div>Bier: {(calculatorValues.beerCount * 0.5 * 5).toFixed(1)}cl reiner Alkohol</div>
+                    <div>AEK Bier: {(calculatorValues.beerCount.aek * 0.5 * 5).toFixed(1)}cl reiner Alkohol</div>
+                    <div>Real Bier: {(calculatorValues.beerCount.real * 0.5 * 5).toFixed(1)}cl reiner Alkohol</div>
                     <div className="border-t pt-1 font-semibold">
-                      Gesamt: {(calculateMatchAlcohol() * 0.4 + calculatorValues.beerCount * 0.5 * 0.05).toFixed(1)}cl reiner Alkohol
+                      Gesamt: {(calculateMatchAlcohol() * 0.4 + (calculatorValues.beerCount.aek + calculatorValues.beerCount.real) * 0.5 * 0.05).toFixed(1)}cl reiner Alkohol
                     </div>
                   </div>
                 </div>
@@ -1840,9 +1903,9 @@ export default function StatsTab({ onNavigate }) {
                           ? (() => {
                               const recentMatches = getRecentMatches();
                               const latestMatch = recentMatches.length > 0 ? recentMatches[recentMatches.length - 1] : null;
-                              return calculateBloodAlcohol(getAutomaticAekDrinks(), calculatorValues.playerData.aekChef, latestMatch?.date, calculatorValues.beerCount);
+                              return calculateBloodAlcohol(getAutomaticAekDrinks(), calculatorValues.playerData.aekChef, latestMatch?.date, calculatorValues.beerCount.aek);
                             })()
-                          : calculateBloodAlcohol(Math.floor(calculatorValues.realGoals / 2) * 2, calculatorValues.playerData.aekChef, null, calculatorValues.beerCount);
+                          : calculateBloodAlcohol(Math.floor(calculatorValues.realGoals / 2) * 2, calculatorValues.playerData.aekChef, null, calculatorValues.beerCount.aek);
                         const levelInfo = getBakLevelInfo(bakValue);
                         return (
                           <div className={`text-sm mt-2 p-2 rounded ${levelInfo.bg} ${levelInfo.border} border`}>
@@ -1865,9 +1928,9 @@ export default function StatsTab({ onNavigate }) {
                           ? (() => {
                               const recentMatches = getRecentMatches();
                               const latestMatch = recentMatches.length > 0 ? recentMatches[recentMatches.length - 1] : null;
-                              return calculateBloodAlcohol(getAutomaticRealDrinks(), calculatorValues.playerData.realChef, latestMatch?.date, calculatorValues.beerCount);
+                              return calculateBloodAlcohol(getAutomaticRealDrinks(), calculatorValues.playerData.realChef, latestMatch?.date, calculatorValues.beerCount.real);
                             })()
-                          : calculateBloodAlcohol(Math.floor(calculatorValues.aekGoals / 2) * 2, calculatorValues.playerData.realChef, null, calculatorValues.beerCount);
+                          : calculateBloodAlcohol(Math.floor(calculatorValues.aekGoals / 2) * 2, calculatorValues.playerData.realChef, null, calculatorValues.beerCount.real);
                         const levelInfo = getBakLevelInfo(bakValue);
                         return (
                           <div className={`text-sm mt-2 p-2 rounded ${levelInfo.bg} ${levelInfo.border} border`}>
@@ -2011,7 +2074,7 @@ export default function StatsTab({ onNavigate }) {
         {/* New Enhanced Statistics Section */}
         <div className="modern-card">
           <h3 className="font-bold text-lg mb-4">📈 Zusätzliche Alkohol-Statistiken</h3>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-4 gap-4">
             <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
               <div className="text-2xl font-bold text-purple-600">
                 {(() => {
@@ -2048,12 +2111,36 @@ export default function StatsTab({ onNavigate }) {
                     const goals = (match.goalsa || 0) + (match.goalsb || 0);
                     return Math.floor(goals / 2) * 2 === 0;
                   }).length || 0;
-                  return alcoholFreeMatches;
+                  const lowAlcoholMatches = matches?.filter(match => {
+                    const goals = (match.goalsa || 0) + (match.goalsb || 0);
+                    const alcohol = Math.floor(goals / 2) * 2;
+                    return alcohol > 0 && alcohol <= 4;
+                  }).length || 0;
+                  return `${alcoholFreeMatches}/${lowAlcoholMatches}`;
                 })()}
               </div>
-              <div className="text-sm text-green-700">🚫 Alkoholfreie Spiele</div>
+              <div className="text-sm text-green-700">🚫 Nüchterne/Wenig-Alkohol Spiele</div>
               <div className="text-xs text-green-600 mt-1">
-                Spiele ohne Alkohol-Konsum
+                Alkoholfrei / Wenig Alkohol (≤4cl)
+              </div>
+            </div>
+
+            <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg border border-yellow-200">
+              <div className="text-2xl font-bold text-amber-600">
+                {(() => {
+                  const heavyAlcoholMatches = matches?.filter(match => {
+                    const goals = (match.goalsa || 0) + (match.goalsb || 0);
+                    const alcohol = Math.floor(goals / 2) * 2;
+                    return alcohol >= 10;
+                  }).length || 0;
+                  const totalMatches = matches?.length || 0;
+                  const percentage = totalMatches > 0 ? ((heavyAlcoholMatches / totalMatches) * 100).toFixed(0) : 0;
+                  return `${heavyAlcoholMatches} (${percentage}%)`;
+                })()}
+              </div>
+              <div className="text-sm text-amber-700">🍻 Starke Alkohol-Spiele</div>
+              <div className="text-xs text-amber-600 mt-1">
+                Spiele mit ≥10cl Alkohol
               </div>
             </div>
           </div>

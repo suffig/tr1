@@ -331,14 +331,66 @@ button:focus {
     font-size: 1.25rem;
   }
   
-  /* Better touch targets for iPhone */
-  .stats-nav-button,
-  .search-nav-button {
-    min-width: 56px;
-    min-height: 56px;
-    padding: 1rem 0.875rem;
-    border-radius: 14px;
+  /* Beer counter buttons - iPhone optimized */
+.beer-counter-button {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+/* Alcohol display cards - better iPhone readability */
+.alcohol-display-card {
+  padding: 1rem;
+  border-radius: 12px;
+  margin: 0.5rem 0;
+}
+
+/* Enhanced form inputs for iPhone */
+.alcohol-input-group input,
+.alcohol-input-group select {
+  font-size: 16px !important; /* Prevent iPhone zoom */
+  min-height: 44px;
+  padding: 0.75rem;
+  border-radius: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+}
+
+/* Better grid spacing on mobile */
+@media (max-width: 640px) {
+  .grid.grid-cols-2.gap-2 {
+    gap: 0.5rem;
   }
+  
+  .grid.grid-cols-2.gap-3 {
+    gap: 0.75rem;
+  }
+  
+  /* Improved alcohol statistics cards for iPhone */
+  .grid.md\\:grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .grid.md\\:grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  /* Better beer counter layout on small screens */
+  .beer-counter-button {
+    min-width: 60px;
+    padding: 0.5rem 0.25rem;
+    font-size: 12px;
+  }
+}
   
   /* Prevent content overlap on iPhone */
   .modern-card {
