@@ -341,7 +341,7 @@ export default function StatsTab({ onNavigate }) {
         setCalculatorValues(updatedValues);
       }
     }
-  }, [matches]); // Depend on matches array
+  }, [matches, calculatorValues]); // Depend on matches array and calculatorValues
   
   const loading = matchesLoading || playersLoading || sdsLoading || bansLoading;
 

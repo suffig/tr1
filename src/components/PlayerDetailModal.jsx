@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FIFADataService } from '../utils/fifaDataService';
 
 const PlayerDetailModal = ({ player, isOpen, onClose }) => {
@@ -10,9 +10,9 @@ const PlayerDetailModal = ({ player, isOpen, onClose }) => {
     if (isOpen && player) {
       loadFIFAData();
     }
-  }, [isOpen, player]);
+  }, [isOpen, player, loadFIFAData]);
 
-  const loadFIFAData = async () => {
+  const loadFIFAData = useCallback(async () => {
     setLoading(true);
     try {
       const data = await FIFADataService.getPlayerData(player.name);
@@ -23,7 +23,7 @@ const PlayerDetailModal = ({ player, isOpen, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [player.name]);
 
   const getTeamClass = () => {
     switch (player?.team) {
