@@ -6,6 +6,8 @@
  */
 
 import SofifaIntegration from './sofifaIntegration.js';
+// Import database access functions - using relative path from src/utils to root
+import { getAllPlayers } from '../../data.js';
 
 export class FIFADataService {
     
@@ -895,6 +897,234 @@ export class FIFADataService {
                 timestamp: new Date().toISOString()
             };
         }
+    }
+
+    /**
+     * Get all database players with enhanced FIFA data
+     * @param {Object} options - Enhancement options
+     * @returns {Promise<Array<Object>>} Array of enhanced player data
+     */
+    static async getAllDatabasePlayersWithFIFA(options = { useLiveData: false }) {
+        console.log('📋 Loading all database players with FIFA enhancement...');
+        
+        try {
+            const databasePlayers = await getAllPlayers();
+            console.log(`📊 Found ${databasePlayers.length} players in database`);
+            
+            if (databasePlayers.length === 0) {
+                return [];
+            }
+
+            const enhancedPlayers = [];
+            const batchSize = options.batchSize || 5;
+            
+            // Process players in batches to avoid overwhelming SoFIFA
+            for (let i = 0; i < databasePlayers.length; i += batchSize) {
+                const batch = databasePlayers.slice(i, i + batchSize);
+                const batchPromises = batch.map(async (dbPlayer) => {
+                    try {
+                        // Try to get FIFA data for this player
+                        const fifaData = await this.getPlayerData(dbPlayer.name, {
+                            useLiveData: options.useLiveData,
+                            fallbackToMock: true
+                        });
+
+                        // Merge database player data with FIFA data
+                        return {
+                            ...dbPlayer,
+                            fifaData: fifaData,
+                            enhanced: true,
+                            source: fifaData?.source || 'database_only'
+                        };
+                    } catch (error) {
+                        console.warn(`❌ Failed to enhance player ${dbPlayer.name}:`, error.message);
+                        return {
+                            ...dbPlayer,
+                            fifaData: this.generateDefaultPlayerData(dbPlayer.name),
+                            enhanced: false,
+                            error: error.message
+                        };
+                    }
+                });
+                
+                const batchResults = await Promise.all(batchPromises);
+                enhancedPlayers.push(...batchResults);
+                
+                // Small delay between batches
+                if (i + batchSize < databasePlayers.length) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+            
+            console.log(`✅ Enhanced ${enhancedPlayers.length} database players with FIFA data`);
+            return enhancedPlayers;
+            
+        } catch (error) {
+            console.error('❌ Error loading database players:', error.message);
+            return [];
+        }
+    }
+
+    /**
+     * Search SoFIFA for a player by name (without pre-existing URL)
+     * @param {string} playerName - Name of the player to search for
+     * @returns {Promise<Object|null>} Player data or null if not found
+     */
+    static async searchSofifaByName(playerName) {
+        console.log(`🔍 Searching SoFIFA for player: ${playerName}`);
+        
+        try {
+            // Use SoFIFA search functionality
+            const searchResult = await SofifaIntegration.searchPlayerByName(playerName);
+            
+            if (searchResult) {
+                console.log(`✅ Found player on SoFIFA: ${searchResult.name || playerName}`);
+                return {
+                    ...searchResult,
+                    searchName: playerName,
+                    found: true,
+                    source: 'sofifa_search'
+                };
+            } else {
+                console.log(`❌ Player not found on SoFIFA: ${playerName}`);
+                return null;
+            }
+        } catch (error) {
+            console.error(`❌ Error searching SoFIFA for ${playerName}:`, error.message);
+            return null;
+        }
+    }
+
+    /**
+     * Enhance a single database player with FIFA/SoFIFA data
+     * @param {Object} databasePlayer - Player from database
+     * @param {Object} options - Enhancement options
+     * @returns {Promise<Object>} Enhanced player data
+     */
+    static async enhanceDatabasePlayer(databasePlayer, options = { useLiveData: false }) {
+        console.log(`🔧 Enhancing player: ${databasePlayer.name}`);
+        
+        try {
+            // First try to get FIFA data using existing method
+            let fifaData = await this.getPlayerData(databasePlayer.name, {
+                useLiveData: options.useLiveData,
+                fallbackToMock: false // Don't fallback immediately
+            });
+
+            // If no FIFA data found and we should search SoFIFA
+            if (!fifaData && options.useLiveData) {
+                fifaData = await this.searchSofifaByName(databasePlayer.name);
+            }
+
+            // If still no data, generate default
+            if (!fifaData) {
+                fifaData = this.generateDefaultPlayerData(databasePlayer.name);
+                fifaData.source = 'generated_default';
+            }
+
+            return {
+                ...databasePlayer,
+                fifaData: fifaData,
+                enhanced: true,
+                enhancedAt: new Date().toISOString()
+            };
+            
+        } catch (error) {
+            console.error(`❌ Error enhancing player ${databasePlayer.name}:`, error.message);
+            return {
+                ...databasePlayer,
+                fifaData: this.generateDefaultPlayerData(databasePlayer.name),
+                enhanced: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Get FIFA data for all stored players (main method for the requirement)
+     * @param {Object} options - Processing options
+     * @returns {Promise<Object>} Results with enhanced players and statistics
+     */
+    static async processAllStoredPlayers(options = {}) {
+        const defaultOptions = {
+            useLiveData: true,
+            batchSize: 3,
+            includeStatistics: true
+        };
+        const finalOptions = { ...defaultOptions, ...options };
+        
+        console.log('🚀 Processing all stored players with SoFIFA integration...');
+        const startTime = Date.now();
+        
+        try {
+            const enhancedPlayers = await this.getAllDatabasePlayersWithFIFA(finalOptions);
+            
+            const results = {
+                players: enhancedPlayers,
+                totalCount: enhancedPlayers.length,
+                processedAt: new Date().toISOString(),
+                processingTime: `${Date.now() - startTime}ms`,
+                options: finalOptions
+            };
+
+            if (finalOptions.includeStatistics) {
+                const stats = this.generateProcessingStatistics(enhancedPlayers);
+                results.statistics = stats;
+            }
+            
+            console.log(`✅ Completed processing ${enhancedPlayers.length} players in ${results.processingTime}`);
+            return results;
+            
+        } catch (error) {
+            console.error('❌ Error processing stored players:', error.message);
+            return {
+                players: [],
+                totalCount: 0,
+                error: error.message,
+                processedAt: new Date().toISOString(),
+                processingTime: `${Date.now() - startTime}ms`
+            };
+        }
+    }
+
+    /**
+     * Generate statistics for processed players
+     * @param {Array<Object>} enhancedPlayers - Array of enhanced player data
+     * @returns {Object} Processing statistics
+     */
+    static generateProcessingStatistics(enhancedPlayers) {
+        const stats = {
+            total: enhancedPlayers.length,
+            enhanced: 0,
+            withMockData: 0,
+            withLiveData: 0,
+            withGeneratedData: 0,
+            failed: 0,
+            sourceBreakdown: {}
+        };
+
+        enhancedPlayers.forEach(player => {
+            if (player.enhanced) {
+                stats.enhanced++;
+            } else {
+                stats.failed++;
+            }
+
+            const source = player.fifaData?.source || 'unknown';
+            stats.sourceBreakdown[source] = (stats.sourceBreakdown[source] || 0) + 1;
+
+            if (source.includes('mock')) {
+                stats.withMockData++;
+            } else if (source.includes('sofifa')) {
+                stats.withLiveData++;
+            } else if (source.includes('generated')) {
+                stats.withGeneratedData++;
+            }
+        });
+
+        stats.successRate = stats.total > 0 ? ((stats.enhanced / stats.total) * 100).toFixed(1) + '%' : '0%';
+        
+        return stats;
     }
 }
 

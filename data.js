@@ -22,6 +22,14 @@ export async function getPlayersByTeam(team) {
     );
 }
 
+// Lade alle Spieler aus Supabase
+export async function getAllPlayers() {
+    return safeDataOperation(
+        () => dataManager.getAllPlayers(),
+        []
+    );
+}
+
 // Lade alle Ehemaligen (team === "Ehemalige")
 export async function getEhemalige() {
     return safeDataOperation(
