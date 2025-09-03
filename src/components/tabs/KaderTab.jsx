@@ -3,6 +3,7 @@ import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
 import LoadingSpinner from '../LoadingSpinner';
 import ExportImportManager from '../ExportImportManager';
 import FormationVisualizerModal from '../FormationVisualizerModal';
+import PlayerDetailModal from '../PlayerDetailModal';
 import { POSITIONS } from '../../utils/errorHandling';
 import toast from 'react-hot-toast';
 
@@ -11,6 +12,8 @@ export default function KaderTab({ onNavigate }) { // eslint-disable-line no-unu
   const [showExportImport, setShowExportImport] = useState(false);
   const [showFormationVisualizer, setShowFormationVisualizer] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [showPlayerDetail, setShowPlayerDetail] = useState(false);
   
   const { data: players, loading, error, refetch } = useSupabaseQuery('players', '*');
   const { update } = useSupabaseMutation('players');
@@ -176,6 +179,17 @@ export default function KaderTab({ onNavigate }) { // eslint-disable-line no-unu
     }
   };
 
+  // FIFA functionality
+  const handleShowPlayerDetail = (player) => {
+    setSelectedPlayer(player);
+    setShowPlayerDetail(true);
+  };
+
+  const handleClosePlayerDetail = () => {
+    setShowPlayerDetail(false);
+    setSelectedPlayer(null);
+  };
+
   if (loading) {
     return <LoadingSpinner message="Lade Kader..." />;
   }
@@ -335,12 +349,18 @@ export default function KaderTab({ onNavigate }) { // eslint-disable-line no-unu
                 {team.players.length > 0 ? (
                   <div className="grid gap-3">
                     {team.players.map((player) => (
-                      <div key={player.id} className="bg-bg-tertiary rounded-lg p-3 hover:bg-bg-secondary transition-colors">
+                      <div key={player.id} className="bg-bg-tertiary rounded-lg p-3 hover:bg-bg-secondary transition-colors cursor-pointer relative group"
+                           onClick={() => handleShowPlayerDetail(player)}>
+                        {/* FIFA Indicator */}
+                        <div className="absolute top-2 right-2 text-xs bg-blue-600 text-white px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                          🎮 FIFA
+                        </div>
+                        
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-3">
                               <div>
-                                <h4 className="font-medium text-text-primary">
+                                <h4 className="font-medium text-text-primary group-hover:text-blue-400 transition-colors">
                                   {player.name}
                                 </h4>
                                 <div className="flex items-center space-x-2 mt-1">
@@ -358,12 +378,29 @@ export default function KaderTab({ onNavigate }) { // eslint-disable-line no-unu
                                     </span>
                                   )}
                                 </div>
+                                <div className="text-xs text-blue-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <i className="fas fa-info-circle mr-1"></i>
+                                  Click for FIFA statistics
+                                </div>
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
                             <button
-                              onClick={() => handleEditPlayer(player)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleShowPlayerDetail(player);
+                              }}
+                              className="text-blue-400 hover:text-blue-300 transition-colors p-2 rounded-full hover:bg-blue-400/10"
+                              title="FIFA Statistics"
+                            >
+                              <i className="fas fa-chart-bar text-sm"></i>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditPlayer(player);
+                              }}
                               className="text-text-muted hover:text-primary-green transition-colors p-1"
                               title="Bearbeiten"
                             >
@@ -415,6 +452,15 @@ export default function KaderTab({ onNavigate }) { // eslint-disable-line no-unu
         <FormationVisualizerModal
           players={players || []}
           onClose={() => setShowFormationVisualizer(false)}
+        />
+      )}
+      
+      {/* Player Detail Modal with FIFA Stats */}
+      {showPlayerDetail && selectedPlayer && (
+        <PlayerDetailModal
+          player={selectedPlayer}
+          isOpen={showPlayerDetail}
+          onClose={handleClosePlayerDetail}
         />
       )}
       
