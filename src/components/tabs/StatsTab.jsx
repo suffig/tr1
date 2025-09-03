@@ -6,6 +6,12 @@ import EnhancedDashboard from '../EnhancedDashboard';
 import PlayerPerformanceAnalytics from './enhanced/PlayerPerformanceAnalytics';
 import MatchPredictionEngine from './enhanced/MatchPredictionEngine';
 import EnhancedFinancialAnalytics from './enhanced/EnhancedFinancialAnalytics';
+import { 
+  loadCalculatorValues, 
+  updateCalculatorValues, 
+  setDrinkingStartTime,
+  getHoursSinceDrinkingStarted 
+} from '../../utils/alcoholCalculatorPersistence';
 
 // Enhanced Statistics Calculator Class (ported from vanilla JS)
 class StatsCalculator {
@@ -273,19 +279,13 @@ export default function StatsTab({ onNavigate }) {
     };
   };
 
-  // Alcohol calculator state - moved from renderAlkohol function to component level
-  const [calculatorValues, setCalculatorValues] = useState({
-    aekPlayer: '',
-    realPlayer: '',
-    aekGoals: 0,
-    realGoals: 0,
-    mode: 'manual', // 'manual' or 'automatic'
-    playerData: loadManagerSettings(),
-    gameDay: new Date().toISOString().split('T')[0],
-    beerCount: {
-      aek: 0,
-      real: 0
-    }
+  // Alcohol calculator state - loaded from persistence and merged with manager settings
+  const [calculatorValues, setCalculatorValues] = useState(() => {
+    const persistedValues = loadCalculatorValues();
+    return {
+      ...persistedValues,
+      playerData: loadManagerSettings() // Always load fresh manager settings
+    };
   });
   
   const { data: matches, loading: matchesLoading } = useSupabaseQuery('matches', '*');
@@ -313,6 +313,14 @@ export default function StatsTab({ onNavigate }) {
       window.removeEventListener('managerSettingsChanged', handleStorageChange);
     };
   }, []);
+
+  // Helper function to update calculator values with persistence
+  const updateCalculatorValuesWithPersistence = (updates) => {
+    setCalculatorValues(prev => {
+      const updated = updateCalculatorValues(updates, prev);
+      return updated;
+    });
+  };
   
   const loading = matchesLoading || playersLoading || sdsLoading || bansLoading;
 
@@ -1359,10 +1367,11 @@ export default function StatsTab({ onNavigate }) {
       // 1 g/kg = 1000 mg/kg = 1000 mg per 1000g = 1 mg/g = 1‰
       let bac = alcoholGrams / (playerData.weight * r);
       
-      // Apply time decay if drinking time is provided
-      if (drinkingTime) {
+      // Apply time decay using persisted drinking time or provided time
+      const timeToUse = drinkingTime || calculatorValues.drinkingStartTime;
+      if (timeToUse) {
         const now = new Date();
-        const timePassed = (now - new Date(drinkingTime)) / (1000 * 60 * 60); // hours
+        const timePassed = (now - new Date(timeToUse)) / (1000 * 60 * 60); // hours
         
         // Alcohol elimination rate: approximately 0.15‰ per hour
         bac = Math.max(0, bac - (timePassed * 0.15));
@@ -1536,10 +1545,9 @@ export default function StatsTab({ onNavigate }) {
                     name="calculatorMode"
                     value="manual"
                     checked={calculatorValues.mode === 'manual'}
-                    onChange={(e) => setCalculatorValues(prev => ({
-                      ...prev,
+                    onChange={(e) => updateCalculatorValuesWithPersistence({
                       mode: e.target.value
-                    }))}
+                    })}
                     className="mr-2"
                   />
                   <span className="text-sm">Manuell</span>
@@ -1550,10 +1558,9 @@ export default function StatsTab({ onNavigate }) {
                     name="calculatorMode"
                     value="automatic"
                     checked={calculatorValues.mode === 'automatic'}
-                    onChange={(e) => setCalculatorValues(prev => ({
-                      ...prev,
+                    onChange={(e) => updateCalculatorValuesWithPersistence({
                       mode: e.target.value
-                    }))}
+                    })}
                     className="mr-2"
                   />
                   <span className="text-sm">Automatisch (letzten 2 Spieltage)</span>
@@ -1577,10 +1584,9 @@ export default function StatsTab({ onNavigate }) {
                     min="0"
                     max="20"
                     value={calculatorValues.aekGoals}
-                    onChange={(e) => setCalculatorValues(prev => ({
-                      ...prev,
+                    onChange={(e) => updateCalculatorValuesWithPersistence({
                       aekGoals: parseInt(e.target.value) || 0
-                    }))}
+                    })}
                     onFocus={(e) => e.target.select()}
                     className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                   />
@@ -1592,10 +1598,9 @@ export default function StatsTab({ onNavigate }) {
                     min="0"
                     max="20"
                     value={calculatorValues.realGoals}
-                    onChange={(e) => setCalculatorValues(prev => ({
-                      ...prev,
+                    onChange={(e) => updateCalculatorValuesWithPersistence({
                       realGoals: parseInt(e.target.value) || 0
-                    }))}
+                    })}
                     onFocus={(e) => e.target.select()}
                     className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                   />
@@ -1671,10 +1676,9 @@ export default function StatsTab({ onNavigate }) {
                   <input
                     type="date"
                     value={calculatorValues.gameDay}
-                    onChange={(e) => setCalculatorValues(prev => ({
-                      ...prev,
+                    onChange={(e) => updateCalculatorValuesWithPersistence({
                       gameDay: e.target.value
-                    }))}
+                    })}
                     className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                   />
                 </div>
@@ -1689,25 +1693,21 @@ export default function StatsTab({ onNavigate }) {
                           min="0"
                           max="20"
                           value={calculatorValues.beerCount.aek}
-                          onChange={(e) => setCalculatorValues(prev => ({
-                            ...prev,
+                          onChange={(e) => updateCalculatorValuesWithPersistence({
                             beerCount: {
-                              ...prev.beerCount,
                               aek: parseInt(e.target.value) || 0
                             }
-                          }))}
+                          })}
                           onFocus={(e) => e.target.select()}
                           className="flex-1 px-2 py-1 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                           style={{ fontSize: '16px' }} // Prevent iPhone zoom
                         />
                         <button
-                          onClick={() => setCalculatorValues(prev => ({
-                            ...prev,
+                          onClick={() => updateCalculatorValuesWithPersistence({
                             beerCount: {
-                              ...prev.beerCount,
-                              aek: prev.beerCount.aek + 1
+                              aek: calculatorValues.beerCount.aek + 1
                             }
-                          }))}
+                          })}
                           className="beer-counter-button px-2 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
                           title="0,5L Bier (5% Alkohol) für AEK hinzufügen"
                         >
@@ -1723,25 +1723,21 @@ export default function StatsTab({ onNavigate }) {
                           min="0"
                           max="20"
                           value={calculatorValues.beerCount.real}
-                          onChange={(e) => setCalculatorValues(prev => ({
-                            ...prev,
+                          onChange={(e) => updateCalculatorValuesWithPersistence({
                             beerCount: {
-                              ...prev.beerCount,
                               real: parseInt(e.target.value) || 0
                             }
-                          }))}
+                          })}
                           onFocus={(e) => e.target.select()}
                           className="flex-1 px-2 py-1 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                           style={{ fontSize: '16px' }} // Prevent iPhone zoom
                         />
                         <button
-                          onClick={() => setCalculatorValues(prev => ({
-                            ...prev,
+                          onClick={() => updateCalculatorValuesWithPersistence({
                             beerCount: {
-                              ...prev.beerCount,
-                              real: prev.beerCount.real + 1
+                              real: calculatorValues.beerCount.real + 1
                             }
-                          }))}
+                          })}
                           className="beer-counter-button px-2 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
                           title="0,5L Bier (5% Alkohol) für Real hinzufügen"
                         >
@@ -1752,13 +1748,12 @@ export default function StatsTab({ onNavigate }) {
                   </div>
                   <div className="flex justify-center mb-2">
                     <button
-                      onClick={() => setCalculatorValues(prev => ({
-                        ...prev,
+                      onClick={() => updateCalculatorValuesWithPersistence({
                         beerCount: {
-                          aek: prev.beerCount.aek + 1,
-                          real: prev.beerCount.real + 1
+                          aek: calculatorValues.beerCount.aek + 1,
+                          real: calculatorValues.beerCount.real + 1
                         }
-                      }))}
+                      })}
                       className="beer-counter-button px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm"
                       title="0,5L Bier (5% Alkohol) für beide Teams hinzufügen"
                     >
@@ -1964,6 +1959,46 @@ export default function StatsTab({ onNavigate }) {
             <div className="text-sm text-yellow-800">
               <strong>Regeln:</strong> Für jedes zweite Tor muss der Gegner 2cl Schnaps (40%) trinken. 
               0,5L Bier (5% Alkohol) entspricht 2,5cl reinem Alkohol.
+            </div>
+          </div>
+
+          {/* Drinking Time Tracking */}
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="font-bold text-lg text-blue-800">⏱️ Zeit-Tracking für BAK-Abbau</h4>
+              {calculatorValues.drinkingStartTime && (
+                <div className="text-sm text-blue-700">
+                  Gestartet: {new Date(calculatorValues.drinkingStartTime).toLocaleString('de-DE')}
+                </div>
+              )}
+            </div>
+            <div className="text-sm text-blue-700 mb-4">
+              Aktivieren Sie das Zeit-Tracking, um den Alkoholabbau über die Zeit korrekt zu berechnen. 
+              {calculatorValues.drinkingStartTime ? 
+                ` Seit Start: ${getHoursSinceDrinkingStarted(calculatorValues).toFixed(1)} Stunden.` :
+                ' Dies startet die Uhr für die BAK-Abbau-Berechnung.'
+              }
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  const updated = setDrinkingStartTime(calculatorValues);
+                  setCalculatorValues(updated);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                🍺 Trinken starten/neu starten
+              </button>
+              {calculatorValues.drinkingStartTime && (
+                <button
+                  onClick={() => updateCalculatorValuesWithPersistence({
+                    drinkingStartTime: null
+                  })}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  ⏹️ Zeit-Tracking stoppen
+                </button>
+              )}
             </div>
           </div>
 
