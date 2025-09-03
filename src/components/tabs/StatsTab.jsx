@@ -6,7 +6,6 @@ import EnhancedDashboard from '../EnhancedDashboard';
 import PlayerPerformanceAnalytics from './enhanced/PlayerPerformanceAnalytics';
 import MatchPredictionEngine from './enhanced/MatchPredictionEngine';
 import EnhancedFinancialAnalytics from './enhanced/EnhancedFinancialAnalytics';
-import AchievementMilestoneSystem from './enhanced/AchievementMilestoneSystem';
 
 // Enhanced Statistics Calculator Class (ported from vanilla JS)
 class StatsCalculator {
@@ -371,7 +370,6 @@ export default function StatsTab({ onNavigate }) {
     { id: 'playeranalytics', label: 'Spieler-Analytics', icon: '🎯' },
     { id: 'matchprediction', label: 'Match-Prediction', icon: '🔮' },
     { id: 'financialanalytics', label: 'Finanz-Analytics', icon: '💰' },
-    { id: 'achievements', label: 'Achievements', icon: '🏆' },
   ];
 
   if (loading) {
@@ -1344,16 +1342,18 @@ export default function StatsTab({ onNavigate }) {
       if (!playerData.weight || (alcoholCl === 0 && beerCount === 0)) return '0.00';
       
       // Convert cl of 40% alcohol to grams of pure alcohol
-      // 1cl = 10ml, 40% alcohol content, density of alcohol ≈ 0.8g/ml
-      let alcoholGrams = (alcoholCl * 10) * 0.4 * 0.8; // Corrected: include alcohol density
+      // 1cl = 10ml, 40% alcohol content, density of ethanol = 0.789g/ml
+      let alcoholGrams = (alcoholCl * 10) * 0.4 * 0.789;
       
-      // Add beer alcohol: 0.5L beer = 500ml * 0.05 (5%) = 25ml pure alcohol, density 0.8g/ml
-      alcoholGrams += (beerCount * 0.5 * 1000 * 0.05 * 0.8) / 1000; // Convert to grams
+      // Add beer alcohol: 0.5L beer = 500ml * 0.05 (5%) = 25ml pure alcohol, density 0.789g/ml
+      alcoholGrams += (beerCount * 0.5 * 1000 * 0.05 * 0.789) / 1000; // Convert to grams
       
-      // Corrected Widmark factors (standard clinical values)
+      // Widmark factors (standard clinical values)
       const r = playerData.gender === 'female' ? 0.60 : 0.70;
       
-      // Basic BAC calculation: alcohol (g) / (weight (kg) * r)
+      // Widmark formula: BAC = A / (r × m) where A=alcohol in grams, r=distribution factor, m=weight in kg
+      // The result is in g/kg, which needs to be converted to ‰ (mg/g)
+      // 1 g/kg = 1000 mg/kg = 1000 mg per 1000g = 1 mg/g = 1‰
       let bac = alcoholGrams / (playerData.weight * r);
       
       // Apply time decay if drinking time is provided
@@ -1362,12 +1362,21 @@ export default function StatsTab({ onNavigate }) {
         const timePassed = (now - new Date(drinkingTime)) / (1000 * 60 * 60); // hours
         
         // Alcohol elimination rate: approximately 0.15‰ per hour
-        const eliminationRate = 0.15;
-        bac = Math.max(0, bac - (timePassed * eliminationRate / 1000)); // Convert properly to decimal
+        bac = Math.max(0, bac - (timePassed * 0.15));
       }
       
-      // Convert to per mille (multiply by 1000)
-      return (bac * 1000).toFixed(2);
+      // The result is already in promille (‰), so no additional conversion needed
+      return bac.toFixed(2);
+    };
+
+    // Get BAK level warning and color coding
+    const getBakLevelInfo = (bakValue) => {
+      const bak = parseFloat(bakValue);
+      if (bak === 0) return { status: 'Nüchtern', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' };
+      if (bak < 0.5) return { status: 'Gering beeinträchtigt', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200' };
+      if (bak < 1.1) return { status: 'Fahruntüchtig', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' };
+      if (bak < 2.0) return { status: 'Stark beeinträchtigt', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' };
+      return { status: 'Lebensgefährlich', color: 'text-red-800', bg: 'bg-red-100', border: 'border-red-400' };
     };
 
     return (
@@ -1826,31 +1835,51 @@ export default function StatsTab({ onNavigate }) {
                       <div className="text-sm font-medium text-blue-600">
                         {calculatorValues.playerData.aekChef.name || 'Chef AEK'} trinkt: {getAutomaticAekDrinks()}cl
                       </div>
-                      <div className="text-xs text-text-muted mt-1">
-                        BAK: ≈ {(() => {
-                          if (calculatorValues.mode === 'automatic') {
-                            const recentMatches = getRecentMatches();
-                            const latestMatch = recentMatches.length > 0 ? recentMatches[recentMatches.length - 1] : null;
-                            return calculateBloodAlcohol(getAutomaticAekDrinks(), calculatorValues.playerData.aekChef, latestMatch?.date, calculatorValues.beerCount);
-                          }
-                          return calculateBloodAlcohol(Math.floor(calculatorValues.realGoals / 2) * 2, calculatorValues.playerData.aekChef, null, calculatorValues.beerCount);
-                        })()}‰
-                      </div>
+                      {(() => {
+                        const bakValue = calculatorValues.mode === 'automatic' 
+                          ? (() => {
+                              const recentMatches = getRecentMatches();
+                              const latestMatch = recentMatches.length > 0 ? recentMatches[recentMatches.length - 1] : null;
+                              return calculateBloodAlcohol(getAutomaticAekDrinks(), calculatorValues.playerData.aekChef, latestMatch?.date, calculatorValues.beerCount);
+                            })()
+                          : calculateBloodAlcohol(Math.floor(calculatorValues.realGoals / 2) * 2, calculatorValues.playerData.aekChef, null, calculatorValues.beerCount);
+                        const levelInfo = getBakLevelInfo(bakValue);
+                        return (
+                          <div className={`text-sm mt-2 p-2 rounded ${levelInfo.bg} ${levelInfo.border} border`}>
+                            <div className={`font-bold ${levelInfo.color}`}>
+                              BAK: {bakValue}‰
+                            </div>
+                            <div className={`text-xs ${levelInfo.color}`}>
+                              {levelInfo.status}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="p-3 border border-red-200 rounded-lg">
                       <div className="text-sm font-medium text-red-600">
                         {calculatorValues.playerData.realChef.name || 'Chef Real'} trinkt: {getAutomaticRealDrinks()}cl
                       </div>
-                      <div className="text-xs text-text-muted mt-1">
-                        BAK: ≈ {(() => {
-                          if (calculatorValues.mode === 'automatic') {
-                            const recentMatches = getRecentMatches();
-                            const latestMatch = recentMatches.length > 0 ? recentMatches[recentMatches.length - 1] : null;
-                            return calculateBloodAlcohol(getAutomaticRealDrinks(), calculatorValues.playerData.realChef, latestMatch?.date, calculatorValues.beerCount);
-                          }
-                          return calculateBloodAlcohol(Math.floor(calculatorValues.aekGoals / 2) * 2, calculatorValues.playerData.realChef, null, calculatorValues.beerCount);
-                        })()}‰
-                      </div>
+                      {(() => {
+                        const bakValue = calculatorValues.mode === 'automatic' 
+                          ? (() => {
+                              const recentMatches = getRecentMatches();
+                              const latestMatch = recentMatches.length > 0 ? recentMatches[recentMatches.length - 1] : null;
+                              return calculateBloodAlcohol(getAutomaticRealDrinks(), calculatorValues.playerData.realChef, latestMatch?.date, calculatorValues.beerCount);
+                            })()
+                          : calculateBloodAlcohol(Math.floor(calculatorValues.aekGoals / 2) * 2, calculatorValues.playerData.realChef, null, calculatorValues.beerCount);
+                        const levelInfo = getBakLevelInfo(bakValue);
+                        return (
+                          <div className={`text-sm mt-2 p-2 rounded ${levelInfo.bg} ${levelInfo.border} border`}>
+                            <div className={`font-bold ${levelInfo.color}`}>
+                              BAK: {bakValue}‰
+                            </div>
+                            <div className={`text-xs ${levelInfo.color}`}>
+                              {levelInfo.status}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="text-xs text-text-muted mt-3">
@@ -1866,6 +1895,37 @@ export default function StatsTab({ onNavigate }) {
             <div className="text-sm text-yellow-800">
               <strong>Regeln:</strong> Für jedes zweite Tor muss der Gegner 2cl Schnaps (40%) trinken. 
               0,5L Bier (5% Alkohol) entspricht 2,5cl reinem Alkohol.
+            </div>
+          </div>
+
+          {/* BAK Reference Table */}
+          <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <h4 className="font-bold text-lg mb-3 text-gray-800">📊 BAK-Referenztabelle</h4>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-sm">
+              <div className="p-2 bg-green-100 border border-green-200 rounded text-center">
+                <div className="font-semibold text-green-800">0.0‰</div>
+                <div className="text-xs text-green-700">Nüchtern</div>
+              </div>
+              <div className="p-2 bg-yellow-100 border border-yellow-200 rounded text-center">
+                <div className="font-semibold text-yellow-800">0.3-0.5‰</div>
+                <div className="text-xs text-yellow-700">Leicht beeinträchtigt</div>
+              </div>
+              <div className="p-2 bg-orange-100 border border-orange-200 rounded text-center">
+                <div className="font-semibold text-orange-800">0.5-1.1‰</div>
+                <div className="text-xs text-orange-700">Fahruntüchtig</div>
+              </div>
+              <div className="p-2 bg-red-100 border border-red-200 rounded text-center">
+                <div className="font-semibold text-red-800">1.1-2.0‰</div>
+                <div className="text-xs text-red-700">Stark beeinträchtigt</div>
+              </div>
+              <div className="p-2 bg-red-200 border border-red-400 rounded text-center">
+                <div className="font-semibold text-red-900">2.0+‰</div>
+                <div className="text-xs text-red-800">Lebensgefährlich</div>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-gray-600">
+              <strong>Wichtig:</strong> Dies ist nur eine grobe Orientierung. Individuelle Faktoren können stark abweichen. 
+              Bei hohen Werten bitte medizinische Hilfe suchen!
             </div>
           </div>
         </div>
@@ -2013,7 +2073,6 @@ export default function StatsTab({ onNavigate }) {
       case 'playeranalytics': return <PlayerPerformanceAnalytics />;
       case 'matchprediction': return <MatchPredictionEngine />;
       case 'financialanalytics': return <EnhancedFinancialAnalytics />;
-      case 'achievements': return <AchievementMilestoneSystem />;
       default: return renderOverview();
     }
   };
