@@ -1289,11 +1289,14 @@ export default function StatsTab({ onNavigate }) {
     };
 
     // Blood Alcohol Content calculation using Widmark formula with time decay
-    const calculateBloodAlcohol = (alcoholCl, playerData, drinkingTime = null) => {
-      if (!playerData.weight || alcoholCl === 0) return '0.00';
+    const calculateBloodAlcohol = (alcoholCl, playerData, drinkingTime = null, beerCount = 0) => {
+      if (!playerData.weight || (alcoholCl === 0 && beerCount === 0)) return '0.00';
       
       // Convert cl of 40% alcohol to grams of pure alcohol
-      const alcoholGrams = (alcoholCl * 10) * 0.4; // 1cl = 10ml, 40% alcohol content
+      let alcoholGrams = (alcoholCl * 10) * 0.4; // 1cl = 10ml, 40% alcohol content
+      
+      // Add beer alcohol: 0.5L beer = 500ml * 0.05 (5%) = 25ml pure alcohol = 2.5cl
+      alcoholGrams += (beerCount * 0.5 * 1000 * 0.05) / 10; // Convert to grams
       
       // Widmark factors (typical values)
       const r = playerData.gender === 'female' ? 0.55 : 0.68;
@@ -1402,9 +1405,9 @@ export default function StatsTab({ onNavigate }) {
             {matches?.slice().reverse().map((match, index) => {
               const aekGoals = match.goalsa || 0;
               const realGoals = match.goalsb || 0;
-              const totalAlcohol = (aekGoals + realGoals) * 2;
-              const aekDrinks = realGoals * 2;
-              const realDrinks = aekGoals * 2;
+              const totalAlcohol = Math.floor((aekGoals + realGoals) / 2) * 2;
+              const aekDrinks = Math.floor(realGoals / 2) * 2;
+              const realDrinks = Math.floor(aekGoals / 2) * 2;
               
               return (
                 <div key={match.id || index} className="p-3 bg-bg-secondary rounded-lg border border-border-light">
@@ -1499,10 +1502,11 @@ export default function StatsTab({ onNavigate }) {
               </div>
             </div>
             
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">{calculatorValues.mode === 'manual' && (
-                <>
-                <div>
+            <div className="grid md:grid-cols-2 gap-6 alcohol-calculator-grid">
+              <div className="space-y-4">
+                {calculatorValues.mode === 'manual' && (
+                <div className="space-y-4">
+                <div className="alcohol-input-group">
                   <label className="block text-sm font-medium mb-2">AEK Tore</label>
                   <input
                     type="number"
@@ -1516,7 +1520,7 @@ export default function StatsTab({ onNavigate }) {
                     className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                   />
                 </div>
-                <div>
+                <div className="alcohol-input-group">
                   <label className="block text-sm font-medium mb-2">Real Tore</label>
                   <input
                     type="number"
@@ -1530,7 +1534,7 @@ export default function StatsTab({ onNavigate }) {
                     className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
                   />
                 </div>
-                </>
+                </div>
                 )}
                 
                 {calculatorValues.mode === 'automatic' && (
@@ -1556,7 +1560,7 @@ export default function StatsTab({ onNavigate }) {
                 )}
               </div>
               <div className="space-y-4">
-                <div className="p-4 bg-bg-secondary rounded-lg">
+                <div className="p-4 bg-bg-secondary rounded-lg alcohol-display-card">
                   <div className="text-center">
                     <div className="text-3xl mb-2">🥃</div>
                     <div className="text-2xl font-bold text-primary-green">{calculateMatchAlcohol()}cl</div>
@@ -1621,13 +1625,14 @@ export default function StatsTab({ onNavigate }) {
                         beerCount: parseInt(e.target.value) || 0
                       }))}
                       className="flex-1 px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                      style={{ fontSize: '16px' }} // Prevent iPhone zoom
                     />
                     <button
                       onClick={() => setCalculatorValues(prev => ({
                         ...prev,
                         beerCount: prev.beerCount + 1
                       }))}
-                      className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+                      className="beer-counter-button px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
                       title="0,5L Bier (5% Alkohol) hinzufügen"
                     >
                       🍺 +0,5L
@@ -1673,6 +1678,7 @@ export default function StatsTab({ onNavigate }) {
                         }
                       }))}
                       className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                      style={{ fontSize: '16px' }} // Prevent iPhone zoom
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <input
@@ -1689,6 +1695,7 @@ export default function StatsTab({ onNavigate }) {
                           }
                         }))}
                         className="px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                        style={{ fontSize: '16px' }} // Prevent iPhone zoom
                       />
                       <select
                         value={calculatorValues.playerData.aekChef.gender}
@@ -1722,6 +1729,7 @@ export default function StatsTab({ onNavigate }) {
                         }
                       }))}
                       className="w-full px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                      style={{ fontSize: '16px' }} // Prevent iPhone zoom
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <input
@@ -1738,6 +1746,7 @@ export default function StatsTab({ onNavigate }) {
                           }
                         }))}
                         className="px-3 py-2 border border-border-light rounded-lg bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-green"
+                        style={{ fontSize: '16px' }} // Prevent iPhone zoom
                       />
                       <select
                         value={calculatorValues.playerData.realChef.gender}
@@ -1770,9 +1779,9 @@ export default function StatsTab({ onNavigate }) {
                           if (calculatorValues.mode === 'automatic') {
                             const recentMatches = getRecentMatches();
                             const latestMatch = recentMatches.length > 0 ? recentMatches[recentMatches.length - 1] : null;
-                            return calculateBloodAlcohol(getAutomaticAekDrinks(), calculatorValues.playerData.aekChef, latestMatch?.date);
+                            return calculateBloodAlcohol(getAutomaticAekDrinks(), calculatorValues.playerData.aekChef, latestMatch?.date, calculatorValues.beerCount);
                           }
-                          return calculateBloodAlcohol(calculatorValues.realGoals * 2, calculatorValues.playerData.aekChef);
+                          return calculateBloodAlcohol(Math.floor(calculatorValues.realGoals / 2) * 2, calculatorValues.playerData.aekChef, null, calculatorValues.beerCount);
                         })()}‰
                       </div>
                     </div>
@@ -1785,9 +1794,9 @@ export default function StatsTab({ onNavigate }) {
                           if (calculatorValues.mode === 'automatic') {
                             const recentMatches = getRecentMatches();
                             const latestMatch = recentMatches.length > 0 ? recentMatches[recentMatches.length - 1] : null;
-                            return calculateBloodAlcohol(getAutomaticRealDrinks(), calculatorValues.playerData.realChef, latestMatch?.date);
+                            return calculateBloodAlcohol(getAutomaticRealDrinks(), calculatorValues.playerData.realChef, latestMatch?.date, calculatorValues.beerCount);
                           }
-                          return calculateBloodAlcohol(calculatorValues.aekGoals * 2, calculatorValues.playerData.realChef);
+                          return calculateBloodAlcohol(Math.floor(calculatorValues.aekGoals / 2) * 2, calculatorValues.playerData.realChef, null, calculatorValues.beerCount);
                         })()}‰
                       </div>
                     </div>
@@ -1882,6 +1891,57 @@ export default function StatsTab({ onNavigate }) {
               </div>
               <div className="text-xs text-text-muted">
                 {alcoholStats.aekShots > alcoholStats.realShots ? 'Real verursacht mehr als getrunken' : 'Real trinkt mehr als verursacht'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* New Enhanced Statistics Section */}
+        <div className="modern-card">
+          <h3 className="font-bold text-lg mb-4">📈 Zusätzliche Alkohol-Statistiken</h3>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+              <div className="text-2xl font-bold text-purple-600">
+                {(() => {
+                  return totalMatches > 0 ? (alcoholStats.totalShots / totalMatches).toFixed(1) : '0.0';
+                })()}cl
+              </div>
+              <div className="text-sm text-purple-700">⌀ Alkohol pro Spiel</div>
+              <div className="text-xs text-purple-600 mt-1">
+                Durchschnittlicher Schnaps-Konsum
+              </div>
+            </div>
+            
+            <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-lg border border-orange-200">
+              <div className="text-2xl font-bold text-orange-600">
+                {(() => {
+                  const maxAlcoholMatch = matches?.reduce((max, match) => {
+                    const goals = (match.goalsa || 0) + (match.goalsb || 0);
+                    const alcohol = Math.floor(goals / 2) * 2;
+                    return alcohol > max ? alcohol : max;
+                  }, 0) || 0;
+                  return maxAlcoholMatch;
+                })()}cl
+              </div>
+              <div className="text-sm text-orange-700">🔥 Höchster Alkohol-Verbrauch</div>
+              <div className="text-xs text-orange-600 mt-1">
+                In einem einzelnen Spiel
+              </div>
+            </div>
+            
+            <div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
+              <div className="text-2xl font-bold text-green-600">
+                {(() => {
+                  const alcoholFreeMatches = matches?.filter(match => {
+                    const goals = (match.goalsa || 0) + (match.goalsb || 0);
+                    return Math.floor(goals / 2) * 2 === 0;
+                  }).length || 0;
+                  return alcoholFreeMatches;
+                })()}
+              </div>
+              <div className="text-sm text-green-700">🚫 Alkoholfreie Spiele</div>
+              <div className="text-xs text-green-600 mt-1">
+                Spiele ohne Alkohol-Konsum
               </div>
             </div>
           </div>

@@ -444,6 +444,46 @@ button:focus {
     grid-template-columns: 1fr;
     gap: 0.5rem;
   }
+
+  /* Alcohol calculator improvements for iPhone */
+  .alcohol-calculator-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .alcohol-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .alcohol-input-group input[type="number"] {
+    font-size: 16px; /* Prevent zoom on iPhone */
+    min-height: 48px;
+    padding: 0.75rem;
+    border-radius: 8px;
+  }
+
+  .alcohol-display-card {
+    padding: 1rem;
+    text-align: center;
+    border-radius: 12px;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* Beer counter button improvements */
+  .beer-counter-button {
+    min-width: 56px;
+    min-height: 48px;
+    font-size: 14px;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    touch-action: manipulation;
+  }
 }
 
 /* Better button groups for mobile */
@@ -466,6 +506,30 @@ button:focus {
     gap: 0.5rem;
     padding: 0.5rem 0;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Enhanced mobile number inputs - prevent iPhone zoom */
+  input[type="number"],
+  input[type="text"],
+  input[type="date"],
+  select {
+    font-size: 16px !important; /* Prevent iPhone zoom */
+    min-height: 48px;
+    padding: 0.75rem;
+    border-radius: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Special handling for number spinners on iPhone */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
   }
   
   .horizontal-scroll button {
