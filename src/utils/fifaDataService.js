@@ -1,19 +1,19 @@
 /**
  * FIFA Database Service for React Application
  * Provides integration with FIFA player statistics and ratings
- * Based on FIFA/SoFIFA data structure
- * Enhanced with real SoFIFA integration
+ * Based on FIFA/FutWiz data structure
+ * Enhanced with real FutWiz integration
  */
 
-import SofifaIntegration from './sofifaIntegration.js';
+import FutwizIntegration from './futwizIntegration.js';
 // Import database access functions - using relative path from src/utils to root
 import { getAllPlayers } from '../../data.js';
 
 export class FIFADataService {
     
     /**
-     * Mock FIFA database - in production this would connect to SoFIFA API or similar
-     * Data structure based on https://sofifa.com player profiles
+     * Mock FIFA database - in production this would connect to FutWiz API or similar
+     * Data structure based on https://www.futwiz.com player profiles
      */
     static fifaDatabase = {
         // Real Madrid players
@@ -66,8 +66,8 @@ export class FIFADataService {
             value: "€180M",
             wage: "€375K",
             contract: "2027",
-            sofifaId: 239085,
-            sofifaUrl: "https://sofifa.com/player/239085/erling-haaland/250001/"
+            futwizId: null, // ID unknown in provided data
+            futwizUrl: "https://www.futwiz.com/fc25/career-mode/player/erling-haaland/<ID_UNBEKANNT>"
         },
         
         "Kylian Mbappé": {
@@ -119,8 +119,8 @@ export class FIFADataService {
             value: "€180M",
             wage: "€1.2M",
             contract: "2029",
-            sofifaId: 231747,
-            sofifaUrl: "https://sofifa.com/player/231747/kylian-mbappe/250001/"
+            futwizId: 7796,
+            futwizUrl: "https://www.futwiz.com/fc25/career-mode/player/kylian-mbappe/7796"
         },
 
         "Jude Bellingham": {
@@ -172,8 +172,8 @@ export class FIFADataService {
             value: "€150M",
             wage: "€350K",
             contract: "2029",
-            sofifaId: 252371,
-            sofifaUrl: "https://sofifa.com/player/252371/jude-bellingham/250001/"
+            futwizId: null, // ID unknown in provided data  
+            futwizUrl: "https://www.futwiz.com/fc25/career-mode/player/jude-bellingham/<ID_UNBEKANNT>" // Not in provided data, placeholder
         },
 
         "Vinicius Jr.": {
@@ -225,8 +225,8 @@ export class FIFADataService {
             value: "€120M",
             wage: "€200K",
             contract: "2027",
-            sofifaId: 238794,
-            sofifaUrl: "https://sofifa.com/player/238794/vinicius-junior/250001/"
+            futwizId: null, // ID unknown in provided data
+            futwizUrl: "https://www.futwiz.com/fc25/career-mode/player/vinicius-jr/<ID_UNBEKANNT>" // Not in provided data, placeholder
         },
 
         // AEK Athens players (using more modest ratings)
@@ -279,8 +279,8 @@ export class FIFADataService {
             value: "€2.8M",
             wage: "€15K",
             contract: "2025",
-            sofifaId: 199455,
-            sofifaUrl: "https://sofifa.com/player/199455/sergio-araujo/250001/"
+            futwizId: null, // ID unknown in provided data
+            futwizUrl: "https://www.futwiz.com/fc25/career-mode/player/sergio-araujo/<ID_UNBEKANNT>" // Not in provided data, placeholder
         },
 
         "Nordin Amrabat": {
@@ -332,8 +332,8 @@ export class FIFADataService {
             value: "€800K",
             wage: "€8K",
             contract: "2024",
-            sofifaId: 199014,
-            sofifaUrl: "https://sofifa.com/player/199014/nordin-amrabat/250001/"
+            futwizId: null, // ID unknown in provided data
+            futwizUrl: "https://www.futwiz.com/fc25/career-mode/player/nordin-amrabat/<ID_UNBEKANNT>" // Not in provided data, placeholder
         },
 
         "Levi García": {
@@ -385,16 +385,69 @@ export class FIFADataService {
             value: "€4.5M",
             wage: "€12K",
             contract: "2025",
-            sofifaId: 236772,
-            sofifaUrl: "https://sofifa.com/player/236772/levi-garcia/250001/"
+            futwizId: null, // ID unknown in provided data
+            futwizUrl: "https://www.futwiz.com/fc25/career-mode/player/levi-garcia/<ID_UNBEKANNT>" // Not in provided data, placeholder
+        },
+
+        "Virgil van Dijk": {
+            overall: 90,
+            potential: 90,
+            positions: ["CB"],
+            age: 32,
+            height: 193,
+            weight: 92,
+            foot: "Right",
+            pace: 77,
+            shooting: 60,
+            passing: 91,
+            dribbling: 86,
+            defending: 92,
+            physical: 86,
+            skills: {
+                crossing: 65,
+                finishing: 60,
+                headingAccuracy: 89,
+                shortPassing: 91,
+                volleys: 65,
+                curve: 82,
+                fkAccuracy: 70,
+                longPassing: 91,
+                ballControl: 86,
+                acceleration: 78,
+                sprintSpeed: 76,
+                agility: 83,
+                reactions: 90,
+                balance: 83,
+                shotPower: 60,
+                jumping: 88,
+                stamina: 90,
+                strength: 86,
+                longShots: 65,
+                aggression: 88,
+                interceptions: 90,
+                positioning: 88,
+                vision: 88,
+                penalties: 70,
+                composure: 95
+            },
+            workrates: "Medium/High",
+            weakFoot: 3,
+            skillMoves: 3,
+            nationality: "Netherlands",
+            club: "Liverpool",
+            value: "€50M",
+            wage: "€220K",
+            contract: "2025",
+            futwizId: 3964,
+            futwizUrl: "https://www.futwiz.com/fc25/career-mode/player/virgil-van-dijk/3964"
         }
     };
 
     /**
-     * Search for a player in the FIFA database with SoFIFA integration
+     * Search for a player in the FIFA database with FutWiz integration
      * @param {string} playerName - Name of the player to search for
      * @param {Object} options - Search options
-     * @param {boolean} options.useLiveData - Whether to attempt SoFIFA fetch
+     * @param {boolean} options.useLiveData - Whether to attempt FutWiz fetch
      * @param {boolean} options.fallbackToMock - Whether to fallback to mock data
      * @returns {Object|null} FIFA player data or null if not found
      */
@@ -437,10 +490,10 @@ export class FIFADataService {
         }
 
         // If we have mock data and should attempt live fetch
-        if (mockData && options.useLiveData && mockData.sofifaUrl) {
+        if (mockData && options.useLiveData && mockData.futwizUrl) {
             try {
-                console.log('🌐 Attempting to fetch live data from SoFIFA...');
-                const liveData = await SofifaIntegration.fetchPlayerData(mockData.sofifaUrl, mockData.sofifaId);
+                console.log('🌐 Attempting to fetch live data from FutWiz...');
+                const liveData = await FutwizIntegration.fetchPlayerData(mockData.futwizUrl, mockData.futwizId);
                 
                 if (liveData) {
                     // Merge live data with mock data (live data takes precedence)
@@ -449,18 +502,18 @@ export class FIFADataService {
                         ...liveData,
                         searchName: cleanPlayerName,
                         found: true,
-                        source: 'sofifa_enhanced',
+                        source: 'futwiz_enhanced',
                         lastUpdated: new Date().toISOString(),
                         mockDataAvailable: true
                     };
                     
-                    console.log(`✅ Enhanced with live SoFIFA data for: ${cleanPlayerName}`);
+                    console.log(`✅ Enhanced with live FutWiz data for: ${cleanPlayerName}`);
                     return enhancedData;
                 } else {
                     console.log('⚠️ Live data fetch failed, using mock data');
                     mockData.source = 'mock_fallback';
-                    mockData.sofifaAttempted = true;
-                    mockData.sofifaFetchTime = new Date().toISOString();
+                    mockData.futwizAttempted = true;
+                    mockData.futwizFetchTime = new Date().toISOString();
                 }
             } catch (error) {
                 console.error('❌ Error fetching live data:', error.message);
@@ -613,8 +666,8 @@ export class FIFADataService {
             value: "€" + (Math.random() * 5 + 0.5).toFixed(1) + "M",
             wage: "€" + Math.floor(Math.random() * 20 + 5) + "K",
             contract: "2025",
-            sofifaId: null,
-            sofifaUrl: null,
+            futwizId: null,
+            futwizUrl: null,
             searchName: playerName,
             found: false,
             generated: true
@@ -722,7 +775,7 @@ export class FIFADataService {
     }
 
     /**
-     * Batch fetch multiple players with SoFIFA integration
+     * Batch fetch multiple players with FutWiz integration
      * @param {Array<string>} playerNames - Array of player names
      * @param {Object} options - Fetch options
      * @returns {Promise<Array<Object>>} Array of player data
@@ -785,21 +838,21 @@ export class FIFADataService {
     }
 
     /**
-     * Get SoFIFA integration statistics
+     * Get FutWiz integration statistics
      * @returns {Object} Integration stats
      */
-    static getSofifaStats() {
-        const cacheStats = SofifaIntegration.getCacheStats();
+    static getFutwizStats() {
+        const cacheStats = FutwizIntegration.getCacheStats();
         const totalPlayers = Object.keys(this.fifaDatabase).length;
-        const playersWithSofifaUrls = Object.values(this.fifaDatabase)
-            .filter(player => player.sofifaUrl).length;
+        const playersWithFutwizUrls = Object.values(this.fifaDatabase)
+            .filter(player => player.futwizUrl).length;
 
         return {
             cache: cacheStats,
             database: {
                 totalPlayers,
-                playersWithSofifaUrls,
-                sofifaUrlCoverage: `${((playersWithSofifaUrls / totalPlayers) * 100).toFixed(1)}%`
+                playersWithFutwizUrls,
+                futwizUrlCoverage: `${((playersWithFutwizUrls / totalPlayers) * 100).toFixed(1)}%`
             },
             integration: {
                 status: 'active',
@@ -809,11 +862,11 @@ export class FIFADataService {
     }
 
     /**
-     * Validate SoFIFA URLs in the database
+     * Validate FutWiz URLs in the database
      * @returns {Object} Validation results
      */
-    static validateSofifaUrls() {
-        console.log('🔍 Validating SoFIFA URLs in database...');
+    static validateFutwizUrls() {
+        console.log('🔍 Validating FutWiz URLs in database...');
         
         const results = {
             valid: [],
@@ -822,12 +875,12 @@ export class FIFADataService {
         };
 
         Object.entries(this.fifaDatabase).forEach(([name, data]) => {
-            if (!data.sofifaUrl) {
+            if (!data.futwizUrl) {
                 results.missing.push(name);
-            } else if (this.isValidSofifaUrl(data.sofifaUrl)) {
-                results.valid.push({ name, url: data.sofifaUrl, id: data.sofifaId });
+            } else if (this.isValidFutwizUrl(data.futwizUrl)) {
+                results.valid.push({ name, url: data.futwizUrl, id: data.futwizId });
             } else {
-                results.invalid.push({ name, url: data.sofifaUrl });
+                results.invalid.push({ name, url: data.futwizUrl });
             }
         });
 
@@ -836,39 +889,39 @@ export class FIFADataService {
     }
 
     /**
-     * Validate a SoFIFA URL format
+     * Validate a FutWiz URL format
      * @param {string} url - URL to validate
      * @returns {boolean} True if valid
      */
-    static isValidSofifaUrl(url) {
+    static isValidFutwizUrl(url) {
         if (typeof url !== 'string') return false;
         
-        const sofifaPattern = /^https:\/\/sofifa\.com\/player\/\d+\/[^\/]+\/\d+\/?$/;
-        return sofifaPattern.test(url);
+        const futwizPattern = /^https:\/\/www\.futwiz\.com\/fc25\/career-mode\/player\/[^\/]+\/\d+$/;
+        return futwizPattern.test(url);
     }
 
     /**
      * Clear all caches
      */
     static clearAllCaches() {
-        SofifaIntegration.clearCache();
+        FutwizIntegration.clearCache();
         console.log('🗑️ All FIFA service caches cleared');
     }
 
     /**
-     * Test SoFIFA connectivity
+     * Test FutWiz connectivity
      * @returns {Promise<Object>} Test results
      */
-    static async testSofifaConnectivity() {
-        console.log('🧪 Testing SoFIFA connectivity...');
+    static async testFutwizConnectivity() {
+        console.log('🧪 Testing FutWiz connectivity...');
         
         const testPlayer = Object.entries(this.fifaDatabase)
-            .find(([name, data]) => data.sofifaUrl);
+            .find(([name, data]) => data.futwizUrl);
 
         if (!testPlayer) {
             return {
                 success: false,
-                error: 'No players with SoFIFA URLs available for testing'
+                error: 'No players with FutWiz URLs available for testing'
             };
         }
 
@@ -876,9 +929,9 @@ export class FIFADataService {
         
         try {
             const startTime = Date.now();
-            const result = await SofifaIntegration.fetchPlayerData(
-                playerData.sofifaUrl, 
-                playerData.sofifaId
+            const result = await FutwizIntegration.fetchPlayerData(
+                playerData.futwizUrl, 
+                playerData.futwizId
             );
             const endTime = Date.now();
 
@@ -918,7 +971,7 @@ export class FIFADataService {
             const enhancedPlayers = [];
             const batchSize = options.batchSize || 5;
             
-            // Process players in batches to avoid overwhelming SoFIFA
+            // Process players in batches to avoid overwhelming FutWiz
             for (let i = 0; i < databasePlayers.length; i += batchSize) {
                 const batch = databasePlayers.slice(i, i + batchSize);
                 const batchPromises = batch.map(async (dbPlayer) => {
@@ -966,37 +1019,37 @@ export class FIFADataService {
     }
 
     /**
-     * Search SoFIFA for a player by name (without pre-existing URL)
+     * Search FutWiz for a player by name (without pre-existing URL)
      * @param {string} playerName - Name of the player to search for
      * @returns {Promise<Object|null>} Player data or null if not found
      */
-    static async searchSofifaByName(playerName) {
-        console.log(`🔍 Searching SoFIFA for player: ${playerName}`);
+    static async searchFutwizByName(playerName) {
+        console.log(`🔍 Searching FutWiz for player: ${playerName}`);
         
         try {
-            // Use SoFIFA search functionality
-            const searchResult = await SofifaIntegration.searchPlayerByName(playerName);
+            // Use FutWiz search functionality
+            const searchResult = await FutwizIntegration.searchPlayerByName(playerName);
             
             if (searchResult) {
-                console.log(`✅ Found player on SoFIFA: ${searchResult.name || playerName}`);
+                console.log(`✅ Found player on FutWiz: ${searchResult.name || playerName}`);
                 return {
                     ...searchResult,
                     searchName: playerName,
                     found: true,
-                    source: 'sofifa_search'
+                    source: 'futwiz_search'
                 };
             } else {
-                console.log(`❌ Player not found on SoFIFA: ${playerName}`);
+                console.log(`❌ Player not found on FutWiz: ${playerName}`);
                 return null;
             }
         } catch (error) {
-            console.error(`❌ Error searching SoFIFA for ${playerName}:`, error.message);
+            console.error(`❌ Error searching FutWiz for ${playerName}:`, error.message);
             return null;
         }
     }
 
     /**
-     * Enhance a single database player with FIFA/SoFIFA data
+     * Enhance a single database player with FIFA/FutWiz data
      * @param {Object} databasePlayer - Player from database
      * @param {Object} options - Enhancement options
      * @returns {Promise<Object>} Enhanced player data
@@ -1011,9 +1064,9 @@ export class FIFADataService {
                 fallbackToMock: false // Don't fallback immediately
             });
 
-            // If no FIFA data found and we should search SoFIFA
+            // If no FIFA data found and we should search FutWiz
             if (!fifaData && options.useLiveData) {
-                fifaData = await this.searchSofifaByName(databasePlayer.name);
+                fifaData = await this.searchFutwizByName(databasePlayer.name);
             }
 
             // If still no data, generate default
@@ -1053,7 +1106,7 @@ export class FIFADataService {
         };
         const finalOptions = { ...defaultOptions, ...options };
         
-        console.log('🚀 Processing all stored players with SoFIFA integration...');
+        console.log('🚀 Processing all stored players with FutWiz integration...');
         const startTime = Date.now();
         
         try {
@@ -1115,7 +1168,7 @@ export class FIFADataService {
 
             if (source.includes('mock')) {
                 stats.withMockData++;
-            } else if (source.includes('sofifa')) {
+            } else if (source.includes('futwiz')) {
                 stats.withLiveData++;
             } else if (source.includes('generated')) {
                 stats.withGeneratedData++;
