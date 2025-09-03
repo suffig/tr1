@@ -120,6 +120,7 @@ export default function TeamSettingsTab() {
                   max="80"
                   value={managers.aek.age}
                   onChange={(e) => handleManagerChange('aek', 'age', e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="w-full px-3 py-2 border border-border-light rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -131,6 +132,7 @@ export default function TeamSettingsTab() {
                   max="200"
                   value={managers.aek.weight}
                   onChange={(e) => handleManagerChange('aek', 'weight', e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="w-full px-3 py-2 border border-border-light rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -164,6 +166,7 @@ export default function TeamSettingsTab() {
                   max="80"
                   value={managers.real.age}
                   onChange={(e) => handleManagerChange('real', 'age', e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="w-full px-3 py-2 border border-border-light rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
@@ -175,6 +178,7 @@ export default function TeamSettingsTab() {
                   max="200"
                   value={managers.real.weight}
                   onChange={(e) => handleManagerChange('real', 'weight', e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="w-full px-3 py-2 border border-border-light rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>

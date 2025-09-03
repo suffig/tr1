@@ -196,6 +196,7 @@ export default function AddPlayerTab() {
                     step="0.1"
                     value={formData.value}
                     onChange={(e) => handleInputChange('value', e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     className="form-input"
                     placeholder="0.0"
                     disabled={loading}
@@ -215,6 +216,7 @@ export default function AddPlayerTab() {
                     min="0"
                     value={formData.goals}
                     onChange={(e) => handleInputChange('goals', e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     className="form-input"
                     placeholder="0"
                     disabled={loading}
