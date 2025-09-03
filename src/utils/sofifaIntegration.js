@@ -579,6 +579,86 @@ export class SofifaIntegration {
             generated: true
         };
     }
+
+    /**
+     * Validate SoFIFA URL format and structure
+     * @param {string} url - URL to validate
+     * @returns {Object} Validation result with details
+     */
+    static validateSofifaUrl(url) {
+        if (!url || typeof url !== 'string') {
+            return { valid: false, error: 'URL is required and must be a string' };
+        }
+
+        // Check basic SoFIFA URL pattern
+        const basicPattern = /^https:\/\/sofifa\.com\/player\/(\d+)/;
+        const basicMatch = url.match(basicPattern);
+        
+        if (!basicMatch) {
+            return { valid: false, error: 'Invalid SoFIFA URL format' };
+        }
+
+        const playerId = parseInt(basicMatch[1]);
+        
+        // Check for the canonical ID format (recommended)
+        const canonicalPattern = /^https:\/\/sofifa\.com\/player\/(\d+)\/?$/;
+        if (canonicalPattern.test(url)) {
+            return { 
+                valid: true, 
+                playerId, 
+                type: 'canonical',
+                note: 'Canonical ID URL - guaranteed correct player'
+            };
+        }
+
+        // Check for dataset URL format with r=250001
+        const datasetPattern = /^https:\/\/sofifa\.com\/player\/(\d+)\/\?r=250001$/;
+        if (datasetPattern.test(url)) {
+            return { 
+                valid: true, 
+                playerId, 
+                type: 'dataset',
+                note: 'Dataset URL with r=250001 parameter'
+            };
+        }
+
+        // Check for slug URL format
+        const slugPattern = /^https:\/\/sofifa\.com\/player\/(\d+)\/([a-z0-9-]+)\/?$/;
+        if (slugPattern.test(url)) {
+            return { 
+                valid: true, 
+                playerId, 
+                type: 'slug',
+                note: 'Slug URL format (optional)'
+            };
+        }
+
+        // Check for old format or other variations
+        return { 
+            valid: true, 
+            playerId, 
+            type: 'other',
+            warning: 'Valid but non-standard format. Consider using canonical or dataset URL.'
+        };
+    }
+
+    /**
+     * Generate canonical URLs from player ID
+     * @param {number} playerId - SoFIFA player ID
+     * @param {string} slug - Optional player slug
+     * @returns {Object} Object with different URL formats
+     */
+    static generatePlayerUrls(playerId, slug = null) {
+        if (!playerId || !Number.isInteger(playerId)) {
+            throw new Error('Player ID is required and must be an integer');
+        }
+
+        return {
+            canonical: `https://sofifa.com/player/${playerId}/`,
+            dataset: `https://sofifa.com/player/${playerId}/?r=250001`,
+            slug: slug ? `https://sofifa.com/player/${playerId}/${slug}/` : null
+        };
+    }
 }
 
 export default SofifaIntegration;
