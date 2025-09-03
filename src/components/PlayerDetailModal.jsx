@@ -6,12 +6,6 @@ const PlayerDetailModal = ({ player, isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [activeSkillGroup, setActiveSkillGroup] = useState(null);
 
-  useEffect(() => {
-    if (isOpen && player) {
-      loadFIFAData();
-    }
-  }, [isOpen, player, loadFIFAData]);
-
   const loadFIFAData = useCallback(async () => {
     setLoading(true);
     try {
@@ -24,6 +18,12 @@ const PlayerDetailModal = ({ player, isOpen, onClose }) => {
       setLoading(false);
     }
   }, [player.name]);
+
+  useEffect(() => {
+    if (isOpen && player) {
+      loadFIFAData();
+    }
+  }, [isOpen, player, loadFIFAData]);
 
   const getTeamClass = () => {
     switch (player?.team) {
