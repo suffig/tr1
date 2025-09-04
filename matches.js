@@ -1818,124 +1818,114 @@ async function submitMatchForm(event, id) {
 // ---------- DELETE ----------
 
 async function deleteMatch(id) {
-    // 1. Hole alle Infos des Matches
-    const { data: match } = await supabase
-        .from('matches')
-        .select('date,prizeaek,prizereal,goalslista,goalslistb,manofthematch,yellowa,reda,yellowb,redb')
-        .eq('id', id)
-        .single();
+    try {
+        // 1. Hole alle Infos des Matches
+        const { data: match } = await supabase
+            .from('matches')
+            .select('date,prizeaek,prizereal,goalslista,goalslistb,manofthematch,yellowa,reda,yellowb,redb')
+            .eq('id', id)
+            .single();
 
-    if (!match) return;
+        if (!match) return;
 
-    // 2. Transaktionen zu diesem Match löschen (inkl. Echtgeld-Ausgleich)
-    await supabase
-        .from('transactions')
-        .delete()
-        .or(`type.eq.Preisgeld,type.eq.Bonus SdS,type.eq.Echtgeld-Ausgleich,type.eq.Echtgeld-Ausgleich (getilgt)`)
-        .eq('match_id', id);
+        // 2. FIRST get all transactions for this match before deleting them
+        const { data: allTransactions } = await supabase
+            .from('transactions')
+            .select('type,team,amount')
+            .eq('match_id', id);
 
-    // 3. Finanzen zurückrechnen (niemals unter 0!)
-    if (typeof match.prizeaek === "number" && match.prizeaek !== 0) {
-        const { data: aekFin } = await supabase.from('finances').select('balance').eq('team', 'AEK').single();
-        let newBal = (aekFin?.balance || 0) - match.prizeaek;
-        if (newBal < 0) newBal = 0;
-        await supabase.from('finances').update({
-            balance: newBal
-        }).eq('team', 'AEK');
-    }
-    if (typeof match.prizereal === "number" && match.prizereal !== 0) {
-        const { data: realFin } = await supabase.from('finances').select('balance').eq('team', 'Real').single();
-        let newBal = (realFin?.balance || 0) - match.prizereal;
-        if (newBal < 0) newBal = 0;
-        await supabase.from('finances').update({
-            balance: newBal
-        }).eq('team', 'Real');
-    }
-    // Bonus SdS rückrechnen
-    const { data: bonusTrans } = await supabase.from('transactions')
-        .select('team,amount')
-        .eq('match_id', id)
-        .eq('type', 'Bonus SdS');
-    if (bonusTrans) {
-        for (const t of bonusTrans) {
-            const { data: fin } = await supabase.from('finances').select('balance').eq('team', t.team).single();
-            let newBal = (fin?.balance || 0) - t.amount;
-            if (newBal < 0) newBal = 0;
-            await supabase.from('finances').update({
-                balance: newBal
-            }).eq('team', t.team);
+        // 3. Finanzen zurückrechnen (niemals unter 0!) - Handle all transaction types
+        if (allTransactions && allTransactions.length > 0) {
+            for (const transaction of allTransactions) {
+                const { data: teamFin } = await supabase.from('finances').select('balance').eq('team', transaction.team).single();
+                let newBal = (teamFin?.balance || 0) - transaction.amount;
+                if (newBal < 0) newBal = 0;
+                await supabase.from('finances').update({
+                    balance: newBal
+                }).eq('team', transaction.team);
+            }
         }
-    }
 
-    // 4. Spieler-Tore abziehen
-    const removeGoals = async (goalslist, team) => {
-        if (!goalslist || !Array.isArray(goalslist)) return;
-        
-        // Count goals per player - handle both new object format and old string array format
-        const goalCounts = {};
-        
-        if (goalslist.length > 0 && typeof goalslist[0] === 'object' && goalslist[0].player !== undefined) {
-            // New object format: [{"count": 4, "player": "Walker"}]
-            goalslist.forEach(goal => {
-                if (goal.player) {
-                    goalCounts[goal.player] = (goalCounts[goal.player] || 0) + (goal.count || 1);
+        // 4. NOW delete all transactions for this match
+        await supabase
+            .from('transactions')
+            .delete()
+            .eq('match_id', id);
+
+        // 5. Spieler-Tore abziehen
+        const removeGoals = async (goalslist, team) => {
+            if (!goalslist || !Array.isArray(goalslist)) return;
+            
+            // Count goals per player - handle both new object format and old string array format
+            const goalCounts = {};
+            
+            if (goalslist.length > 0 && typeof goalslist[0] === 'object' && goalslist[0].player !== undefined) {
+                // New object format: [{"count": 4, "player": "Walker"}]
+                goalslist.forEach(goal => {
+                    if (goal.player) {
+                        goalCounts[goal.player] = (goalCounts[goal.player] || 0) + (goal.count || 1);
+                    }
+                });
+            } else {
+                // Old string array format: ["Walker", "Walker", "Messi"]
+                for (const playerName of goalslist) {
+                    if (!playerName) continue;
+                    goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
                 }
-            });
-        } else {
-            // Old string array format: ["Walker", "Walker", "Messi"]
-            for (const playerName of goalslist) {
-                if (!playerName) continue;
-                goalCounts[playerName] = (goalCounts[playerName] || 0) + 1;
             }
-        }
-        
-        // Remove each player's goal count
-        for (const [playerName, count] of Object.entries(goalCounts)) {
-            const { data: player } = await supabase.from('players').select('goals').eq('name', playerName).eq('team', team).single();
-            let newGoals = (player?.goals || 0) - count;
-            if (newGoals < 0) newGoals = 0;
-            await supabase.from('players').update({ goals: newGoals }).eq('name', playerName).eq('team', team);
-        }
-    };
-    await removeGoals(match.goalslista, "AEK");
-    await removeGoals(match.goalslistb, "Real");
-
-    // 5. Spieler des Spiels rückgängig machen
-    if (match.manofthematch) {
-        let sdsTeam = null;
-        
-        // Helper function to check if player is in goals list - handle both object and string array formats
-        const checkPlayerInGoals = (goalsList, playerName) => {
-          if (!goalsList || !goalsList.length) return false;
-          // Handle object format: [{"count": 1, "player": "Kante"}]
-          if (typeof goalsList[0] === 'object' && goalsList[0].player !== undefined) {
-            return goalsList.some(goal => goal.player === playerName);
-          }
-          // Handle string array format: ["Kante", "Walker"]
-          return goalsList.includes(playerName);
+            
+            // Remove each player's goal count
+            for (const [playerName, count] of Object.entries(goalCounts)) {
+                const { data: player } = await supabase.from('players').select('goals').eq('name', playerName).eq('team', team).single();
+                let newGoals = (player?.goals || 0) - count;
+                if (newGoals < 0) newGoals = 0;
+                await supabase.from('players').update({ goals: newGoals }).eq('name', playerName).eq('team', team);
+            }
         };
-        
-        if (checkPlayerInGoals(match.goalslista, match.manofthematch)) sdsTeam = "AEK";
-        else if (checkPlayerInGoals(match.goalslistb, match.manofthematch)) sdsTeam = "Real";
-        else {
-            const { data: p } = await supabase.from('players').select('team').eq('name', match.manofthematch).single();
-            sdsTeam = p?.team;
-        }
-        if (sdsTeam) {
-            const { data: sds } = await supabase.from('spieler_des_spiels').select('count').eq('name', match.manofthematch).eq('team', sdsTeam).single();
-            if (sds) {
-                const newCount = Math.max(0, sds.count - 1);
-                await supabase.from('spieler_des_spiels').update({ count: newCount }).eq('name', match.manofthematch).eq('team', sdsTeam);
+        await removeGoals(match.goalslista, "AEK");
+        await removeGoals(match.goalslistb, "Real");
+
+        // 6. Spieler des Spiels rückgängig machen
+        if (match.manofthematch) {
+            let sdsTeam = null;
+            
+            // Helper function to check if player is in goals list - handle both object and string array formats
+            const checkPlayerInGoals = (goalsList, playerName) => {
+              if (!goalsList || !goalsList.length) return false;
+              // Handle object format: [{"count": 1, "player": "Kante"}]
+              if (typeof goalsList[0] === 'object' && goalsList[0].player !== undefined) {
+                return goalsList.some(goal => goal.player === playerName);
+              }
+              // Handle string array format: ["Kante", "Walker"]
+              return goalsList.includes(playerName);
+            };
+            
+            if (checkPlayerInGoals(match.goalslista, match.manofthematch)) sdsTeam = "AEK";
+            else if (checkPlayerInGoals(match.goalslistb, match.manofthematch)) sdsTeam = "Real";
+            else {
+                const { data: p } = await supabase.from('players').select('team').eq('name', match.manofthematch).single();
+                sdsTeam = p?.team;
+            }
+            if (sdsTeam) {
+                const { data: sds } = await supabase.from('spieler_des_spiels').select('count').eq('name', match.manofthematch).eq('team', sdsTeam).single();
+                if (sds) {
+                    const newCount = Math.max(0, sds.count - 1);
+                    await supabase.from('spieler_des_spiels').update({ count: newCount }).eq('name', match.manofthematch).eq('team', sdsTeam);
+                }
             }
         }
+
+        // 7. Karten-Information ist nur auf Match-Ebene gespeichert, 
+        // keine individuellen Spieler-Kartenzähler vorhanden
+
+        // 8. Match löschen
+        await supabase.from('matches').delete().eq('id', id);
+        // Kein manuelles Neuladen nötig – Live-Sync!
+    
+    } catch (error) {
+        console.error('Error deleting match:', error);
+        throw error; // Re-throw to let the calling function handle it
     }
-
-    // 6. Karten zurücksetzen (Spieler-Kartenzähler updaten, falls du sowas hast)
-    // Falls du Karten pro Spieler speicherst, musst du analog zu removeGoals abziehen!
-
-    // 7. Match löschen
-    await supabase.from('matches').delete().eq('id', id);
-    // Kein manuelles Neuladen nötig – Live-Sync!
 }
 
 export function resetMatchesState() {
