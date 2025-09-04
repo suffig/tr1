@@ -58,7 +58,8 @@ export function useSupabaseMutation(table) {
       return result;
     } catch (err) {
       setError(err);
-      ErrorHandler.handleDatabaseError(err, `Einfügen in ${table}`);
+      // Log error for debugging but don't show user toast - let the component handle it
+      console.error(`Insert operation failed for ${table}:`, err);
       throw err;
     } finally {
       setLoading(false);
@@ -76,7 +77,8 @@ export function useSupabaseMutation(table) {
       return result;
     } catch (err) {
       setError(err);
-      ErrorHandler.handleDatabaseError(err, `Aktualisieren in ${table}`);
+      // Log error for debugging but don't show user toast - let the component handle it
+      console.error(`Update operation failed for ${table}:`, err);
       throw err;
     } finally {
       setLoading(false);
@@ -94,7 +96,8 @@ export function useSupabaseMutation(table) {
       return result;
     } catch (err) {
       setError(err);
-      ErrorHandler.handleDatabaseError(err, `Löschen aus ${table}`);
+      // Log error for debugging but don't show user toast - let the component handle it
+      console.error(`Delete operation failed for ${table}:`, err);
       throw err;
     } finally {
       setLoading(false);
