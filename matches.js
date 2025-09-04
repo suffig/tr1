@@ -1849,8 +1849,56 @@ async function deleteMatch(id) {
 
         console.log(`Deleting match data:`, match);
 
-        // 2. Transaktionen zu diesem Match löschen (inkl. Echtgeld-Ausgleich)
-        console.log(`Deleting transactions for match ${id}`);
+        // 2. Fetch all transactions for this match BEFORE deleting them (needed for financial reversals)
+        console.log(`Fetching transactions for match ${id} before deletion`);
+        const { data: matchTransactions, error: fetchTransError } = await supabase
+            .from('transactions')
+            .select('team,amount,type')
+            .in('type', ['Preisgeld', 'Bonus SdS', 'SdS Bonus', 'Echtgeld-Ausgleich', 'Echtgeld-Ausgleich (getilgt)', 'Strafe'])
+            .eq('match_id', id);
+        
+        if (fetchTransError) {
+            console.error('Error fetching transactions:', fetchTransError);
+            throw fetchTransError;
+        }
+
+        // 3. Finanzen zurückrechnen (reverse all financial changes, niemals unter 0!)
+        console.log(`Reversing financial changes for ${matchTransactions?.length || 0} transactions`);
+        
+        if (matchTransactions && matchTransactions.length > 0) {
+            for (const trans of matchTransactions) {
+                if (trans.type === 'Echtgeld-Ausgleich') {
+                    // For debt transactions, we need to reduce the debt
+                    const { data: teamFin } = await supabase.from('finances').select('debt').eq('team', trans.team).single();
+                    let newDebt = (teamFin?.debt || 0) - trans.amount;
+                    if (newDebt < 0) newDebt = 0;
+                    await supabase.from('finances').update({ debt: newDebt }).eq('team', trans.team);
+                } else {
+                    // For other transactions, reverse the balance change
+                    const { data: teamFin } = await supabase.from('finances').select('balance').eq('team', trans.team).single();
+                    let newBalance = (teamFin?.balance || 0) - trans.amount;
+                    if (newBalance < 0) newBalance = 0;
+                    await supabase.from('finances').update({ balance: newBalance }).eq('team', trans.team);
+                }
+            }
+        }
+
+        // Also handle prize money from match data (in case transactions weren't recorded properly)
+        if (typeof match.prizeaek === "number" && match.prizeaek !== 0) {
+            const { data: aekFin } = await supabase.from('finances').select('balance').eq('team', 'AEK').single();
+            let newBal = (aekFin?.balance || 0) - match.prizeaek;
+            if (newBal < 0) newBal = 0;
+            await supabase.from('finances').update({ balance: newBal }).eq('team', 'AEK');
+        }
+        if (typeof match.prizereal === "number" && match.prizereal !== 0) {
+            const { data: realFin } = await supabase.from('finances').select('balance').eq('team', 'Real').single();
+            let newBal = (realFin?.balance || 0) - match.prizereal;
+            if (newBal < 0) newBal = 0;
+            await supabase.from('finances').update({ balance: newBal }).eq('team', 'Real');
+        }
+
+        // 4. Now delete the transactions
+        console.log(`Deleting ${matchTransactions?.length || 0} transactions for match ${id}`);
         const { error: transactionError } = await supabase
             .from('transactions')
             .delete()
@@ -1862,40 +1910,7 @@ async function deleteMatch(id) {
             throw transactionError;
         }
 
-    // 3. Finanzen zurückrechnen (niemals unter 0!)
-    if (typeof match.prizeaek === "number" && match.prizeaek !== 0) {
-        const { data: aekFin } = await supabase.from('finances').select('balance').eq('team', 'AEK').single();
-        let newBal = (aekFin?.balance || 0) - match.prizeaek;
-        if (newBal < 0) newBal = 0;
-        await supabase.from('finances').update({
-            balance: newBal
-        }).eq('team', 'AEK');
-    }
-    if (typeof match.prizereal === "number" && match.prizereal !== 0) {
-        const { data: realFin } = await supabase.from('finances').select('balance').eq('team', 'Real').single();
-        let newBal = (realFin?.balance || 0) - match.prizereal;
-        if (newBal < 0) newBal = 0;
-        await supabase.from('finances').update({
-            balance: newBal
-        }).eq('team', 'Real');
-    }
-    // Bonus SdS rückrechnen
-    const { data: bonusTrans } = await supabase.from('transactions')
-        .select('team,amount')
-        .eq('match_id', id)
-        .eq('type', 'Bonus SdS');
-    if (bonusTrans) {
-        for (const t of bonusTrans) {
-            const { data: fin } = await supabase.from('finances').select('balance').eq('team', t.team).single();
-            let newBal = (fin?.balance || 0) - t.amount;
-            if (newBal < 0) newBal = 0;
-            await supabase.from('finances').update({
-                balance: newBal
-            }).eq('team', t.team);
-        }
-    }
-
-    // 4. Spieler-Tore abziehen
+    // 5. Spieler-Tore abziehen
     const removeGoals = async (goalslist, team) => {
         if (!goalslist || !Array.isArray(goalslist)) return;
         
@@ -1928,7 +1943,7 @@ async function deleteMatch(id) {
     await removeGoals(match.goalslista, "AEK");
     await removeGoals(match.goalslistb, "Real");
 
-    // 5. Spieler des Spiels rückgängig machen
+    // 6. Spieler des Spiels rückgängig machen
     if (match.manofthematch) {
         let sdsTeam = null;
         
@@ -1958,7 +1973,7 @@ async function deleteMatch(id) {
         }
     }
 
-        // 6. Karten zurücksetzen (Card handling)
+        // 7. Karten zurücksetzen (Card handling)
         // Note: Card-related penalty transactions are already deleted in step 2
         // Here we could add logic for individual player card counters if they exist in the future
         if (match.yellowa > 0 || match.reda > 0 || match.yellowb > 0 || match.redb > 0) {
@@ -1966,7 +1981,7 @@ async function deleteMatch(id) {
             // Future: Decrement individual player card statistics if stored separately
         }
 
-    // 7. Match löschen
+    // 8. Match löschen
     const { error: deleteError } = await supabase.from('matches').delete().eq('id', id);
     if (deleteError) {
         console.error('Error deleting match:', deleteError);
@@ -1982,6 +1997,8 @@ async function deleteMatch(id) {
         throw error;
     }
 }
+
+export { deleteMatch };
 
 export function resetMatchesState() {
     matches = [];
