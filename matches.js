@@ -1889,14 +1889,23 @@ async function deleteMatch(id) {
         console.log(`Starting deletion of match ${id}`);
         
         // Input validation and type conversion
-        if (!id) {
+        if (!id && id !== 0) {
             throw new Error('No match ID provided for deletion');
         }
         
-        // Convert string ID to number if needed
-        const matchId = typeof id === 'string' ? parseInt(id, 10) : id;
+        // Convert string ID to number if needed, handle BigInt properly
+        let matchId;
+        if (typeof id === 'string') {
+            matchId = parseInt(id, 10);
+        } else if (typeof id === 'bigint') {
+            // Convert BigInt to Number for compatibility with Supabase queries
+            matchId = Number(id);
+        } else {
+            matchId = id;
+        }
         
-        if (!Number.isInteger(matchId) || matchId <= 0) {
+        // Validate the final ID - check for both regular numbers and properly converted BigInt
+        if ((!Number.isInteger(matchId) && typeof matchId !== 'bigint') || matchId <= 0) {
             throw new Error('Invalid match ID provided for deletion');
         }
         
