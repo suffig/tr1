@@ -103,7 +103,19 @@ export async function savePlayer(player) {
 
 export async function deletePlayer(id) {
     return ErrorHandler.withErrorHandling(async () => {
-        return await dataManager.delete('players', id);
+        // CRITICAL: Player deletion must handle referential integrity
+        // This is a placeholder - proper implementation would need to:
+        // 1. Check for matches where this player scored goals (goalslista/goalslistb)
+        // 2. Check for SdS statistics for this player
+        // 3. Handle bans referencing this player_id (foreign key constraint)
+        // 4. Check for manofthematch references
+        // 5. Either prevent deletion or clean up all references
+        
+        console.warn('Player deletion not fully implemented - referential integrity checks needed');
+        throw new Error('Player deletion requires manual review of all references in matches, SdS statistics, and bans');
+        
+        // TODO: Implement proper referential integrity handling
+        // return await dataManager.delete('players', id);
     }, 'Spieler löschen');
 }
 
