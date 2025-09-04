@@ -1939,10 +1939,10 @@ async function deleteMatch(id) {
             throw fetchTransError;
         }
         
-        // Filter for the transaction types we care about - expanded list to be comprehensive
-        const matchTransactions = allMatchTransactions?.filter(t => 
-            ['Preisgeld', 'Bonus SdS', 'SdS Bonus', 'Echtgeld-Ausgleich', 'Echtgeld-Ausgleich (getilgt)', 'Strafe', 'Bonus', 'Penalty'].includes(t.type)
-        ) || [];
+        // Use ALL match transactions for financial reversal - don't filter by type
+        // This ensures all financial impacts are properly reversed regardless of transaction type
+        const matchTransactions = allMatchTransactions || [];
+        console.log(`Found ${matchTransactions.length} transactions to reverse:`, matchTransactions.map(t => `${t.type}: ${t.amount} (${t.team})`));
 
         // 3. Finanzen zurückrechnen (reverse all financial changes, niemals unter 0!)
         console.log(`Reversing financial changes for ${matchTransactions?.length || 0} transactions`);
@@ -2037,6 +2037,21 @@ async function deleteMatch(id) {
             throw transactionError;
         }
 
+        // Verify transactions were actually deleted
+        const { data: remainingTransactions, error: verifyError } = await supabase
+            .from('transactions')
+            .select('id')
+            .eq('match_id', id);
+        
+        if (verifyError) {
+            console.warn('Could not verify transaction deletion:', verifyError);
+        } else if (remainingTransactions && remainingTransactions.length > 0) {
+            console.error(`❌ Failed to delete ${remainingTransactions.length} transactions for match ${id}`);
+            throw new Error(`Transaction deletion incomplete: ${remainingTransactions.length} transactions still exist`);
+        } else {
+            console.log(`✅ Successfully deleted all transactions for match ${id}`);
+        }
+
     // 5. Spieler-Tore abziehen
     const removeGoals = async (goalslist, team) => {
         if (!goalslist || !Array.isArray(goalslist)) return;
@@ -2081,6 +2096,8 @@ async function deleteMatch(id) {
             const { error: updateError } = await supabase.from('players').update({ goals: newGoals }).eq('name', playerName).eq('team', team);
             if (updateError) {
                 console.error(`Error updating goals for player ${playerName}:`, updateError);
+            } else {
+                console.log(`✅ Updated goals for ${playerName} (${team}): ${player.goals} → ${newGoals}`);
             }
         }
     };
@@ -2128,6 +2145,8 @@ async function deleteMatch(id) {
                 const { error: updateError } = await supabase.from('spieler_des_spiels').update({ count: newCount }).eq('name', match.manofthematch).eq('team', sdsTeam);
                 if (updateError) {
                     console.error(`Error updating SdS count for ${match.manofthematch}:`, updateError);
+                } else {
+                    console.log(`✅ Updated SdS count for ${match.manofthematch} (${sdsTeam}): ${sds.count} → ${newCount}`);
                 }
             } else {
                 console.warn(`SdS entry for ${match.manofthematch} in team ${sdsTeam} not found`);
@@ -2143,14 +2162,43 @@ async function deleteMatch(id) {
             // Future: Decrement individual player card statistics if stored separately
         }
 
+        // Note: Ban matchesserved counters are NOT decremented when deleting matches
+        // This is by design - served ban time should not be reversed when matches are deleted
+        // If needed, this would require separate business logic to determine which bans were affected
+
     // 8. Match löschen
+    console.log(`Deleting match ${id} from matches table`);
     const { error: deleteError } = await supabase.from('matches').delete().eq('id', id);
     if (deleteError) {
         console.error('Error deleting match:', deleteError);
         throw deleteError;
     }
     
-    console.log(`Successfully deleted match ${id} and all related data`);
+    // Verify the match was actually deleted
+    const { data: remainingMatch, error: verifyMatchError } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('id', id);
+    
+    if (verifyMatchError) {
+        console.warn('Could not verify match deletion:', verifyMatchError);
+    } else if (remainingMatch && remainingMatch.length > 0) {
+        console.error(`❌ Failed to delete match ${id}`);
+        throw new Error(`Match deletion failed: match ${id} still exists`);
+    } else {
+        console.log(`✅ Successfully deleted match ${id}`);
+    }
+    
+    console.log(`✅ Successfully deleted match ${id} and all related data`);
+    
+    // Summary of what was deleted
+    console.log(`📋 Deletion Summary for Match ${id}:`);
+    console.log(`   - Match record: deleted`);
+    console.log(`   - Transactions: ${matchTransactions.length} deleted`);
+    console.log(`   - Player goals: updated for ${match.goalslista?.length || 0} AEK + ${match.goalslistb?.length || 0} Real goals`);
+    console.log(`   - Player of the match: ${match.manofthematch ? 'updated' : 'none'}`);
+    console.log(`   - Prize money: AEK ${match.prizeaek || 0}, Real ${match.prizereal || 0} (reversed)`);
+    console.log(`   - Match date: ${match.date}`);
     // Kein manuelles Neuladen nötig – Live-Sync!
     
     } catch (error) {
