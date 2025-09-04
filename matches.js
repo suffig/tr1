@@ -1817,15 +1817,16 @@ async function submitMatchForm(event, id) {
 
 // ---------- DELETE ----------
 
-async function deleteMatch(id) {
-    // 1. Hole alle Infos des Matches
-    const { data: match } = await supabase
-        .from('matches')
-        .select('date,prizeaek,prizereal,goalslista,goalslistb,manofthematch,yellowa,reda,yellowb,redb')
-        .eq('id', id)
-        .single();
+export async function deleteMatch(id) {
+    try {
+        // 1. Hole alle Infos des Matches
+        const { data: match } = await supabase
+            .from('matches')
+            .select('date,prizeaek,prizereal,goalslista,goalslistb,manofthematch,yellowa,reda,yellowb,redb')
+            .eq('id', id)
+            .single();
 
-    if (!match) return;
+        if (!match) return;
 
     // 2. Transaktionen zu diesem Match löschen (inkl. Echtgeld-Ausgleich)
     await supabase
@@ -1856,7 +1857,7 @@ async function deleteMatch(id) {
         .select('team,amount')
         .eq('match_id', id)
         .eq('type', 'Bonus SdS');
-    if (bonusTrans) {
+    if (bonusTrans && Array.isArray(bonusTrans) && bonusTrans.length > 0) {
         for (const t of bonusTrans) {
             const { data: fin } = await supabase.from('finances').select('balance').eq('team', t.team).single();
             let newBal = (fin?.balance || 0) - t.amount;
@@ -1936,6 +1937,10 @@ async function deleteMatch(id) {
     // 7. Match löschen
     await supabase.from('matches').delete().eq('id', id);
     // Kein manuelles Neuladen nötig – Live-Sync!
+    } catch (error) {
+        console.error('Error deleting match:', error);
+        throw error; // Re-throw so the calling code can handle it
+    }
 }
 
 export function resetMatchesState() {
