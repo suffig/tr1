@@ -176,7 +176,7 @@
             showLoading('playerCard');
             
             try {
-                console.log(\`🔍 Suche nach: "\${searchTerm}"\`);
+                console.log(`🔍 Suche nach: "${searchTerm}"`);
                 const playerData = await FIFADataService.getPlayerData(searchTerm, { useLiveData: true });
                 displayPlayer(playerData);
                 await loadSystemStats(); // Update stats
