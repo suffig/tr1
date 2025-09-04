@@ -8,6 +8,7 @@ export default function DeleteTab() {
   const [activeSection, setActiveSection] = useState('players');
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMatches, setSelectedMatches] = useState(new Set());
 
   // Data queries - sorted by newest first
   const { data: players, refetch: refetchPlayers } = useSupabaseQuery('players', '*', {
@@ -30,16 +31,107 @@ export default function DeleteTab() {
 
   const sections = [
     { id: 'players', label: 'Spieler löschen', icon: 'fas fa-users' },
-    { id: 'matches', label: 'Spiele löschen', icon: 'fas fa-futbol' },
+    { id: 'matches', label: 'Spiele löschen (Einzel & Bulk)', icon: 'fas fa-futbol' },
     { id: 'bans', label: 'Sperren löschen', icon: 'fas fa-ban' },
     { id: 'transactions', label: 'Transaktionen löschen', icon: 'fas fa-euro-sign' },
-    { id: 'bulk-delete', label: 'Bulk-Löschung (ID ≥ 140)', icon: 'fas fa-bomb' },
   ];
 
   // Clear search when switching sections
   const handleSectionChange = (sectionId) => {
     setActiveSection(sectionId);
     setSearchQuery('');
+    setSelectedMatches(new Set()); // Clear selection when switching sections
+  };
+
+  // Match selection handlers
+  const handleMatchSelection = (matchId, isSelected) => {
+    const newSelection = new Set(selectedMatches);
+    if (isSelected) {
+      newSelection.add(matchId);
+    } else {
+      newSelection.delete(matchId);
+    }
+    setSelectedMatches(newSelection);
+  };
+
+  const handleSelectAllMatches = (matches) => {
+    const filteredMatches = filterMatches(matches);
+    if (selectedMatches.size === filteredMatches.length) {
+      // Deselect all
+      setSelectedMatches(new Set());
+    } else {
+      // Select all
+      setSelectedMatches(new Set(filteredMatches.map(m => m.id)));
+    }
+  };
+
+  const handleBulkDeleteSelected = async () => {
+    if (selectedMatches.size === 0) {
+      toast.error('Keine Spiele ausgewählt');
+      return;
+    }
+
+    const selectedMatchObjects = matches?.filter(m => selectedMatches.has(m.id)) || [];
+    const totalTransactions = selectedMatchObjects.reduce((count, match) => {
+      return count + (transactions?.filter(t => t.match_id === match.id).length || 0);
+    }, 0);
+
+    let confirmMessage = `Sind Sie sicher, dass Sie ${selectedMatches.size} ausgewählte Spiele löschen möchten?`;
+    if (totalTransactions > 0) {
+      confirmMessage += `\n\nAchtung: ${totalTransactions} zugehörige Transaktion(en) werden ebenfalls gelöscht.`;
+    }
+    confirmMessage += '\n\nDieser Vorgang kann nicht rückgängig gemacht werden!';
+
+    if (!confirm(confirmMessage)) return;
+
+    setLoading(true);
+    let deletedCount = 0;
+    let failedCount = 0;
+
+    try {
+      const { deleteMatch } = await import('../../../../matches.js');
+      
+      // Delete matches one by one to handle individual errors
+      for (const matchId of selectedMatches) {
+        try {
+          console.log(`Deleting match ${matchId}`);
+          await deleteMatch(matchId);
+          deletedCount++;
+        } catch (error) {
+          console.error(`Failed to delete match ${matchId}:`, error);
+          failedCount++;
+        }
+      }
+
+      // Clear selection after operation
+      setSelectedMatches(new Set());
+
+      // Show results
+      if (deletedCount > 0 && failedCount === 0) {
+        toast.success(`Alle ${deletedCount} Spiele erfolgreich gelöscht`);
+      } else if (deletedCount > 0 && failedCount > 0) {
+        toast.success(`${deletedCount} Spiele gelöscht, ${failedCount} fehlgeschlagen`);
+      } else {
+        toast.error(`Alle ${failedCount} Löschvorgänge fehlgeschlagen`);
+      }
+
+      // Refresh data
+      refetchMatches();
+      refetchTransactions();
+      
+      // Force refresh after delay
+      setTimeout(() => {
+        refetchMatches();
+        refetchTransactions();
+      }, 1000);
+
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      toast.error('Fehler beim Bulk-Löschen: ' + error.message);
+      setSelectedMatches(new Set());
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Get counts for current section
@@ -64,11 +156,6 @@ export default function DeleteTab() {
         return {
           total: transactions?.length || 0,
           filtered: filterTransactions(transactions).length
-        };
-      case 'bulk-delete':
-        return {
-          total: matches?.filter(m => m.id >= 140).length || 0,
-          filtered: 0
         };
       default:
         return { total: 0, filtered: 0 };
@@ -119,15 +206,26 @@ export default function DeleteTab() {
     
     setLoading(true);
     try {
-      // Use the existing deleteMatch function from matches.js
+      // Use the comprehensive deleteMatch function from matches.js
       const { deleteMatch } = await import('../../../../matches.js');
+      console.log(`Attempting to delete match ${match.id}`);
       await deleteMatch(match.id);
+      console.log(`Successfully deleted match ${match.id}`);
       toast.success('Spiel erfolgreich gelöscht');
+      
+      // Refresh all data to ensure UI is updated
       refetchMatches();
-      if (relatedTransactions.length > 0) {
-        refetchTransactions(); // Refresh transactions in case they were deleted
-      }
+      refetchTransactions();
+      
+      // Also refresh other data that might be affected
+      setTimeout(() => {
+        // Force a full data refresh after a short delay to ensure all changes are reflected
+        refetchMatches();
+        refetchTransactions();
+      }, 1000);
+      
     } catch (error) {
+      console.error('Error deleting match:', error);
       toast.error('Fehler beim Löschen des Spiels: ' + error.message);
     } finally {
       setLoading(false);
@@ -189,77 +287,6 @@ export default function DeleteTab() {
       refetchTransactions();
     } catch (error) {
       toast.error('Fehler beim Löschen der Transaktion: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Bulk delete handlers
-  const handleBulkDeletePreview = async () => {
-    setLoading(true);
-    try {
-      const { findMatchesAbove140 } = await import('../../../../bulk-delete-matches.js');
-      const matches = await findMatchesAbove140();
-      
-      if (matches.length === 0) {
-        toast.success('Keine Matches mit ID ≥ 140 gefunden');
-        return;
-      }
-      
-      const message = `Gefunden: ${matches.length} Matches mit ID ≥ 140\n\n` +
-        matches.slice(0, 10).map(m => 
-          `ID ${m.id}: ${m.date} - ${m.teama} ${m.goalsa} vs ${m.goalsb} ${m.teamb}`
-        ).join('\n') +
-        (matches.length > 10 ? `\n... und ${matches.length - 10} weitere` : '');
-      
-      alert(message);
-    } catch (error) {
-      toast.error('Fehler beim Laden der Matches: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBulkDeleteExecute = async () => {
-    const confirm1 = confirm(
-      '⚠️ WARNUNG: Dies wird ALLE Matches mit ID ≥ 140 löschen!\n\n' +
-      'Dazu gehören:\n' +
-      '- Match-Datensätze\n' +
-      '- Alle zugehörigen Transaktionen\n' +
-      '- Umkehrung von Finanzänderungen\n' +
-      '- Spieler-Tor-Anpassungen\n' +
-      '- Spieler des Spiels Anpassungen\n\n' +
-      'Diese Aktion kann NICHT rückgängig gemacht werden!\n\n' +
-      'Fortfahren?'
-    );
-    
-    if (!confirm1) return;
-    
-    const confirm2 = confirm(
-      'LETZTE BESTÄTIGUNG:\n\n' +
-      'Sie sind dabei, permanent ALLE Matches mit ID ≥ 140 zu löschen.\n\n' +
-      'Klicken Sie OK zum Fortfahren oder Abbrechen zum Stoppen.'
-    );
-    
-    if (!confirm2) return;
-    
-    setLoading(true);
-    try {
-      const { bulkDeleteMatches } = await import('../../../../bulk-delete-matches.js');
-      const result = await bulkDeleteMatches();
-      
-      const message = `Bulk-Löschung abgeschlossen!\n\n` +
-        `✅ Erfolgreich gelöscht: ${result.deleted} Matches\n` +
-        (result.failed > 0 ? `❌ Fehlgeschlagen: ${result.failed} Matches` : '');
-      
-      toast.success(message);
-      
-      // Refresh all data
-      refetchMatches();
-      refetchTransactions();
-      
-    } catch (error) {
-      toast.error('Fehler bei der Bulk-Löschung: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -358,34 +385,87 @@ export default function DeleteTab() {
       </p>;
     }
 
+    const allSelected = filteredMatches.length > 0 && filteredMatches.every(match => selectedMatches.has(match.id));
+    const someSelected = selectedMatches.size > 0;
+
     return (
-      <div className="space-y-2">
-        {filteredMatches.map((match) => (
-          <div key={match.id} className="flex items-center justify-between p-3 bg-bg-tertiary rounded-lg">
-            <div>
-              <h4 className="font-medium text-text-primary">
-                {new Date(match.date).toLocaleDateString('de-DE')}
-              </h4>
-              <p className="text-sm text-text-muted">
-                AEK {match.goalsa || 0} - {match.goalsb || 0} Real
-              </p>
-              {match.manofthematch && (
-                <p className="text-xs text-text-muted mt-1">
-                  <i className="fas fa-star mr-1"></i>
-                  SdS: {match.manofthematch}
-                </p>
-              )}
-            </div>
+      <div className="space-y-4">
+        {/* Bulk actions header */}
+        <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg border">
+          <div className="flex items-center space-x-3">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={() => handleSelectAllMatches(matches)}
+                className="w-4 h-4 text-accent-primary focus:ring-accent-primary border-gray-300 rounded"
+              />
+              <span className="text-sm text-text-primary">
+                {allSelected ? 'Alle abwählen' : 'Alle auswählen'} ({filteredMatches.length})
+              </span>
+            </label>
+            {selectedMatches.size > 0 && (
+              <span className="text-sm text-accent-primary font-medium">
+                {selectedMatches.size} ausgewählt
+              </span>
+            )}
+          </div>
+          
+          {someSelected && (
             <button
-              onClick={() => handleDeleteMatch(match)}
+              onClick={handleBulkDeleteSelected}
               disabled={loading}
-              className="btn-secondary btn-sm text-accent-red hover:bg-red-50 disabled:opacity-50"
+              className="btn-primary btn-sm bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
             >
               <i className="fas fa-trash mr-1"></i>
-              Löschen
+              {selectedMatches.size} Spiele löschen
             </button>
-          </div>
-        ))}
+          )}
+        </div>
+
+        {/* Matches list */}
+        <div className="space-y-2">
+          {filteredMatches.map((match) => (
+            <div key={match.id} className="flex items-center space-x-3 p-3 bg-bg-tertiary rounded-lg">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedMatches.has(match.id)}
+                  onChange={(e) => handleMatchSelection(match.id, e.target.checked)}
+                  className="w-4 h-4 text-accent-primary focus:ring-accent-primary border-gray-300 rounded"
+                />
+              </label>
+              
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-text-primary">
+                      ID {match.id} • {new Date(match.date).toLocaleDateString('de-DE')}
+                    </h4>
+                    <p className="text-sm text-text-muted">
+                      AEK {match.goalsa || 0} - {match.goalsb || 0} Real
+                    </p>
+                    {match.manofthematch && (
+                      <p className="text-xs text-text-muted mt-1">
+                        <i className="fas fa-star mr-1"></i>
+                        SdS: {match.manofthematch}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={() => handleDeleteMatch(match)}
+                    disabled={loading}
+                    className="btn-secondary btn-sm text-accent-red hover:bg-red-50 disabled:opacity-50"
+                  >
+                    <i className="fas fa-trash mr-1"></i>
+                    Einzeln löschen
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -505,81 +585,6 @@ export default function DeleteTab() {
     );
   };
 
-  const renderBulkDeleteSection = () => {
-    return (
-      <div className="space-y-6">
-        {/* Info Section */}
-        <div className="modern-card bg-yellow-50 border-yellow-200">
-          <div className="flex items-start">
-            <div className="text-yellow-600 mr-3">
-              <i className="fas fa-info-circle"></i>
-            </div>
-            <div>
-              <h4 className="font-semibold text-yellow-800 mb-1">Bulk-Löschung von Matches</h4>
-              <p className="text-yellow-700 text-sm">
-                Diese Funktion löscht ALLE Matches mit ID ≥ 140 und deren zugehörige Daten:
-                <br />• Match-Datensätze
-                <br />• Alle Transaktionen (Preisgeld, SdS Bonus, etc.)
-                <br />• Umkehrung von Finanzänderungen
-                <br />• Spieler-Tor-Anpassungen
-                <br />• Spieler des Spiels Anpassungen
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="modern-card">
-          <h3 className="text-lg font-semibold text-text-primary mb-4">
-            <i className="fas fa-bomb mr-2 text-red-500"></i>
-            Bulk-Löschung Aktionen
-          </h3>
-          
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleBulkDeletePreview}
-                disabled={loading}
-                className="btn-primary flex-1 disabled:opacity-50"
-              >
-                <i className="fas fa-search mr-2"></i>
-                {loading ? 'Lade...' : 'Vorschau - Matches finden (ID ≥ 140)'}
-              </button>
-            </div>
-            
-            <div className="border-t pt-4">
-              <button
-                onClick={handleBulkDeleteExecute}
-                disabled={loading}
-                className="btn-secondary w-full bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
-              >
-                <i className="fas fa-bomb mr-2"></i>
-                {loading ? 'Löscht...' : '🔥 ALLE MATCHES ID ≥ 140 LÖSCHEN 🔥'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Warning Section */}
-        <div className="modern-card bg-red-50 border-red-200">
-          <div className="flex items-start">
-            <div className="text-red-600 mr-3">
-              <i className="fas fa-exclamation-triangle"></i>
-            </div>
-            <div>
-              <h4 className="font-semibold text-red-800 mb-1">⚠️ KRITISCHE WARNUNG</h4>
-              <p className="text-red-700 text-sm">
-                Diese Aktion ist IRREVERSIBEL! Stellen Sie sicher, dass Sie ein Backup der Datenbank haben, 
-                bevor Sie fortfahren. Die Bulk-Löschung kann nicht rückgängig gemacht werden und betrifft 
-                alle zugehörigen Daten der gelöschten Matches.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const renderSectionContent = () => {
     switch (activeSection) {
       case 'players':
@@ -590,8 +595,6 @@ export default function DeleteTab() {
         return renderBansList();
       case 'transactions':
         return renderTransactionsList();
-      case 'bulk-delete':
-        return renderBulkDeleteSection();
       default:
         return renderPlayersList();
     }
