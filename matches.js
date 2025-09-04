@@ -2242,9 +2242,10 @@ async function deleteMatch(id) {
     // Kein manuelles Neuladen nötig – Live-Sync!
     
     } catch (error) {
-        console.error(`Failed to delete match ${matchId}:`, error);
+        const safeMatchId = typeof matchId !== 'undefined' ? matchId : id || 'unknown';
+        console.error(`Failed to delete match ${safeMatchId}:`, error);
         console.error('Error details:', {
-            matchId,
+            matchId: typeof matchId !== 'undefined' ? matchId : 'undefined',
             matchIdType: typeof matchId,
             originalId: id,
             originalIdType: typeof id,
