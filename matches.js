@@ -1889,14 +1889,23 @@ async function deleteMatch(id) {
         console.log(`Starting deletion of match ${id}`);
         
         // Input validation and type conversion
-        if (!id && id !== 0) {
+        if (id === null || id === undefined) {
             throw new Error('No match ID provided for deletion');
         }
         
-        // Convert string ID to number if needed, handle BigInt properly
+        console.log(`Processing match ID for deletion: ${id} (type: ${typeof id})`);
+        
+        // Convert various ID types to a valid format for Supabase
         let matchId;
         if (typeof id === 'string') {
+            if (id.trim() === '') {
+                throw new Error('Empty string provided as match ID');
+            }
             matchId = parseInt(id, 10);
+            // Check if parseInt returned NaN
+            if (isNaN(matchId)) {
+                throw new Error(`Invalid match ID string: "${id}" cannot be converted to number`);
+            }
         } else if (typeof id === 'bigint') {
             // For very large BigInt values, check if conversion to Number loses precision
             const numberValue = Number(id);
@@ -1907,17 +1916,21 @@ async function deleteMatch(id) {
                 // Keep as BigInt for very large values - Supabase can handle this
                 matchId = id;
             }
-        } else {
+        } else if (typeof id === 'number') {
             matchId = id;
+        } else {
+            throw new Error(`Unsupported match ID type: ${typeof id}. Expected string, number, or bigint.`);
         }
         
         // Validate the final ID - handle both Number and BigInt types
-        const isValidNumber = Number.isInteger(matchId) && matchId > 0;
+        const isValidNumber = typeof matchId === 'number' && Number.isInteger(matchId) && matchId > 0;
         const isValidBigInt = typeof matchId === 'bigint' && matchId > 0n;
         
         if (!isValidNumber && !isValidBigInt) {
-            throw new Error('Invalid match ID provided for deletion');
+            throw new Error(`Invalid match ID after conversion: ${matchId} (type: ${typeof matchId}). Must be a positive integer.`);
         }
+        
+        console.log(`Converted match ID: ${matchId} (type: ${typeof matchId})`);
         
         // 1. Hole alle Infos des Matches - using safe array access instead of .single()
         const { data: matchesArray, error: matchError } = await supabase
@@ -1931,8 +1944,9 @@ async function deleteMatch(id) {
         }
 
         if (!matchesArray || matchesArray.length === 0) {
-            console.warn(`Match with id ${matchId} not found`);
-            return;
+            const errorMsg = `Match with ID ${matchId} not found in database`;
+            console.error(errorMsg);
+            throw new Error(errorMsg);
         }
 
         const match = matchesArray[0];
@@ -2229,7 +2243,21 @@ async function deleteMatch(id) {
     
     } catch (error) {
         console.error(`Failed to delete match ${matchId}:`, error);
-        alert(`Fehler beim Löschen des Spiels: ${error.message}`);
+        console.error('Error details:', {
+            matchId,
+            matchIdType: typeof matchId,
+            originalId: id,
+            originalIdType: typeof id,
+            errorMessage: error.message,
+            errorStack: error.stack
+        });
+        
+        // Don't show alert in browsers - let the calling code handle the error
+        if (typeof window === 'undefined') {
+            // Only show alert in Node.js environment (for testing)
+            console.log(`Fehler beim Löschen des Spiels: ${error.message}`);
+        }
+        
         throw error;
     }
 }
