@@ -1383,10 +1383,19 @@ async function updatePlayersGoals(goalslist, team) {
     // Update each player's goal count
     for (const [playerName, count] of Object.entries(goalCounts)) {
         // Spieler laden, aktueller Stand
-        const { data: player } = await supabase.from('players').select('goals').eq('name', playerName).eq('team', team).single();
+        const { data: players, error: playerError } = await supabase.from('players').select('goals').eq('name', playerName).eq('team', team);
+        
+        if (playerError) {
+            console.error(`Error fetching player ${playerName} for goal addition:`, playerError);
+            continue; // Skip this player if there's an error
+        }
+        
         let newGoals = count;
-        if (player && typeof player.goals === 'number') {
-            newGoals = player.goals + count;
+        if (players && players.length > 0) {
+            const player = players[0]; // Take first match if multiple found
+            if (player && typeof player.goals === 'number') {
+                newGoals = player.goals + count;
+            }
         }
         await supabase.from('players').update({ goals: newGoals }).eq('name', playerName).eq('team', team);
     }
@@ -1586,9 +1595,15 @@ async function submitMatchForm(event, id) {
 
     // Edit-Modus: Vorherigen Match löschen (und zugehörige Transaktionen an diesem Tag!)
     if (id && matches.find(m => m.id === id)) {
-        const { data: matchOld } = await supabase.from('matches').select('date').eq('id', id).single();
-        if (matchOld && matchOld.date) {
-            await supabase.from('transactions').delete().in('type', ['Preisgeld', 'Bonus SdS', 'SdS Bonus', 'Echtgeld-Ausgleich']).eq('date', matchOld.date);
+        const { data: matchOldArray, error: matchOldError } = await supabase.from('matches').select('date').eq('id', id);
+        
+        if (matchOldError) {
+            console.error('Error fetching old match for edit mode:', matchOldError);
+        } else if (matchOldArray && matchOldArray.length > 0) {
+            const matchOld = matchOldArray[0];
+            if (matchOld && matchOld.date) {
+                await supabase.from('transactions').delete().in('type', ['Preisgeld', 'Bonus SdS', 'SdS Bonus', 'Echtgeld-Ausgleich']).eq('date', matchOld.date);
+            }
         }
         await supabase.from('matches').delete().eq('id', id);
     }
@@ -1655,8 +1670,19 @@ async function submitMatchForm(event, id) {
     const now = new Date().toISOString().slice(0,10);
 
     async function getTeamFinance(team) {
-        const { data } = await supabase.from('finances').select('balance').eq('team', team).single();
-        return (data && typeof data.balance === "number") ? data.balance : 0;
+        const { data: teamFinances, error: financeError } = await supabase.from('finances').select('balance').eq('team', team);
+        
+        if (financeError) {
+            console.error(`Error fetching finances for team ${team}:`, financeError);
+            return 0;
+        }
+        
+        if (teamFinances && teamFinances.length > 0) {
+            const data = teamFinances[0];
+            return (data && typeof data.balance === "number") ? data.balance : 0;
+        }
+        
+        return 0;
     }
 
     // Preisgelder buchen & neuen Kontostand berechnen (niemals unter 0)
@@ -1869,13 +1895,27 @@ async function deleteMatch(id) {
             for (const trans of matchTransactions) {
                 if (trans.type === 'Echtgeld-Ausgleich') {
                     // For debt transactions, we need to reduce the debt
-                    const { data: teamFin } = await supabase.from('finances').select('debt').eq('team', trans.team).single();
+                    const { data: teamFinances, error: finError } = await supabase.from('finances').select('debt').eq('team', trans.team);
+                    
+                    if (finError) {
+                        console.error(`Error fetching finances for team ${trans.team}:`, finError);
+                        continue;
+                    }
+                    
+                    const teamFin = teamFinances && teamFinances.length > 0 ? teamFinances[0] : null;
                     let newDebt = (teamFin?.debt || 0) - trans.amount;
                     if (newDebt < 0) newDebt = 0;
                     await supabase.from('finances').update({ debt: newDebt }).eq('team', trans.team);
                 } else {
                     // For other transactions, reverse the balance change
-                    const { data: teamFin } = await supabase.from('finances').select('balance').eq('team', trans.team).single();
+                    const { data: teamFinances, error: finError } = await supabase.from('finances').select('balance').eq('team', trans.team);
+                    
+                    if (finError) {
+                        console.error(`Error fetching finances for team ${trans.team}:`, finError);
+                        continue;
+                    }
+                    
+                    const teamFin = teamFinances && teamFinances.length > 0 ? teamFinances[0] : null;
                     let newBalance = (teamFin?.balance || 0) - trans.amount;
                     if (newBalance < 0) newBalance = 0;
                     await supabase.from('finances').update({ balance: newBalance }).eq('team', trans.team);
@@ -1885,16 +1925,28 @@ async function deleteMatch(id) {
 
         // Also handle prize money from match data (in case transactions weren't recorded properly)
         if (typeof match.prizeaek === "number" && match.prizeaek !== 0) {
-            const { data: aekFin } = await supabase.from('finances').select('balance').eq('team', 'AEK').single();
-            let newBal = (aekFin?.balance || 0) - match.prizeaek;
-            if (newBal < 0) newBal = 0;
-            await supabase.from('finances').update({ balance: newBal }).eq('team', 'AEK');
+            const { data: aekFinances, error: aekFinError } = await supabase.from('finances').select('balance').eq('team', 'AEK');
+            
+            if (aekFinError) {
+                console.error('Error fetching AEK finances:', aekFinError);
+            } else {
+                const aekFin = aekFinances && aekFinances.length > 0 ? aekFinances[0] : null;
+                let newBal = (aekFin?.balance || 0) - match.prizeaek;
+                if (newBal < 0) newBal = 0;
+                await supabase.from('finances').update({ balance: newBal }).eq('team', 'AEK');
+            }
         }
         if (typeof match.prizereal === "number" && match.prizereal !== 0) {
-            const { data: realFin } = await supabase.from('finances').select('balance').eq('team', 'Real').single();
-            let newBal = (realFin?.balance || 0) - match.prizereal;
-            if (newBal < 0) newBal = 0;
-            await supabase.from('finances').update({ balance: newBal }).eq('team', 'Real');
+            const { data: realFinances, error: realFinError } = await supabase.from('finances').select('balance').eq('team', 'Real');
+            
+            if (realFinError) {
+                console.error('Error fetching Real finances:', realFinError);
+            } else {
+                const realFin = realFinances && realFinances.length > 0 ? realFinances[0] : null;
+                let newBal = (realFin?.balance || 0) - match.prizereal;
+                if (newBal < 0) newBal = 0;
+                await supabase.from('finances').update({ balance: newBal }).eq('team', 'Real');
+            }
         }
 
         // 4. Now delete the transactions
@@ -1934,7 +1986,20 @@ async function deleteMatch(id) {
         
         // Remove each player's goal count
         for (const [playerName, count] of Object.entries(goalCounts)) {
-            const { data: player } = await supabase.from('players').select('goals').eq('name', playerName).eq('team', team).single();
+            const { data: players, error: playerError } = await supabase.from('players').select('goals').eq('name', playerName).eq('team', team);
+            
+            if (playerError) {
+                console.error(`Error fetching player ${playerName} for goal removal:`, playerError);
+                continue; // Skip this player if there's an error
+            }
+            
+            if (!players || players.length === 0) {
+                console.warn(`Player ${playerName} not found in team ${team} for goal removal`);
+                continue; // Skip if player not found
+            }
+            
+            // Take the first match if multiple players found (shouldn't happen with proper data)
+            const player = players[0];
             let newGoals = (player?.goals || 0) - count;
             if (newGoals < 0) newGoals = 0;
             await supabase.from('players').update({ goals: newGoals }).eq('name', playerName).eq('team', team);
@@ -1961,14 +2026,27 @@ async function deleteMatch(id) {
         if (checkPlayerInGoals(match.goalslista, match.manofthematch)) sdsTeam = "AEK";
         else if (checkPlayerInGoals(match.goalslistb, match.manofthematch)) sdsTeam = "Real";
         else {
-            const { data: p } = await supabase.from('players').select('team').eq('name', match.manofthematch).single();
-            sdsTeam = p?.team;
+            const { data: players, error: playerError } = await supabase.from('players').select('team').eq('name', match.manofthematch);
+            
+            if (playerError) {
+                console.error(`Error fetching player ${match.manofthematch} for team lookup:`, playerError);
+            } else if (players && players.length > 0) {
+                sdsTeam = players[0].team; // Take first match if multiple found
+            } else {
+                console.warn(`Player ${match.manofthematch} not found for SdS team determination`);
+            }
         }
         if (sdsTeam) {
-            const { data: sds } = await supabase.from('spieler_des_spiels').select('count').eq('name', match.manofthematch).eq('team', sdsTeam).single();
-            if (sds) {
+            const { data: sdsEntries, error: sdsError } = await supabase.from('spieler_des_spiels').select('count').eq('name', match.manofthematch).eq('team', sdsTeam);
+            
+            if (sdsError) {
+                console.error(`Error fetching SdS entry for ${match.manofthematch}:`, sdsError);
+            } else if (sdsEntries && sdsEntries.length > 0) {
+                const sds = sdsEntries[0]; // Take first match if multiple found
                 const newCount = Math.max(0, sds.count - 1);
                 await supabase.from('spieler_des_spiels').update({ count: newCount }).eq('name', match.manofthematch).eq('team', sdsTeam);
+            } else {
+                console.warn(`SdS entry for ${match.manofthematch} in team ${sdsTeam} not found`);
             }
         }
     }
