@@ -1602,7 +1602,7 @@ async function submitMatchForm(event, id) {
         } else if (matchOldArray && matchOldArray.length > 0) {
             const matchOld = matchOldArray[0];
             if (matchOld && matchOld.date) {
-                await supabase.from('transactions').delete().in('type', ['Preisgeld', 'Bonus SdS', 'SdS Bonus', 'Echtgeld-Ausgleich']).eq('date', matchOld.date);
+                await supabase.from('transactions').delete().eq('date', matchOld.date);
             }
         }
         await supabase.from('matches').delete().eq('id', id);
@@ -1877,16 +1877,20 @@ async function deleteMatch(id) {
 
         // 2. Fetch all transactions for this match BEFORE deleting them (needed for financial reversals)
         console.log(`Fetching transactions for match ${id} before deletion`);
-        const { data: matchTransactions, error: fetchTransError } = await supabase
+        const { data: allMatchTransactions, error: fetchTransError } = await supabase
             .from('transactions')
             .select('team,amount,type')
-            .in('type', ['Preisgeld', 'Bonus SdS', 'SdS Bonus', 'Echtgeld-Ausgleich', 'Echtgeld-Ausgleich (getilgt)', 'Strafe'])
             .eq('match_id', id);
         
         if (fetchTransError) {
             console.error('Error fetching transactions:', fetchTransError);
             throw fetchTransError;
         }
+        
+        // Filter for the transaction types we care about
+        const matchTransactions = allMatchTransactions?.filter(t => 
+            ['Preisgeld', 'Bonus SdS', 'SdS Bonus', 'Echtgeld-Ausgleich', 'Echtgeld-Ausgleich (getilgt)', 'Strafe'].includes(t.type)
+        ) || [];
 
         // 3. Finanzen zurückrechnen (reverse all financial changes, niemals unter 0!)
         console.log(`Reversing financial changes for ${matchTransactions?.length || 0} transactions`);
@@ -1954,7 +1958,6 @@ async function deleteMatch(id) {
         const { error: transactionError } = await supabase
             .from('transactions')
             .delete()
-            .in('type', ['Preisgeld', 'Bonus SdS', 'SdS Bonus', 'Echtgeld-Ausgleich', 'Echtgeld-Ausgleich (getilgt)', 'Strafe'])
             .eq('match_id', id);
         
         if (transactionError) {
