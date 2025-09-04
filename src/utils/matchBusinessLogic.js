@@ -463,18 +463,21 @@ export class MatchBusinessLogic {
 
   /**
    * Delete match and related transactions (for edit mode)
+   * FIXED: Now uses the comprehensive deleteMatch function to ensure all data is properly cleaned up
    */
   static async deleteMatchTransactions(matchId) {
-    // Delete associated transactions
-    const transactions = await supabaseDb.select('transactions', '*', { eq: { match_id: matchId } });
-    if (transactions.data) {
-      for (const transaction of transactions.data) {
-        await supabaseDb.delete('transactions', transaction.id);
-      }
+    // Import and use the comprehensive deleteMatch function that handles:
+    // - Financial transaction reversal
+    // - Player goal adjustments  
+    // - Spieler des Spiels (SdS) count updates
+    // - Complete data cleanup with verification
+    try {
+      const { deleteMatch } = await import('../../matches.js');
+      await deleteMatch(matchId);
+    } catch (error) {
+      console.error(`Failed to delete match ${matchId} comprehensively:`, error);
+      throw error;
     }
-
-    // Delete the match
-    await supabaseDb.delete('matches', matchId);
   }
 
   /**
