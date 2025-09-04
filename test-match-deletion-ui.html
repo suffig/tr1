@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Deletion Test & Bulk Delete Tool</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        .info { color: #17a2b8; }
+        button { 
+            margin: 5px; 
+            padding: 12px 20px; 
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #output { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            margin: 15px 0; 
+            white-space: pre-wrap; 
+            font-family: 'Courier New', monospace; 
+            max-height: 400px; 
+            overflow-y: auto; 
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        input[type="number"] {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-connected { background: #d4edda; color: #155724; }
+        .status-disconnected { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Match Deletion Test & Bulk Delete Tool</h1>
+        <p class="info">This tool tests the comprehensive match deletion functionality and provides bulk deletion for matches with ID ≥ 140.</p>
+        
+        <div id="connectionStatus" class="status-badge status-disconnected">⚠️ Not Connected</div>
+        
+        <div class="section">
+            <h2>🔌 Database Connection & Basic Tests</h2>
+            <button onclick="testConnection()" class="btn-primary">Test Database Connection</button>
+            <button onclick="listAllMatches()" class="btn-success">List All Matches</button>
+            <button onclick="findMatchesAbove140()" class="btn-warning">Find Matches ≥ ID 140</button>
+        </div>
+        
+        <div class="section">
+            <h2>🎯 Single Match Delete Test</h2>
+            <div class="input-group">
+                <label for="matchIdInput">Match ID to test:</label>
+                <input type="number" id="matchIdInput" placeholder="Enter match ID" min="1">
+                <button onclick="previewSingleDelete()" class="btn-warning">Preview Delete</button>
+                <button onclick="executeSingleDelete()" class="btn-danger">🔥 DELETE MATCH</button>
+            </div>
+            <p class="info">Enter a match ID to test the comprehensive deletion functionality. Preview first to see what will be deleted.</p>
+        </div>
+        
+        <div class="section">
+            <h2>💣 Bulk Delete Matches ≥ ID 140</h2>
+            <div class="input-group">
+                <button onclick="previewBulkDelete()" class="btn-warning">📋 Preview Bulk Delete</button>
+                <button onclick="executeBulkDelete()" class="btn-danger">🔥 EXECUTE BULK DELETE ≥ 140</button>
+            </div>
+            <p class="warning">⚠️ WARNING: Bulk delete will permanently remove ALL matches with ID ≥ 140 and ALL related data!</p>
+        </div>
+        
+        <div class="section">
+            <h2>📊 Output Log</h2>
+            <button onclick="clearOutput()" class="btn-primary">Clear Log</button>
+            <div id="output">Ready to test match deletion functionality...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import required modules
+        let supabase, deleteMatch, bulkDeleteMatches, findMatchesAbove140;
+        let isConnected = false;
+        
+        // Initialize modules
+        async function initializeModules() {
+            try {
+                const supabaseModule = await import('./supabaseClient.js');
+                const matchesModule = await import('./matches.js');
+                const bulkDeleteModule = await import('./bulk-delete-matches.js');
+                
+                supabase = supabaseModule.supabase;
+                deleteMatch = matchesModule.deleteMatch;
+                bulkDeleteMatches = bulkDeleteModule.bulkDeleteMatches;
+                findMatchesAbove140 = bulkDeleteModule.findMatchesAbove140;
+                
+                log('✅ Modules loaded successfully', 'success');
+                return true;
+            } catch (error) {
+                log(`❌ Error loading modules: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            output.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+        
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            isConnected = connected;
+            if (connected) {
+                statusEl.className = 'status-badge status-connected';
+                statusEl.textContent = '✅ Connected';
+            } else {
+                statusEl.className = 'status-badge status-disconnected';
+                statusEl.textContent = '❌ Disconnected';
+            }
+        }
+        
+        window.testConnection = async function() {
+            log('🔌 Testing database connection...');
+            try {
+                if (!supabase) {
+                    const success = await initializeModules();
+                    if (!success) return;
+                }
+                
+                const { data, error } = await supabase.from('matches').select('count', { count: 'exact' });
+                if (error) throw error;
+                
+                const count = data?.[0]?.count || 0;
+                log(`✅ Database connected successfully! Found ${count} total matches.`, 'success');
+                updateConnectionStatus(true);
+                
+                // Also test basic table access
+                const { data: sampleMatch, error: sampleError } = await supabase
+                    .from('matches')
+                    .select('id, date, teama, teamb, goalsa, goalsb')
+                    .limit(1);
+                    
+                if (sampleError) throw sampleError;
+                if (sampleMatch && sampleMatch.length > 0) {
+                    log(`📋 Sample match: ID ${sampleMatch[0].id} - ${sampleMatch[0].date} - ${sampleMatch[0].teama} vs ${sampleMatch[0].teamb}`);
+                }
+                
+            } catch (error) {
+                log(`❌ Database connection failed: ${error.message}`, 'error');
+                updateConnectionStatus(false);
+            }
+        };
+        
+        window.listAllMatches = async function() {
+            if (!isConnected) {
+                log('❌ Please test connection first', 'error');
+                return;
+            }
+            
+            log('📋 Listing all matches...');
+            try {
+                const { data: matches, error } = await supabase
+                    .from('matches')
+                    .select('id, date, teama, teamb, goalsa, goalsb, manofthematch')
+                    .order('id');
+                    
+                if (error) throw error;
+                
+                log(`Found ${matches.length} matches:`);
+                matches.forEach(match => {
+                    log(`  ID ${match.id}: ${match.date} - ${match.teama} ${match.goalsa} vs ${match.goalsb} ${match.teamb} (MoM: ${match.manofthematch || 'none'})`);
+                });
+                
+            } catch (error) {
+                log(`❌ Error listing matches: ${error.message}`, 'error');
+            }
+        };
+        
+        window.findMatchesAbove140 = async function() {
+            if (!isConnected) {
+                log('❌ Please test connection first', 'error');
+                return;
+            }
+            
+            log('🔍 Finding matches with ID ≥ 140...');
+            try {
+                if (!findMatchesAbove140) {
+                    await initializeModules();
+                }
+                
+                const matches = await findMatchesAbove140();
+                
+                if (matches.length === 0) {
+                    log('✅ No matches found with ID ≥ 140', 'success');
+                } else {
+                    log(`⚠️ Found ${matches.length} matches with ID ≥ 140:`, 'warning');
+                    matches.forEach(match => {
+                        log(`  ID ${match.id}: ${match.date} - ${match.teama} ${match.goalsa} vs ${match.goalsb} ${match.teamb}`, 'warning');
+                    });
+                }
+                
+            } catch (error) {
+                log(`❌ Error finding matches ≥ 140: ${error.message}`, 'error');
+            }
+        };
+        
+        window.previewSingleDelete = async function() {
+            const matchId = parseInt(document.getElementById('matchIdInput').value);
+            if (!matchId) {
+                log('❌ Please enter a valid match ID', 'error');
+                return;
+            }
+            
+            if (!isConnected) {
+                log('❌ Please test connection first', 'error');
+                return;
+            }
+            
+            log(`🔍 Previewing deletion of match ${matchId}...`);
+            try {
+                // Check if match exists and show what would be deleted
+                const { data: match, error: matchError } = await supabase
+                    .from('matches')
+                    .select('*')
+                    .eq('id', matchId)
+                    .single();
+                    
+                if (matchError) throw matchError;
+                if (!match) {
+                    log(`❌ Match ${matchId} not found`, 'error');
+                    return;
+                }
+                
+                log(`📋 Match found: ${match.date} - ${match.teama} ${match.goalsa} vs ${match.goalsb} ${match.teamb}`);
+                log(`   Man of Match: ${match.manofthematch || 'none'}`);
+                log(`   Prize Money: AEK ${match.prizeaek || 0}, Real ${match.prizereal || 0}`);
+                
+                // Check related transactions
+                const { data: transactions, error: transError } = await supabase
+                    .from('transactions')
+                    .select('*')
+                    .eq('match_id', matchId);
+                    
+                if (!transError && transactions) {
+                    log(`📊 Found ${transactions.length} related transactions:`);
+                    transactions.forEach(t => {
+                        log(`     - ${t.type}: ${t.amount} (${t.team}) - ${t.info || 'no info'}`);
+                    });
+                } else {
+                    log(`📊 No related transactions found`);
+                }
+                
+                log('✅ Preview completed. This match can be deleted safely.', 'success');
+                
+            } catch (error) {
+                log(`❌ Error previewing delete: ${error.message}`, 'error');
+            }
+        };
+        
+        window.executeSingleDelete = async function() {
+            const matchId = parseInt(document.getElementById('matchIdInput').value);
+            if (!matchId) {
+                log('❌ Please enter a valid match ID', 'error');
+                return;
+            }
+            
+            if (!isConnected) {
+                log('❌ Please test connection first', 'error');
+                return;
+            }
+            
+            const confirmed = confirm(`⚠️ Are you sure you want to delete match ${matchId}?\n\nThis will:\n- Delete the match record\n- Delete all related transactions\n- Reverse financial changes\n- Adjust player goals\n- Adjust Spieler des Spiels counts\n\nThis action cannot be undone!`);
+            
+            if (!confirmed) {
+                log('❌ Deletion cancelled by user');
+                return;
+            }
+            
+            log(`🔥 DELETING MATCH ${matchId}...`, 'warning');
+            try {
+                if (!deleteMatch) {
+                    await initializeModules();
+                }
+                
+                await deleteMatch(matchId);
+                log(`✅ Successfully deleted match ${matchId}!`, 'success');
+                
+                // Clear the input
+                document.getElementById('matchIdInput').value = '';
+                
+            } catch (error) {
+                log(`❌ Error deleting match: ${error.message}`, 'error');
+            }
+        };
+        
+        window.previewBulkDelete = async function() {
+            if (!isConnected) {
+                log('❌ Please test connection first', 'error');
+                return;
+            }
+            
+            log('🔍 Previewing bulk delete of matches ≥ 140...', 'warning');
+            try {
+                if (!findMatchesAbove140) {
+                    await initializeModules();
+                }
+                
+                const matches = await findMatchesAbove140();
+                
+                if (matches.length === 0) {
+                    log('✅ No matches found with ID ≥ 140. Nothing to delete.', 'success');
+                } else {
+                    log(`⚠️ BULK DELETE PREVIEW: Would delete ${matches.length} matches:`, 'warning');
+                    matches.forEach(match => {
+                        log(`  🗑️ ID ${match.id}: ${match.date} - ${match.teama} ${match.goalsa} vs ${match.goalsb} ${match.teamb}`, 'warning');
+                    });
+                    log(`⚠️ This would also delete ALL related transactions, reverse financial changes, and adjust player statistics!`, 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ Error previewing bulk delete: ${error.message}`, 'error');
+            }
+        };
+        
+        window.executeBulkDelete = async function() {
+            if (!isConnected) {
+                log('❌ Please test connection first', 'error');
+                return;
+            }
+            
+            const confirm1 = confirm(
+                '⚠️ CRITICAL WARNING!\n\n' +
+                'You are about to PERMANENTLY DELETE ALL matches with ID ≥ 140!\n\n' +
+                'This includes:\n' +
+                '• All match records\n' +
+                '• All related transactions\n' +
+                '• Reversal of financial changes\n' +
+                '• Player goal adjustments\n' +
+                '• Spieler des Spiels adjustments\n\n' +
+                'This action CANNOT be undone!\n\n' +
+                'Continue?'
+            );
+            
+            if (!confirm1) {
+                log('❌ Bulk delete cancelled by user');
+                return;
+            }
+            
+            const confirm2 = confirm(
+                'FINAL CONFIRMATION!\n\n' +
+                'Last chance to cancel!\n\n' +
+                'Click OK to execute bulk delete or Cancel to abort.'
+            );
+            
+            if (!confirm2) {
+                log('❌ Bulk delete cancelled by user');
+                return;
+            }
+            
+            log('🔥 EXECUTING BULK DELETE OF ALL MATCHES ≥ 140...', 'warning');
+            log('================================================================================', 'warning');
+            
+            try {
+                if (!bulkDeleteMatches) {
+                    await initializeModules();
+                }
+                
+                const result = await bulkDeleteMatches();
+                
+                log('================================================================================');
+                log(`✅ BULK DELETE COMPLETED!`, 'success');
+                log(`   Successfully deleted: ${result.deleted} matches`, 'success');
+                if (result.failed > 0) {
+                    log(`   Failed to delete: ${result.failed} matches`, 'error');
+                }
+                log('================================================================================');
+                
+            } catch (error) {
+                log(`❌ Critical error in bulk delete: ${error.message}`, 'error');
+            }
+        };
+        
+        window.clearOutput = function() {
+            document.getElementById('output').innerHTML = 'Log cleared...\n';
+        };
+        
+        // Initialize on page load
+        window.addEventListener('load', async () => {
+            log('🚀 Match Deletion Test Tool Loaded');
+            log('Click "Test Database Connection" to begin...');
+            
+            // Try to auto-initialize modules
+            await initializeModules();
+        });
+    </script>
+</body>
+</html>
