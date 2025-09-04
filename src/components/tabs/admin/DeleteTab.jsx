@@ -226,7 +226,20 @@ export default function DeleteTab() {
       
     } catch (error) {
       console.error('Error deleting match:', error);
-      toast.error('Fehler beim Löschen des Spiels: ' + error.message);
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = 'Fehler beim Löschen des Spiels: ';
+      if (error.message.includes('not found')) {
+        errorMessage += `Spiel mit ID ${match.id} wurde nicht in der Datenbank gefunden. Möglicherweise wurde es bereits gelöscht.`;
+      } else if (error.message.includes('Invalid match ID')) {
+        errorMessage += `Ungültige Spiel-ID: ${match.id}`;
+      } else if (error.message.includes('fetch failed') || error.message.includes('network')) {
+        errorMessage += 'Netzwerkfehler. Bitte überprüfen Sie Ihre Internetverbindung.';
+      } else {
+        errorMessage += error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

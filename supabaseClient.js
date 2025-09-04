@@ -96,39 +96,74 @@ const createFallbackClient = () => {
   const filterData = (tableName, query = {}) => {
     let data = [...(sampleData[tableName] || [])];
     
-    // Apply filters
-    if (query.eq) {
-      const [column, value] = query.eq;
-      data = data.filter(item => item[column] === value);
-    }
-    if (query.neq) {
-      const [column, value] = query.neq;
-      data = data.filter(item => item[column] !== value);
-    }
-    if (query.gt) {
-      const [column, value] = query.gt;
-      data = data.filter(item => item[column] > value);
-    }
-    if (query.gte) {
-      const [column, value] = query.gte;
-      data = data.filter(item => item[column] >= value);
-    }
-    if (query.lt) {
-      const [column, value] = query.lt;
-      data = data.filter(item => item[column] < value);
-    }
-    if (query.lte) {
-      const [column, value] = query.lte;
-      data = data.filter(item => item[column] <= value);
-    }
-    if (query.like) {
-      const [column, pattern] = query.like;
-      const regex = new RegExp(pattern.replace(/%/g, '.*'), 'i');
-      data = data.filter(item => regex.test(item[column]));
-    }
-    if (query.in) {
-      const [column, values] = query.in;
-      data = data.filter(item => values.includes(item[column]));
+    // Apply filters - support both old format and new conditions array format
+    if (query.conditions && Array.isArray(query.conditions)) {
+      // New format: array of conditions
+      for (const condition of query.conditions) {
+        const { type, column, value } = condition;
+        switch (type) {
+          case 'eq':
+            data = data.filter(item => item[column] === value);
+            break;
+          case 'neq':
+            data = data.filter(item => item[column] !== value);
+            break;
+          case 'gt':
+            data = data.filter(item => item[column] > value);
+            break;
+          case 'gte':
+            data = data.filter(item => item[column] >= value);
+            break;
+          case 'lt':
+            data = data.filter(item => item[column] < value);
+            break;
+          case 'lte':
+            data = data.filter(item => item[column] <= value);
+            break;
+          case 'like':
+            const regex = new RegExp(value.replace(/%/g, '.*'), 'i');
+            data = data.filter(item => regex.test(item[column]));
+            break;
+          case 'in':
+            data = data.filter(item => value.includes(item[column]));
+            break;
+        }
+      }
+    } else {
+      // Old format: direct properties (for backward compatibility)
+      if (query.eq) {
+        const [column, value] = query.eq;
+        data = data.filter(item => item[column] === value);
+      }
+      if (query.neq) {
+        const [column, value] = query.neq;
+        data = data.filter(item => item[column] !== value);
+      }
+      if (query.gt) {
+        const [column, value] = query.gt;
+        data = data.filter(item => item[column] > value);
+      }
+      if (query.gte) {
+        const [column, value] = query.gte;
+        data = data.filter(item => item[column] >= value);
+      }
+      if (query.lt) {
+        const [column, value] = query.lt;
+        data = data.filter(item => item[column] < value);
+      }
+      if (query.lte) {
+        const [column, value] = query.lte;
+        data = data.filter(item => item[column] <= value);
+      }
+      if (query.like) {
+        const [column, pattern] = query.like;
+        const regex = new RegExp(pattern.replace(/%/g, '.*'), 'i');
+        data = data.filter(item => regex.test(item[column]));
+      }
+      if (query.in) {
+        const [column, values] = query.in;
+        data = data.filter(item => values.includes(item[column]));
+      }
     }
     
     // Apply ordering
@@ -298,11 +333,11 @@ const createFallbackClient = () => {
       }
     },
     from: (table) => {
-      let queryState = {};
+      let queryState = { conditions: [] };
       
       const executeQuery = () => {
         const data = filterData(table, queryState);
-        queryState = {}; // Reset for next query
+        queryState = { conditions: [] }; // Reset for next query
         return Promise.resolve({ data, error: null });
       };
       
@@ -312,11 +347,11 @@ const createFallbackClient = () => {
           return queryBuilder;
         },
         eq: (column, value) => {
-          queryState.eq = [column, value];
+          queryState.conditions.push({ type: 'eq', column, value });
           return queryBuilder;
         },
         neq: (column, value) => {
-          queryState.neq = [column, value];
+          queryState.conditions.push({ type: 'neq', column, value });
           return queryBuilder;
         },
         gt: (column, value) => {
@@ -433,18 +468,34 @@ const createFallbackClient = () => {
         update: (data) => {
           console.warn('Supabase update not available in demo mode - simulating success');
           
-          // Return a chainable object that supports .eq()
-          return {
+          // Return a chainable object that supports multiple .eq() calls
+          const conditions = {};
+          
+          const updateChain = {
             eq: (column, value) => {
-              console.warn('Supabase update().eq() not available in demo mode - simulating success');
-              // Filter and update matching items
-              const filteredData = filterData(table, queryState);
-              queryState = {};
-              const matchingItems = filteredData.filter(item => item[column] === value);
-              matchingItems.forEach(item => {
-                Object.assign(item, data);
-              });
-              return Promise.resolve({ data: matchingItems, error: null });
+              console.warn(`Supabase update().eq() not available in demo mode - simulating success for ${column}=${value}`);
+              conditions[column] = value;
+              
+              // Return another chainable object to support multiple .eq() calls
+              return {
+                eq: (column2, value2) => {
+                  conditions[column2] = value2;
+                  return updateChain; // Allow further chaining
+                },
+                then: (resolve, reject) => {
+                  // Execute the update with all collected conditions
+                  const matchingItems = sampleData[table] ? sampleData[table].filter(item => {
+                    return Object.entries(conditions).every(([key, val]) => item[key] === val);
+                  }) : [];
+                  
+                  matchingItems.forEach(item => {
+                    Object.assign(item, data);
+                  });
+                  
+                  console.log(`Simulated update of ${matchingItems.length} item(s) in ${table} with conditions:`, conditions);
+                  resolve({ data: matchingItems, error: null });
+                }
+              };
             },
             // Make it thenable for backward compatibility
             then: (resolve, reject) => {
@@ -472,18 +523,41 @@ const createFallbackClient = () => {
               Promise.resolve({ data: filteredData, error: null }).finally(callback);
             }
           };
+          
+          return updateChain;
         },
         delete: () => {
           console.warn('Supabase delete not available in demo mode - simulating success');
-          const filteredData = filterData(table, queryState);
-          queryState = {};
-          // Remove from sample data
-          if (sampleData[table] && filteredData.length > 0) {
-            sampleData[table] = sampleData[table].filter(item => 
-              !filteredData.some(toDelete => toDelete.id === item.id)
-            );
-          }
-          return Promise.resolve({ data: filteredData, error: null });
+          
+          // Return a chainable object that supports .eq() like the real Supabase API
+          return {
+            eq: (column, value) => {
+              console.warn(`Supabase delete().eq() not available in demo mode - simulating success for ${column}=${value}`);
+              
+              // Filter items to delete based on the condition
+              const itemsToDelete = sampleData[table] ? sampleData[table].filter(item => item[column] === value) : [];
+              
+              // Remove from sample data
+              if (sampleData[table] && itemsToDelete.length > 0) {
+                sampleData[table] = sampleData[table].filter(item => item[column] !== value);
+                console.log(`Simulated deletion of ${itemsToDelete.length} item(s) from ${table} where ${column}=${value}`);
+              }
+              
+              return Promise.resolve({ data: itemsToDelete, error: null });
+            },
+            // Make it thenable for backward compatibility (in case someone awaits delete() directly)
+            then: (resolve, reject) => {
+              const filteredData = filterData(table, queryState);
+              queryState = {};
+              // Remove from sample data
+              if (sampleData[table] && filteredData.length > 0) {
+                sampleData[table] = sampleData[table].filter(item => 
+                  !filteredData.some(toDelete => toDelete.id === item.id)
+                );
+              }
+              resolve({ data: filteredData, error: null });
+            }
+          };
         }
       };
       
