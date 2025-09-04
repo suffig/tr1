@@ -527,10 +527,19 @@ function attachMatchEventListeners(uniqueDates) {
     });
     
     document.querySelectorAll('.delete-match-btn').forEach(btn => {
-        btn.onclick = () => {
+        btn.onclick = async () => {
             const matchId = parseInt(btn.getAttribute('data-id'));
             if (matchId) {
-                deleteMatch(matchId);
+                // Confirm deletion
+                if (confirm(`Spiel wirklich löschen? Dies kann nicht rückgängig gemacht werden.`)) {
+                    try {
+                        await deleteMatch(matchId);
+                        // The UI will automatically update via live sync
+                    } catch (error) {
+                        console.error('Failed to delete match:', error);
+                        alert(`Fehler beim Löschen: ${error.message}`);
+                    }
+                }
             }
         };
     });
@@ -1579,7 +1588,7 @@ async function submitMatchForm(event, id) {
     if (id && matches.find(m => m.id === id)) {
         const { data: matchOld } = await supabase.from('matches').select('date').eq('id', id).single();
         if (matchOld && matchOld.date) {
-            await supabase.from('transactions').delete().or(`type.eq.Preisgeld,type.eq.Bonus SdS,type.eq.Echtgeld-Ausgleich`).eq('date', matchOld.date);
+            await supabase.from('transactions').delete().in('type', ['Preisgeld', 'Bonus SdS', 'SdS Bonus', 'Echtgeld-Ausgleich']).eq('date', matchOld.date);
         }
         await supabase.from('matches').delete().eq('id', id);
     }
@@ -1818,21 +1827,40 @@ async function submitMatchForm(event, id) {
 // ---------- DELETE ----------
 
 async function deleteMatch(id) {
-    // 1. Hole alle Infos des Matches
-    const { data: match } = await supabase
-        .from('matches')
-        .select('date,prizeaek,prizereal,goalslista,goalslistb,manofthematch,yellowa,reda,yellowb,redb')
-        .eq('id', id)
-        .single();
+    try {
+        console.log(`Starting deletion of match ${id}`);
+        
+        // 1. Hole alle Infos des Matches
+        const { data: match, error: matchError } = await supabase
+            .from('matches')
+            .select('date,prizeaek,prizereal,goalslista,goalslistb,manofthematch,yellowa,reda,yellowb,redb')
+            .eq('id', id)
+            .single();
 
-    if (!match) return;
+        if (matchError) {
+            console.error('Error fetching match:', matchError);
+            throw matchError;
+        }
 
-    // 2. Transaktionen zu diesem Match löschen (inkl. Echtgeld-Ausgleich)
-    await supabase
-        .from('transactions')
-        .delete()
-        .or(`type.eq.Preisgeld,type.eq.Bonus SdS,type.eq.Echtgeld-Ausgleich,type.eq.Echtgeld-Ausgleich (getilgt)`)
-        .eq('match_id', id);
+        if (!match) {
+            console.warn(`Match with id ${id} not found`);
+            return;
+        }
+
+        console.log(`Deleting match data:`, match);
+
+        // 2. Transaktionen zu diesem Match löschen (inkl. Echtgeld-Ausgleich)
+        console.log(`Deleting transactions for match ${id}`);
+        const { error: transactionError } = await supabase
+            .from('transactions')
+            .delete()
+            .in('type', ['Preisgeld', 'Bonus SdS', 'SdS Bonus', 'Echtgeld-Ausgleich', 'Echtgeld-Ausgleich (getilgt)', 'Strafe'])
+            .eq('match_id', id);
+        
+        if (transactionError) {
+            console.error('Error deleting transactions:', transactionError);
+            throw transactionError;
+        }
 
     // 3. Finanzen zurückrechnen (niemals unter 0!)
     if (typeof match.prizeaek === "number" && match.prizeaek !== 0) {
@@ -1930,12 +1958,29 @@ async function deleteMatch(id) {
         }
     }
 
-    // 6. Karten zurücksetzen (Spieler-Kartenzähler updaten, falls du sowas hast)
-    // Falls du Karten pro Spieler speicherst, musst du analog zu removeGoals abziehen!
+        // 6. Karten zurücksetzen (Card handling)
+        // Note: Card-related penalty transactions are already deleted in step 2
+        // Here we could add logic for individual player card counters if they exist in the future
+        if (match.yellowa > 0 || match.reda > 0 || match.yellowb > 0 || match.redb > 0) {
+            console.log(`Match had cards: AEK(${match.yellowa}Y,${match.reda}R) Real(${match.yellowb}Y,${match.redb}R)`);
+            // Future: Decrement individual player card statistics if stored separately
+        }
 
     // 7. Match löschen
-    await supabase.from('matches').delete().eq('id', id);
+    const { error: deleteError } = await supabase.from('matches').delete().eq('id', id);
+    if (deleteError) {
+        console.error('Error deleting match:', deleteError);
+        throw deleteError;
+    }
+    
+    console.log(`Successfully deleted match ${id} and all related data`);
     // Kein manuelles Neuladen nötig – Live-Sync!
+    
+    } catch (error) {
+        console.error(`Failed to delete match ${id}:`, error);
+        alert(`Fehler beim Löschen des Spiels: ${error.message}`);
+        throw error;
+    }
 }
 
 export function resetMatchesState() {
