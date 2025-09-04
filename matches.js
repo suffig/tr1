@@ -1889,14 +1889,33 @@ async function deleteMatch(id) {
         console.log(`Starting deletion of match ${id}`);
         
         // Input validation and type conversion
-        if (!id) {
+        if (!id && id !== 0) {
             throw new Error('No match ID provided for deletion');
         }
         
-        // Convert string ID to number if needed
-        const matchId = typeof id === 'string' ? parseInt(id, 10) : id;
+        // Convert string ID to number if needed, handle BigInt properly
+        let matchId;
+        if (typeof id === 'string') {
+            matchId = parseInt(id, 10);
+        } else if (typeof id === 'bigint') {
+            // For very large BigInt values, check if conversion to Number loses precision
+            const numberValue = Number(id);
+            if (BigInt(numberValue) === id) {
+                // Safe to convert - no precision loss
+                matchId = numberValue;
+            } else {
+                // Keep as BigInt for very large values - Supabase can handle this
+                matchId = id;
+            }
+        } else {
+            matchId = id;
+        }
         
-        if (!Number.isInteger(matchId) || matchId <= 0) {
+        // Validate the final ID - handle both Number and BigInt types
+        const isValidNumber = Number.isInteger(matchId) && matchId > 0;
+        const isValidBigInt = typeof matchId === 'bigint' && matchId > 0n;
+        
+        if (!isValidNumber && !isValidBigInt) {
             throw new Error('Invalid match ID provided for deletion');
         }
         
