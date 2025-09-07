@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 export default function TeamSettingsTab() {
   const [managers, setManagers] = useState({
-    aek: { name: 'Alexander', age: 30, weight: 100 },
+    aek: { name: 'Alexander', age: 30, weight: 110 },
     real: { name: 'Philip', age: 30, weight: 105 }
   });
   const [hasChanges, setHasChanges] = useState(false);
@@ -68,7 +68,7 @@ export default function TeamSettingsTab() {
 
   const resetToDefaults = () => {
     setManagers({
-      aek: { name: 'Alexander', age: 30, weight: 100 },
+      aek: { name: 'Alexander', age: 30, weight: 110 },
       real: { name: 'Philip', age: 30, weight: 105 }
     });
     setHasChanges(true);

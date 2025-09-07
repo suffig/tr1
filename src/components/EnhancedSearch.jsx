@@ -26,13 +26,21 @@ export default function EnhancedSearch({
         // Use custom search extractor if provided
         if (searchExtractor) {
           const extractedText = searchExtractor(item);
-          return extractedText && extractedText.toLowerCase().includes(searchTerm);
+          return extractedText && performEnhancedNameSearch(searchTerm, extractedText);
         }
         
-        // Default search through specified fields
+        // Default search through specified fields with enhanced name matching
         return searchFields.some(field => {
           const value = getNestedValue(item, field);
-          return value && value.toString().toLowerCase().includes(searchTerm);
+          if (!value) return false;
+          
+          const valueStr = value.toString();
+          // For name fields, use enhanced search; for others, use standard includes
+          if (field.toLowerCase().includes('name') || field === 'name') {
+            return performEnhancedNameSearch(searchTerm, valueStr);
+          } else {
+            return valueStr.toLowerCase().includes(searchTerm);
+          }
         });
       });
     }
@@ -265,6 +273,83 @@ function getNestedValue(obj, path) {
   return path.split('.').reduce((current, key) => {
     return (current && current[key] !== undefined) ? current[key] : '';
   }, obj);
+}
+
+// Enhanced search function for better name matching
+function performEnhancedNameSearch(searchTerm, targetText) {
+  if (!searchTerm || !targetText) return false;
+  
+  const normalizedSearch = normalizeString(searchTerm.toLowerCase());
+  const normalizedTarget = normalizeString(targetText.toLowerCase());
+  
+  // Simple contains check first
+  if (normalizedTarget.includes(normalizedSearch)) {
+    return true;
+  }
+  
+  // Split search terms and target into words
+  const searchWords = normalizedSearch.split(' ').filter(word => word.length > 0);
+  const targetWords = normalizedTarget.split(' ').filter(word => word.length > 0);
+  
+  // Check if all search words are found in target words (allows partial matching)
+  const allWordsFound = searchWords.every(searchWord => {
+    return targetWords.some(targetWord => {
+      // Allow partial word matching (great for last name searches)
+      return targetWord.includes(searchWord) || 
+             searchWord.includes(targetWord) ||
+             calculateSimilarity(searchWord, targetWord) > 0.6;
+    });
+  });
+  
+  return allWordsFound;
+}
+
+// Normalize string by removing accents and special characters
+function normalizeString(str) {
+  return str.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove accents
+    .replace(/[^\w\s]/g, "") // Remove special characters
+    .toLowerCase();
+}
+
+// Calculate string similarity (Levenshtein-based)
+function calculateSimilarity(str1, str2) {
+  const longer = str1.length > str2.length ? str1 : str2;
+  const shorter = str1.length > str2.length ? str2 : str1;
+  
+  if (longer.length === 0) return 1.0;
+  
+  const editDistance = levenshteinDistance(longer, shorter);
+  return (longer.length - editDistance) / longer.length;
+}
+
+// Levenshtein distance calculation
+function levenshteinDistance(str1, str2) {
+  const matrix = [];
+  
+  for (let i = 0; i <= str2.length; i++) {
+    matrix[i] = [i];
+  }
+  
+  for (let j = 0; j <= str1.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  for (let i = 1; i <= str2.length; i++) {
+    for (let j = 1; j <= str1.length; j++) {
+      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  
+  return matrix[str2.length][str1.length];
 }
 
 // Helper function to format field names for display
