@@ -43,6 +43,15 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    assetsDir: 'assets'
+    assetsDir: 'assets',
+    rollupOptions: {
+      input: {
+        main: './index.html'
+      }
+    }
+  },
+  // Exclude problematic HTML files from scanning
+  optimizeDeps: {
+    exclude: ['debug.html', 'fifa-sofifa-demo.html', 'test*.html', 'docs/**']
   }
 })

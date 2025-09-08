@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './hooks/useAuth';
 import useTouchGestures from './hooks/useTouchGestures';
+import useVisibilityHandler from './hooks/useVisibilityHandler';
 import { OfflineIndicator } from './hooks/useOfflineManager.jsx';
 import Login from './components/Login';
 import BottomNavigation from './components/BottomNavigation';
@@ -25,6 +26,9 @@ function App() {
   const [tabLoading, setTabLoading] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+
+  // Handle visibility changes for better resource management
+  useVisibilityHandler();
 
   // Check if we're in demo mode
   useEffect(() => {
